@@ -40,3 +40,44 @@ Test for every screen: "would a parent trust this with their child's story?"
 - All Claude system prompts live in /prompts as .txt files, loaded at runtime.
 - Every Claude call has a canned-fallback path so demos never break offline.
 - Keep it boring: no extra services, no Docker, no cloud until asked.
+
+## Architecture notes (established building the Day-1 slice — follow these)
+- Reads vs. writes split: `lib/queries.ts` holds plain read functions called
+  directly from Server Components (no API routes for reads). `lib/actions.ts`
+  holds `"use server"` Server Actions — the only way data is ever written —
+  called directly from Client Components. Don't add REST/API routes for
+  CRUD; Server Actions cover it.
+- `lib/claude.ts` wraps every Anthropic call in try/catch. On a missing key
+  or any failure it returns the same return shape with `usedFallback: true`
+  plus a canned-but-honest fallback value (never throws, never blocks the
+  UI). Callers (`CaptureModal`, `PortraitPanel`) surface that flag as a
+  plain-language "AI assist is offline" notice rather than failing silently
+  — keep this contract for any new Claude call.
+- Sign-off (DRAFT watermark + "Reviewed and signed by ___" + Sign button)
+  applies to BOTH the family Pathway Portrait and the anonymized admissions
+  story, not just the family one — principle #1 ("no unsupervised send") was
+  read as covering admissions copy too, even though only the disclaimer
+  label was spelled out for that button. Keep both gated the same way.
+- The discipline-vs-formation check (product principle #3) surfaces as a
+  dismissable inline banner in the capture review step, not a blocking
+  error — the teacher can edit/reframe or save through it either way.
+- Formation tags are stored as a JSON-encoded array in the `observations`
+  table's `tags` TEXT column. Always validate against the fixed 6-tag enum
+  in `lib/types.ts` server-side before writing; never trust client input for
+  tag values.
+- Fonts: Lora (display/serif headings) + Inter (body), both via
+  `next/font/google`, exposed as `--font-display` / `--font-sans` CSS
+  variables in `globals.css` alongside the brand color variables.
+- SQLite connection is a singleton in `lib/db.ts` cached on `globalThis` to
+  survive dev-mode hot reload; seeding (`lib/seed.ts`) runs once, guarded by
+  `SELECT COUNT(*) FROM students` — safe to call on every boot.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->

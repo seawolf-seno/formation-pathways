@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+:root {
+  /* Pacifica Christian brand palette — placeholders, swap in official codes. */
+  --color-navy: #16324f;
+  --color-navy-ink: #0f2338;
+  --color-pacific: #8fb3d9;
+  --color-pacific-light: #eaf1f8;
+  --color-gold: #c9a24b;
+  --color-gold-light: #f6ecd9;
+  --color-surface: #ffffff;
+  --color-canvas: #f7f9fb;
+  --color-ink: #1c2b3a;
+  --color-ink-muted: #5b6b7a;
+  --color-border: #dfe7ee;
+
+  --background: var(--color-canvas);
+  --foreground: var(--color-ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-display: var(--font-display);
+  --font-sans: var(--font-sans);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
