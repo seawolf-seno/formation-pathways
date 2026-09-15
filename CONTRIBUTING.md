@@ -67,3 +67,5 @@ Keep PRs small and scoped to one feature or fix. If you're about to touch
 `lib/db.ts`'s schema, or a file you suspect someone else is already working
 on, ask first (open an issue or comment on the existing one) so two people
 don't build the same thing at once.
+
+<!-- dry-run: verifying the CI + branch protection + CODEOWNERS loop end-to-end -->
