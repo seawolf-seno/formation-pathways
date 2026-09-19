@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { supabase } from "./supabase";
 import { daysSince } from "./format";
 import type {
   ClassWithStats,
@@ -133,15 +134,54 @@ export function getTagCounts(observations: Observation[]): Record<string, number
   return counts;
 }
 
-export function getPortraitsForStudent(id: number): Portrait[] {
-  return db
-    .prepare(
-      "SELECT * FROM portraits WHERE student_id = ? ORDER BY created_at DESC"
-    )
-    .all(id) as Portrait[];
+interface AdmissionsStoryRow {
+  id: string;
+  student_id: number;
+  content: string;
+  signed_by: string | null;
+  signed_at: string | null;
+  created_at: string;
 }
 
-export function getPortrait(id: number): Portrait | undefined {
+function admissionsStoryToPortrait(row: AdmissionsStoryRow): Portrait {
+  return { ...row, type: "admissions" };
+}
+
+export async function getPortraitsForStudent(id: number): Promise<Portrait[]> {
+  const familyPortraits = db
+    .prepare(
+      "SELECT * FROM portraits WHERE student_id = ? AND type = 'family' ORDER BY created_at DESC"
+    )
+    .all(id) as Portrait[];
+
+  const { data, error } = await supabase
+    .from("admissions_stories")
+    .select("*")
+    .eq("student_id", id)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const admissionsStories = (data as AdmissionsStoryRow[]).map(
+    admissionsStoryToPortrait
+  );
+
+  return [...familyPortraits, ...admissionsStories].sort((a, b) =>
+    b.created_at.localeCompare(a.created_at)
+  );
+}
+
+export async function getPortrait(
+  id: number | string
+): Promise<Portrait | undefined> {
+  if (typeof id === "string") {
+    const { data, error } = await supabase
+      .from("admissions_stories")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? admissionsStoryToPortrait(data as AdmissionsStoryRow) : undefined;
+  }
+
   return db.prepare("SELECT * FROM portraits WHERE id = ?").get(id) as
     | Portrait
     | undefined;

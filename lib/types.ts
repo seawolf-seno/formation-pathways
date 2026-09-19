@@ -37,7 +37,7 @@ export interface Observation {
 export type PortraitType = "family" | "admissions";
 
 export interface Portrait {
-  id: number;
+  id: number | string;
   student_id: number;
   type: PortraitType;
   content: string;

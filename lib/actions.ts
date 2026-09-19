@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "./db";
+import { supabase } from "./supabase";
 import {
   draftAdmissionsStory,
   draftFamilyPortrait,
@@ -93,13 +94,23 @@ export async function draftPortraitAction(
       ? await draftFamilyPortrait(student.name, student.grade, observations)
       : await draftAdmissionsStory(student.grade, observations);
 
+  revalidatePath(`/students/${studentId}`);
+
+  if (type === "admissions") {
+    const { data, error } = await supabase
+      .from("admissions_stories")
+      .insert({ student_id: studentId, content })
+      .select()
+      .single();
+    if (error) throw error;
+    return { ...data, type: "admissions" } as Portrait;
+  }
+
   const info = db
     .prepare(
       `INSERT INTO portraits (student_id, type, content) VALUES (?, ?, ?)`
     )
     .run(studentId, type, content);
-
-  revalidatePath(`/students/${studentId}`);
 
   return db
     .prepare("SELECT * FROM portraits WHERE id = ?")
@@ -107,23 +118,31 @@ export async function draftPortraitAction(
 }
 
 export async function updatePortraitContentAction(
-  portraitId: number,
+  portraitId: number | string,
   content: string
 ): Promise<Portrait> {
-  const existing = getPortrait(portraitId);
+  const existing = await getPortrait(portraitId);
   if (!existing) throw new Error("Portrait not found");
   if (existing.signed_by) {
     throw new Error("Cannot edit a signed portrait");
   }
 
-  db.prepare("UPDATE portraits SET content = ? WHERE id = ?").run(
-    content,
-    portraitId
-  );
+  if (typeof portraitId === "string") {
+    const { error } = await supabase
+      .from("admissions_stories")
+      .update({ content })
+      .eq("id", portraitId);
+    if (error) throw error;
+  } else {
+    db.prepare("UPDATE portraits SET content = ? WHERE id = ?").run(
+      content,
+      portraitId
+    );
+  }
 
   revalidatePath(`/students/${existing.student_id}`);
 
-  return getPortrait(portraitId) as Portrait;
+  return (await getPortrait(portraitId)) as Portrait;
 }
 
 export async function createClassAction(name: string): Promise<SchoolClass> {
@@ -188,20 +207,30 @@ export async function unenrollStudentAction(
 }
 
 export async function signPortraitAction(
-  portraitId: number,
+  portraitId: number | string,
   signedBy: string
 ): Promise<Portrait> {
   if (!signedBy || !signedBy.trim()) {
     throw new Error("A name is required to sign a Pathway Portrait");
   }
-  const existing = getPortrait(portraitId);
+  const existing = await getPortrait(portraitId);
   if (!existing) throw new Error("Portrait not found");
 
-  db.prepare(
-    "UPDATE portraits SET signed_by = ?, signed_at = datetime('now') WHERE id = ?"
-  ).run(signedBy.trim(), portraitId);
+  const trimmedSignedBy = signedBy.trim();
+
+  if (typeof portraitId === "string") {
+    const { error } = await supabase
+      .from("admissions_stories")
+      .update({ signed_by: trimmedSignedBy, signed_at: new Date().toISOString() })
+      .eq("id", portraitId);
+    if (error) throw error;
+  } else {
+    db.prepare(
+      "UPDATE portraits SET signed_by = ?, signed_at = datetime('now') WHERE id = ?"
+    ).run(trimmedSignedBy, portraitId);
+  }
 
   revalidatePath(`/students/${existing.student_id}`);
 
-  return getPortrait(portraitId) as Portrait;
+  return (await getPortrait(portraitId)) as Portrait;
 }
