@@ -5,9 +5,21 @@ observations of student formation moments; AI synthesizes them into a
 forward-looking "Pathway" per student. Governing principle: AI works for the
 adults behind the scenes; students stay present, in person, with people.
 
+## Background context
+`/context` holds the business/product background this project was built
+from. At the start of a session, read `context/formation-pathways-agent-context.md`
+first — it's written as agent onboarding and says so itself. The other three
+files (`pacifica-ai-formation-proposal.md`, `pacifica-pathways-one-pager.md`,
+`exec-demo-prototype-spec.md`) are supplementary board/demo material — read
+them only when a task needs that level of detail. Where anything there
+conflicts with this file, this file wins for what's already built.
+
 ## Stack
 - Next.js (App Router) + Tailwind, SQLite via better-sqlite3, Anthropic SDK
   (model: claude-sonnet-4-6). Single repo, runs with `npm run dev`. No auth yet.
+- Supabase (Postgres) holds one slice so far: the admissions-story pathway
+  (see Architecture notes below). Everything else stays on SQLite until a
+  later phase.
 - Voice capture: browser Web Speech API for live dictation (Chrome), with a
   plain textarea fallback. (Production will use a dedicated speech-to-text
   service; do not block on audio quality now.)
@@ -71,6 +83,17 @@ Test for every screen: "would a parent trust this with their child's story?"
 - SQLite connection is a singleton in `lib/db.ts` cached on `globalThis` to
   survive dev-mode hot reload; seeding (`lib/seed.ts`) runs once, guarded by
   `SELECT COUNT(*) FROM students` — safe to call on every boot.
+- Admissions stories (Phase 4) live in Supabase's `admissions_stories` table
+  (project "Formation Pathways", `cvppxixatcreyptpkymh`), not SQLite. RLS is
+  enabled with zero policies — access is server-only via the service_role
+  key (`lib/supabase.ts`, `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` in
+  `.env.local`, never committed). The client in `lib/supabase.ts` is built
+  lazily on first use (not at module load) specifically so importing it
+  can't crash pages/builds that don't touch admissions stories — keep that
+  contract for any new Supabase-backed table. Portrait ids are `number |
+  string`: a plain number is a SQLite `portraits.id` (family type), a
+  string is a Supabase `admissions_stories.id` (uuid) — `getPortrait` in
+  `lib/queries.ts` branches on `typeof id` to route to the right store.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
