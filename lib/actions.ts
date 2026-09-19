@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "./db";
-import { supabase } from "./supabase";
+import { getSupabase } from "./supabase";
 import {
   draftAdmissionsStory,
   draftFamilyPortrait,
@@ -97,7 +97,7 @@ export async function draftPortraitAction(
   revalidatePath(`/students/${studentId}`);
 
   if (type === "admissions") {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from("admissions_stories")
       .insert({ student_id: studentId, content })
       .select()
@@ -128,7 +128,7 @@ export async function updatePortraitContentAction(
   }
 
   if (typeof portraitId === "string") {
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from("admissions_stories")
       .update({ content })
       .eq("id", portraitId);
@@ -219,7 +219,7 @@ export async function signPortraitAction(
   const trimmedSignedBy = signedBy.trim();
 
   if (typeof portraitId === "string") {
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from("admissions_stories")
       .update({ signed_by: trimmedSignedBy, signed_at: new Date().toISOString() })
       .eq("id", portraitId);

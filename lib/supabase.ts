@@ -17,8 +17,19 @@ function createSupabase(): SupabaseClient {
   });
 }
 
-// Reuse a single client across hot reloads in dev, same pattern as lib/db.ts.
-export const supabase = global.__formationSupabase ?? createSupabase();
-if (process.env.NODE_ENV !== "production") {
-  global.__formationSupabase = supabase;
+let client: SupabaseClient | undefined = global.__formationSupabase;
+
+// Constructed lazily (not at module load) so importing this module -- e.g.
+// via lib/queries.ts, which app/layout.tsx pulls into every route -- never
+// throws for pages that don't touch admissions stories; only calling
+// getSupabase() does. Cached to survive dev-mode hot reload, same pattern
+// as lib/db.ts.
+export function getSupabase(): SupabaseClient {
+  if (!client) {
+    client = createSupabase();
+    if (process.env.NODE_ENV !== "production") {
+      global.__formationSupabase = client;
+    }
+  }
+  return client;
 }

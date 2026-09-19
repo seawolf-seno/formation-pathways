@@ -1,5 +1,5 @@
 import { db } from "./db";
-import { supabase } from "./supabase";
+import { getSupabase } from "./supabase";
 import { daysSince } from "./format";
 import type {
   ClassWithStats,
@@ -154,7 +154,7 @@ export async function getPortraitsForStudent(id: number): Promise<Portrait[]> {
     )
     .all(id) as Portrait[];
 
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from("admissions_stories")
     .select("*")
     .eq("student_id", id)
@@ -173,7 +173,7 @@ export async function getPortrait(
   id: number | string
 ): Promise<Portrait | undefined> {
   if (typeof id === "string") {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from("admissions_stories")
       .select("*")
       .eq("id", id)
