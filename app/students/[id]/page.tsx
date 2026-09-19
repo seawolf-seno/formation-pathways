@@ -24,7 +24,7 @@ export default async function StudentPage({
   if (!student) notFound();
 
   const observations = getObservationsForStudent(student.id);
-  const portraits = getPortraitsForStudent(student.id);
+  const portraits = await getPortraitsForStudent(student.id);
   const tagCounts = getTagCounts(observations);
   const lastObservedDays = observations[0]
     ? daysSince(observations[0].created_at)

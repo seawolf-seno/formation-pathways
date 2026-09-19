@@ -18,7 +18,7 @@ export function PortraitPanel({
   initialPortraits: Portrait[];
 }) {
   const [portraits, setPortraits] = useState(initialPortraits);
-  const [openId, setOpenId] = useState<number | null>(null);
+  const [openId, setOpenId] = useState<number | string | null>(null);
   const [loading, setLoading] = useState<PortraitType | null>(null);
 
   const familyLatest = latestOf(portraits, "family");
@@ -86,7 +86,7 @@ function PortraitCard({
   latest: Portrait | null;
   loading: boolean;
   onDraft: () => void;
-  onOpen: (id: number) => void;
+  onOpen: (id: number | string) => void;
 }) {
   return (
     <div className="flex flex-col justify-between rounded-xl border border-[var(--color-border)] bg-white p-4">
