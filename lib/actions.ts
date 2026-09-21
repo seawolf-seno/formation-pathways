@@ -1,27 +1,81 @@
 "use server";
 
+import { randomBytes } from "crypto";
+import fs from "fs";
+import path from "path";
 import { revalidatePath } from "next/cache";
 import { db } from "./db";
-import { getSupabase } from "./supabase";
+import { getSupabase, isSupabaseConfigured } from "./supabase";
 import {
+  draftAdmissionsPathways,
   draftAdmissionsStory,
   draftFamilyPortrait,
   draftObservation,
+  draftSkillSnapshots,
 } from "./claude";
 import {
+  ensureMockWorld,
+  getCanvasSource,
+  isLiveCanvasConfigured,
+  pseudonymizeToRoster,
+  simulateCanvasActivity,
+} from "./integrations/canvas";
+import { getDriveSource, type DriveDoc } from "./integrations/drive";
+import {
+  getApplicant,
+  getCourse,
+  getCourseRoster,
+  getCourseSkills,
   getObservationsForStudent,
   getPortrait,
+  getSkillSnapshotsForCourse,
   getStudent,
 } from "./queries";
 import type {
+  Applicant,
+  ApplicantAnswer,
+  Course,
+  CourseSkill,
   DraftObservationResult,
   FormationTag,
   Observation,
   Portrait,
+  SkillSnapshot,
   PortraitType,
   SchoolClass,
   Student,
 } from "./types";
+
+const ADMISSIONS_QUESTIONS = fs
+  .readFileSync(
+    path.join(process.cwd(), "prompts", "admissions-questions.txt"),
+    "utf-8"
+  )
+  .split("\n")
+  .map((q) => q.trim())
+  .filter(Boolean);
+
+function slugify(name: string): string {
+  const base = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (base.length === 0) return "applicant";
+  if (base.length === 1) return base[0];
+  return `${base[0]}-${base[base.length - 1][0]}`;
+}
+
+function newToken(): string {
+  return randomBytes(4).toString("hex");
+}
+
+function applicantRow(id: number): Applicant {
+  const applicant = getApplicant(id);
+  if (!applicant) throw new Error("Applicant not found");
+  return applicant;
+}
 
 export async function draftObservationAction(
   rawText: string
@@ -75,6 +129,7 @@ export async function saveObservationAction(input: {
     clean_text: string;
     tags: string;
     discipline_flag: string | null;
+    source: Observation["source"];
     created_at: string;
   };
 
@@ -87,6 +142,11 @@ export async function draftPortraitAction(
 ): Promise<Portrait> {
   const student = getStudent(studentId);
   if (!student) throw new Error("Student not found");
+  if (type === "admissions" && !isSupabaseConfigured()) {
+    throw new Error(
+      "Admissions stories need Supabase configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY in .env.local) — not set up in this environment."
+    );
+  }
   const observations = getObservationsForStudent(studentId);
 
   const { content } =
@@ -233,4 +293,369 @@ export async function signPortraitAction(
   revalidatePath(`/students/${existing.student_id}`);
 
   return (await getPortrait(portraitId)) as Portrait;
+}
+
+export async function startApplicantAction(name: string): Promise<Applicant> {
+  const trimmed = name.trim();
+  if (!trimmed) throw new Error("A name is required to start an application");
+
+  const answers: ApplicantAnswer[] = ADMISSIONS_QUESTIONS.map((question) => ({
+    question,
+    answer: "",
+  }));
+
+  const info = db
+    .prepare(
+      `INSERT INTO applicants (name, slug, token, answers) VALUES (?, ?, ?, ?)`
+    )
+    .run(trimmed, slugify(trimmed), newToken(), JSON.stringify(answers));
+
+  return applicantRow(info.lastInsertRowid as number);
+}
+
+export async function saveApplicantAnswerAction(
+  applicantId: number,
+  questionIndex: number,
+  answerText: string
+): Promise<void> {
+  const applicant = applicantRow(applicantId);
+  if (applicant.status !== "in_progress") return;
+
+  const answers = applicant.answers.map((a, i) =>
+    i === questionIndex ? { ...a, answer: answerText } : a
+  );
+
+  db.prepare("UPDATE applicants SET answers = ? WHERE id = ?").run(
+    JSON.stringify(answers),
+    applicantId
+  );
+}
+
+export async function submitApplicantAction(
+  applicantId: number
+): Promise<Applicant> {
+  const applicant = applicantRow(applicantId);
+
+  const { result } = await draftAdmissionsPathways(applicant.answers);
+
+  db.prepare(
+    `UPDATE applicants SET generated_pathways = ?, status = 'submitted' WHERE id = ?`
+  ).run(JSON.stringify(result), applicantId);
+
+  revalidatePath("/admissions");
+
+  return applicantRow(applicantId);
+}
+
+export async function regenerateApplicantPathwaysAction(
+  applicantId: number
+): Promise<Applicant> {
+  const applicant = applicantRow(applicantId);
+  const { result } = await draftAdmissionsPathways(applicant.answers);
+
+  db.prepare(`UPDATE applicants SET generated_pathways = ? WHERE id = ?`).run(
+    JSON.stringify(result),
+    applicantId
+  );
+
+  revalidatePath(`/admissions/${applicantId}`);
+
+  return applicantRow(applicantId);
+}
+
+export async function approveApplicantAction(
+  applicantId: number,
+  approvedBy: string
+): Promise<Applicant> {
+  const trimmed = approvedBy.trim();
+  if (!trimmed) throw new Error("A staff name is required to approve a Pathway page");
+  const applicant = applicantRow(applicantId);
+  if (!applicant.generated) {
+    throw new Error("Generate Pathways before approving");
+  }
+
+  db.prepare(
+    `UPDATE applicants SET status = 'approved', approved_by = ?, approved_at = datetime('now') WHERE id = ?`
+  ).run(trimmed, applicantId);
+
+  revalidatePath(`/admissions/${applicantId}`);
+  revalidatePath(`/applicant/${applicant.slug}-${applicant.token}`);
+
+  return applicantRow(applicantId);
+}
+
+export async function convertApplicantToStudentAction(
+  applicantId: number
+): Promise<Student> {
+  const applicant = applicantRow(applicantId);
+  if (!applicant.generated) {
+    throw new Error("Generate Pathways before enrolling this applicant");
+  }
+  if (applicant.converted_student_id) {
+    return getStudent(applicant.converted_student_id) as Student;
+  }
+
+  const grade = applicant.grade ?? 9;
+
+  const studentInfo = db
+    .prepare("INSERT INTO students (name, grade) VALUES (?, ?)")
+    .run(applicant.name, grade);
+  const studentId = studentInfo.lastInsertRowid as number;
+
+  const insertObservation = db.prepare(
+    `INSERT INTO observations (student_id, author, raw_text, clean_text, tags, discipline_flag, source)
+     VALUES (?, ?, ?, ?, ?, NULL, 'admissions')`
+  );
+  const seedTx = db.transaction(() => {
+    for (const obs of applicant.generated!.seedObservations) {
+      insertObservation.run(
+        studentId,
+        "Admissions (from application)",
+        obs.text,
+        obs.text,
+        JSON.stringify(obs.tags)
+      );
+    }
+    db.prepare(
+      `UPDATE applicants SET status = 'enrolled', converted_student_id = ? WHERE id = ?`
+    ).run(studentId, applicantId);
+  });
+  seedTx();
+
+  revalidatePath(`/admissions/${applicantId}`);
+  revalidatePath("/");
+  revalidatePath(`/students/${studentId}`);
+
+  return getStudent(studentId) as Student;
+}
+
+export async function createCourseAction(
+  name: string,
+  teacherName: string,
+  studentIds: number[]
+): Promise<Course> {
+  const trimmedName = name.trim();
+  const trimmedTeacher = teacherName.trim();
+  if (!trimmedName) throw new Error("A course name is required");
+  if (!trimmedTeacher) throw new Error("A teacher name is required");
+
+  const info = db
+    .prepare("INSERT INTO courses (name, teacher_name) VALUES (?, ?)")
+    .run(trimmedName, trimmedTeacher);
+  const courseId = info.lastInsertRowid as number;
+
+  const enroll = db.prepare(
+    "INSERT OR IGNORE INTO course_students (course_id, student_id) VALUES (?, ?)"
+  );
+  const tx = db.transaction(() => {
+    for (const studentId of studentIds) enroll.run(courseId, studentId);
+  });
+  tx();
+
+  revalidatePath("/courses");
+
+  return getCourse(courseId) as Course;
+}
+
+export async function addCourseSkillAction(
+  courseId: number,
+  name: string,
+  description: string
+): Promise<CourseSkill> {
+  const trimmedName = name.trim();
+  if (!trimmedName) throw new Error("A skill name is required");
+
+  const info = db
+    .prepare(
+      "INSERT INTO course_skills (course_id, name, description) VALUES (?, ?, ?)"
+    )
+    .run(courseId, trimmedName, description.trim());
+
+  revalidatePath(`/courses/${courseId}`);
+
+  return db
+    .prepare("SELECT * FROM course_skills WHERE id = ?")
+    .get(info.lastInsertRowid) as CourseSkill;
+}
+
+export async function updateCourseCanvasIdAction(
+  courseId: number,
+  canvasCourseId: string
+): Promise<Course> {
+  const trimmed = canvasCourseId.trim();
+
+  db.prepare("UPDATE courses SET canvas_course_id = ? WHERE id = ?").run(
+    trimmed || null,
+    courseId
+  );
+
+  revalidatePath(`/courses/${courseId}`);
+
+  return getCourse(courseId) as Course;
+}
+
+export async function listAvailableDriveDocsAction(): Promise<DriveDoc[]> {
+  return getDriveSource().listAvailableDocs();
+}
+
+export async function linkDriveDocAction(
+  courseId: number,
+  fileId: string
+): Promise<Course> {
+  const doc = await getDriveSource().fetchDoc(fileId);
+
+  db.prepare(
+    "UPDATE courses SET drive_doc_name = ?, drive_doc_content = ? WHERE id = ?"
+  ).run(doc.name, doc.content, courseId);
+
+  revalidatePath(`/courses/${courseId}`);
+
+  return getCourse(courseId) as Course;
+}
+
+export interface PendingSkillObservation {
+  studentId: number;
+  studentName: string;
+  text: string;
+  tags: FormationTag[];
+}
+
+async function runCourseSync(courseId: number): Promise<{
+  course: Course;
+  snapshots: SkillSnapshot[];
+  pendingObservations: PendingSkillObservation[];
+}> {
+  const course = getCourse(courseId);
+  if (!course) throw new Error("Course not found");
+
+  const skills = getCourseSkills(courseId);
+  if (skills.length === 0) throw new Error("Add at least one skill before syncing");
+
+  const roster = getCourseRoster(courseId);
+  const rosterNames = roster.map((s) => s.name);
+  const worldKey = course.canvas_course_id ?? `local-${course.id}`;
+
+  const rawCanvasData = await getCanvasSource().fetchCourseData(
+    worldKey,
+    rosterNames,
+    course.name
+  );
+  // Live Canvas returns real student names — rename onto the local fictional
+  // roster immediately, before this data touches storage or Claude. See
+  // pseudonymizeToRoster's doc comment in lib/integrations/canvas.ts.
+  const canvasData = isLiveCanvasConfigured()
+    ? pseudonymizeToRoster(rawCanvasData, rosterNames)
+    : rawCanvasData;
+
+  const { drafts } = await draftSkillSnapshots(
+    course.name,
+    skills,
+    course.drive_doc_content,
+    canvasData
+  );
+
+  const skillByName = new Map(skills.map((s) => [s.name, s]));
+  const studentByName = new Map(roster.map((s) => [s.name, s]));
+
+  const upsert = db.prepare(
+    `INSERT INTO skill_snapshots (student_id, skill_id, narrative, evidence, updated_at)
+     VALUES (?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(student_id, skill_id)
+     DO UPDATE SET narrative = excluded.narrative, evidence = excluded.evidence, updated_at = datetime('now')`
+  );
+
+  const pendingObservations: PendingSkillObservation[] = [];
+  const tx = db.transaction(() => {
+    for (const draft of drafts) {
+      const student = studentByName.get(draft.studentName);
+      const skill = skillByName.get(draft.skillName);
+      if (!student || !skill) continue;
+      upsert.run(student.id, skill.id, draft.narrative, JSON.stringify(draft.evidence));
+      if (draft.proposedObservation) {
+        pendingObservations.push({
+          studentId: student.id,
+          studentName: student.name,
+          text: draft.proposedObservation.text,
+          tags: draft.proposedObservation.tags,
+        });
+      }
+    }
+    db.prepare("UPDATE courses SET last_synced_at = datetime('now') WHERE id = ?").run(
+      courseId
+    );
+  });
+  tx();
+
+  revalidatePath(`/courses/${courseId}`);
+  revalidatePath("/");
+
+  return {
+    course: getCourse(courseId) as Course,
+    snapshots: getSkillSnapshotsForCourse(courseId),
+    pendingObservations,
+  };
+}
+
+export async function syncCourseAction(courseId: number): Promise<{
+  course: Course;
+  snapshots: SkillSnapshot[];
+  pendingObservations: PendingSkillObservation[];
+}> {
+  return runCourseSync(courseId);
+}
+
+export async function simulateCanvasActivityAction(courseId: number): Promise<{
+  message: string;
+  course: Course;
+  snapshots: SkillSnapshot[];
+  pendingObservations: PendingSkillObservation[];
+}> {
+  if (isLiveCanvasConfigured()) {
+    throw new Error("Simulate only works against the mock Canvas — live Canvas is configured.");
+  }
+  const course = getCourse(courseId);
+  if (!course) throw new Error("Course not found");
+  const roster = getCourseRoster(courseId);
+  const worldKey = course.canvas_course_id ?? `local-${course.id}`;
+
+  ensureMockWorld(worldKey, course.name, roster.map((s) => s.name));
+  const message = simulateCanvasActivity(worldKey);
+  if (!message) throw new Error("Nothing to simulate yet");
+
+  const syncResult = await runCourseSync(courseId);
+  return { message, ...syncResult };
+}
+
+export async function approveSkillSignalObservationAction(input: {
+  studentId: number;
+  text: string;
+  tags: FormationTag[];
+}): Promise<Observation> {
+  const { studentId, text, tags } = input;
+
+  const info = db
+    .prepare(
+      `INSERT INTO observations (student_id, author, raw_text, clean_text, tags, discipline_flag, source)
+       VALUES (?, 'Canvas skill signal (teacher-approved)', ?, ?, ?, NULL, 'canvas')`
+    )
+    .run(studentId, text, text, JSON.stringify(tags));
+
+  revalidatePath(`/students/${studentId}`);
+  revalidatePath("/");
+
+  const row = db
+    .prepare("SELECT * FROM observations WHERE id = ?")
+    .get(info.lastInsertRowid) as {
+    id: number;
+    student_id: number;
+    author: string;
+    raw_text: string;
+    clean_text: string;
+    tags: string;
+    discipline_flag: string | null;
+    source: Observation["source"];
+    created_at: string;
+  };
+
+  return { ...row, tags: JSON.parse(row.tags) as FormationTag[] };
 }

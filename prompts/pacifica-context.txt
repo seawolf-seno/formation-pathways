@@ -1,0 +1,93 @@
+Pacifica Christian High School — knowledge base for generating admissions Pathways.
+Only use experiences, programs, and routes described below; do not invent programs.
+Two kinds of facts are marked below: LIVE (real, currently offered, from the school's
+own public website) and PROPOSED (from an internal roadmap, not yet live — describe
+these as "coming to Pacifica" / "in development," never as already running).
+
+FORMATION FRAMEWORK (the six dimensions every Pathway should touch on, in the
+applicant's language, never as a labeled score): Spiritual Depth, Intellectual
+Courage, Character Under Pressure, Love of Neighbor, Emerging Superpowers,
+Sense of Calling.
+
+FACULTY — real names and departments only (pacificachristian.org/about/our-staff).
+No bios beyond subject are public, so NEVER invent a personal teaching style,
+habit, or anecdote for a named teacher below. When a pathway names a mentor, pick
+ONE real name from the department that best matches the pathway's emphasis, and
+describe them only by name + department + what that department/program actually
+does (from this file) — never a fabricated personality trait.
+
+- English: Ruth Andrew, Amber DeBenning, Dr. Katheryn Park, Katie Savage, Isaias Uggetti
+- Mathematics: Matt Benedetto, Steven Eno, Darryle Mensah, Jeremy Tuggy, Josephine Wilson
+- History/Theology: Scott Comer, Violet Comer (Dance/History), Chris McCulloch,
+  Joo Bin Kim (History), Michael Weaver
+- Philosophy/Theology/Psychology: Devin Ketch; Latin/Theology: Linnea Scobey
+- Science: Nicole Geiger (Biology), Clarita Joung (Chemistry), Nic Scobey (Biology/Chemistry),
+  Dr. David Sumida (Engineering)
+- World Languages: Karla Herrera (Spanish), Ryan Tahbaz (Spanish/Soccer)
+- Arts: Tehillah Alphonso (A Cappella Music), Sam Anderson (Film/Photography),
+  Carson Vandermade (Visual Arts), Zemeira Walker (Visual Arts)
+- Chapel/Spiritual Life: Trevor DeBenning (Chapel Director)
+- Philosophy & Theology Center director: Stephen Roberson
+
+LIVE SIGNATURE PROGRAMS (real, currently offered)
+
+- STEM Scholars: for students concentrating in science/tech/engineering/math.
+  Clubs: Drone Club (competes in the Aerial Drone Competition), Makers Space
+  (student-led build/innovation workshop), Women in STEM (service-oriented),
+  Chem Club. A "STEM Scholar with Distinction" award exists via 8+ STEM courses
+  (3+ AP), a 3.7 weighted GPA, and 100 hours of external STEM pursuits presented
+  to the community.
+- The Minchin Center for Economics & Innovation: AP Economics and Economics &
+  Entrepreneurship (Shark-Tank-style pitches); The Wolf Shack, a real student-run
+  campus store (inventory, pricing, sales, profit); Young Entrepreneurs
+  Association; a DECA chapter; This Little Light Africa Club (social
+  entrepreneurship supporting farming/solar/education in West Africa); the
+  Insight Speaker Series bringing in outside professionals to review pitches and
+  guest-teach.
+- The Center for Philosophy & Theology (director: Stephen Roberson): Oxford-style
+  small-group seminars on first principles — courses include Old Testament, New
+  Testament, Moral Philosophy, Ancient Philosophy, Modern Philosophy, Political
+  Philosophy, Patristic Theology. Values "Intellectual Hospitality" (understand
+  differing views rather than attack them) and "Leisure in Learning" (deep
+  reflection over constant output).
+- PACARTS (the arts program): theater, visual arts, film/photography, music, and
+  dance, taught by working artist-instructors; over half the student body
+  participates. The i.Sight Festival is an end-of-year, three-night showcase
+  across every discipline; there's also an annual Student Film Festival
+  screening at a local theater.
+- Athletics: philosophy of "process over product" — player development and
+  character alongside winning, measured by CIF championships. The "Wolfpack"
+  student section supports home games. Athletes can specialize or play multiple
+  sports across their four years.
+- Spiritual Life: weekly all-school chapel (prayer, singing, teaching). An
+  annual All-School Retreat (small-group discussions on real-life and faith
+  questions, run in partnership with Young Life since 2007, held in Arizona)
+  is the year's deepest shared formation experience. Open, honest conversation
+  about faith is welcomed regardless of a student's background.
+
+PROPOSED / IN DEVELOPMENT (internal roadmap — describe as upcoming, not live yet)
+
+- "Lost Canyon": the school's proposed re-framing of the All-School Retreat as a
+  fully phone-free keystone harvest — describe as "the retreat Pacifica is
+  building toward," not as an already-enforced no-phones policy.
+- Pathway Expeditions: proposed small-group (2 adults, 6 students) 6–7 day
+  academic road trips (e.g. Mammoth, the Sierra) blending Socratic seminar with
+  outdoor skill-building. Coming, not yet running.
+- The Forge / Advanced AI Agents class: a proposed school-hosted pipeline for
+  students to ship their own software from laptop to a real dev server to
+  production. Coming, not yet running.
+
+LAUNCH ROUTES (the Pathways Engine catalog — a four-year horizon should name
+2–3 of these, chosen to fit the applicant, never generic "college" alone):
+selective colleges and universities, the Thiel Fellowship, Y Combinator or
+similar startup accelerators, Emergent Ventures-style grants, gap-year
+fellowships, trade apprenticeships, service academies, conservatories,
+university research tracks, and vocational ministry.
+
+GOVERNING PRINCIPLE
+AI works for the adults, behind the scenes. A Pathway is a forward-looking
+compass, never a backward-looking record or a ranking. Struggle is framed as
+growth-in-progress. Never diagnose, label, or score a student's character.
+Never invent a personal fact, habit, or teaching-style claim about a real,
+named faculty member — only their real department and what that department
+or program actually offers.

@@ -17,6 +17,10 @@ function createSupabase(): SupabaseClient {
   });
 }
 
+export function isSupabaseConfigured(): boolean {
+  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
 let client: SupabaseClient | undefined = global.__formationSupabase;
 
 // Constructed lazily (not at module load) so importing this module -- e.g.

@@ -1,5 +1,12 @@
 import type Database from "better-sqlite3";
-import type { FormationTag } from "./types";
+import { buildMockCanvasSyncResult } from "./integrations/canvas";
+import { MOCK_DOCS } from "./integrations/drive";
+import { fallbackSkillSnapshots } from "./claude";
+import type {
+  ApplicantAnswer,
+  FormationTag,
+  GeneratedPathwaysResult,
+} from "./types";
 
 interface SeedStudent {
   name: string;
@@ -301,6 +308,241 @@ export function seedIfEmpty(db: Database.Database): void {
   seedTx();
 }
 
+interface SeedApplicant {
+  name: string;
+  grade: number;
+  slug: string;
+  token: string;
+  status: "submitted" | "approved";
+  answers: ApplicantAnswer[];
+  generated: GeneratedPathwaysResult;
+}
+
+const APPLICANTS: SeedApplicant[] = [
+  {
+    name: "Emma Reyes",
+    grade: 9,
+    slug: "emma-r",
+    token: "8f3k2a",
+    status: "approved",
+    answers: [
+      {
+        question:
+          "Tell us about a time you lost track of time doing something. What were you doing, and what pulled you in?",
+        answer:
+          "I was rebuilding my little brother's broken RC car with parts from three other broken toys. I looked up and it was dark outside — I'd missed dinner. I just wanted to see if it would actually drive again.",
+      },
+      {
+        question:
+          "Who is someone you admire — famous or not — and what is it about the way they live that you want for your own life?",
+        answer:
+          "My abuela. She fixes everything in her house herself instead of paying someone, and she taught me it's not about money, it's about not being afraid to open something up and figure out how it works.",
+      },
+      {
+        question:
+          "Tell us about something hard you've faced. What did it teach you about who you are?",
+        answer:
+          "Moving schools in 7th grade and being the only new kid. I learned I'd rather sit with the one lonely person at lunch than try to impress the popular table — I noticed I actually looked for kids sitting alone after that.",
+      },
+      {
+        question:
+          "If you could spend a whole year getting really good at one thing, what would you choose, and why that?",
+        answer:
+          "Building actual robots, not just toy ones. I want to build something that helps my abuela around the house since her knees hurt now.",
+      },
+      {
+        question:
+          "When you imagine yourself at high school graduation, what do you hope is true about you that isn't true yet?",
+        answer:
+          "That I stopped being afraid to show people something I built before it's finished and perfect.",
+      },
+    ],
+    generated: {
+      pathways: [
+        {
+          name: "The Fixer",
+          firstSemester:
+            'Emma starts in STEM Scholars, where "not being afraid to open something up and figure out how it works" becomes her actual Makers Space project instead of a rainy-day hobby.',
+          mentorArchetype:
+            "Dr. David Sumida (Engineering) — teaches in the STEM Scholars program, home to the Makers Space where students build and iterate on their own projects.",
+          stretchChallenge:
+            "Presenting an unfinished robotics build to a room of people — practicing the exact thing she said she wants to stop being afraid of: \"showing people something I built before it's finished.\"",
+          fourYearHorizon: [
+            "an engineering-focused university research track",
+            "a summer apprenticeship with a robotics or hardware startup",
+          ],
+        },
+        {
+          name: "Abuela's Engineer",
+          firstSemester:
+            "Her Makers Space project starts as something practical: a low-cost assistive device idea for her abuela's knees, workshopped with real tools from day one.",
+          mentorArchetype:
+            "Steven Eno (Mathematics) — the math faculty behind the problem-solving that a real assistive-device build actually requires, from STEM Scholars.",
+          stretchChallenge:
+            "Turning a family need into a project other students could actually use — moving from 'fixed it for one person' to 'built something that scales.'",
+          fourYearHorizon: [
+            "a service-academy or vocational engineering track",
+            "a selective university with a strong applied-engineering program",
+          ],
+        },
+        {
+          name: "The One Who Sits Down",
+          firstSemester:
+            'The All-School Retreat comes first, small-group and unhurried, where the instinct she named, looking "for kids sitting alone," gets to be who she is rather than a story she tells in an essay.',
+          mentorArchetype:
+            "Trevor DeBenning (Chapel Director) — runs weekly chapel and the All-School Retreat, where noticing who's on the outside of a group is the whole point.",
+          stretchChallenge:
+            "Leading a small-group mentoring role for a newer student, the way she wished someone had for her in 7th grade.",
+          fourYearHorizon: [
+            "a selective college with strong community-engagement programs",
+            "a gap-year fellowship focused on mentorship or service",
+          ],
+        },
+      ],
+      seedObservations: [
+        {
+          text: 'In her application, Emma wrote about rebuilding her little brother\'s RC car from parts of three broken toys, losing track of time until "it was dark outside." Worth pairing her with STEM Scholars early.',
+          tags: ["Emerging Superpowers"],
+        },
+        {
+          text: "She wrote about looking for the one lonely kid at a new lunch table instead of trying to impress the popular one — a pattern worth watching for in her first weeks.",
+          tags: ["Love of Neighbor", "Character Under Pressure"],
+        },
+        {
+          text: 'She named wanting to stop being "afraid to show people something I built before it\'s finished" — a good, gentle thing to invite her into early, not force.',
+          tags: ["Intellectual Courage"],
+        },
+      ],
+    },
+  },
+  {
+    name: "Marcus Bell",
+    grade: 10,
+    slug: "marcus-b",
+    token: "q7d1n9",
+    status: "submitted",
+    answers: [
+      {
+        question:
+          "Tell us about a time you lost track of time doing something. What were you doing, and what pulled you in?",
+        answer:
+          "Reading about the early Church fathers for a debate I wasn't even assigned. I wanted to know if what my youth pastor said last week actually held up historically.",
+      },
+      {
+        question:
+          "Who is someone you admire — famous or not — and what is it about the way they live that you want for your own life?",
+        answer:
+          "My debate coach. She'll argue the side she personally disagrees with just as hard, because she says you don't actually understand your own position until you've defended the other one.",
+      },
+      {
+        question:
+          "Tell us about something hard you've faced. What did it teach you about who you are?",
+        answer:
+          "I doubted my faith pretty seriously last year and was scared to tell anyone at my old church. I learned that asking the question out loud didn't destroy anything — it's actually what got me somewhere real.",
+      },
+      {
+        question:
+          "If you could spend a whole year getting really good at one thing, what would you choose, and why that?",
+        answer:
+          "Formal debate and rhetoric — I want to be able to actually defend what I believe under real pressure, not just at church camp.",
+      },
+      {
+        question:
+          "When you imagine yourself at high school graduation, what do you hope is true about you that isn't true yet?",
+        answer:
+          "That I can sit across from someone who thinks I'm wrong about God and not get defensive.",
+      },
+      ],
+    generated: {
+      pathways: [
+        {
+          name: "The Honest Apologist",
+          firstSemester:
+            'Marcus starts in an Oxford-style seminar in the Center for Philosophy & Theology, where "asking the question out loud" is the assignment, not the risk — his first seminar topic is the one he was scared to raise at his old church.',
+          mentorArchetype:
+            "Devin Ketch (Philosophy/Theology/Psychology) — teaches in the Center for Philosophy & Theology, where seminars are built around Old and New Testament, moral and ancient philosophy, and defending an idea all the way through.",
+          stretchChallenge:
+            "Debating a position he actually holds, in front of people who disagree, and staying in the room afterward — practicing exactly what he said isn't true of him yet.",
+          fourYearHorizon: [
+            "a selective college with a strong debate or rhetoric program",
+            "a ministry-track apprenticeship under a working pastor",
+          ],
+        },
+        {
+          name: "Steelman",
+          firstSemester:
+            "Following the rule he admires in his coach, his first seminar assignment is arguing a side he personally disagrees with — turning 'you don't understand your own position until you've defended the other one' into his actual curriculum.",
+          mentorArchetype:
+            "Dr. Katheryn Park (English) — English faculty whose coursework in argument and rhetoric gives him the tools to build and take apart a case on paper, not just out loud.",
+          stretchChallenge:
+            "Writing and delivering the strongest possible case against his own current belief, then answering it honestly.",
+          fourYearHorizon: [
+            "a research track in philosophy, theology, or rhetoric at a selective university",
+            "a fellowship or program built around public discourse and civic debate",
+          ],
+        },
+        {
+          name: "Unshaken, Not Unquestioned",
+          firstSemester:
+            "The All-School Retreat becomes the place where he first says out loud to peers what he only admitted alone last year — that doubt is where his year of growth actually started.",
+          mentorArchetype:
+            "Linnea Scobey (Latin/Theology) — theology faculty in a program built on \"Intellectual Hospitality,\" treating a hard question about faith as worth sitting with, not managing away.",
+          stretchChallenge:
+            "Sitting across from a classmate who disagrees with him about God, on purpose, and staying curious instead of defensive.",
+          fourYearHorizon: [
+            "a vocational-ministry track",
+            "a selective college with a strong philosophy or religious-studies department",
+          ],
+        },
+      ],
+      seedObservations: [
+        {
+          text: 'He wrote about reading early Church history for a debate "I wasn\'t even assigned," to check whether something he\'d been taught actually held up. Sharp, self-directed curiosity worth naming early.',
+          tags: ["Intellectual Courage", "Spiritual Depth"],
+        },
+        {
+          text: 'He described doubting his faith seriously and being "scared to tell anyone" at his old church, then finding that saying it out loud "is actually what got me somewhere real."',
+          tags: ["Spiritual Depth", "Character Under Pressure"],
+        },
+        {
+          text: "He named wanting to sit across from someone who thinks he's wrong about God without getting defensive — worth a gentle check-in once he's in an actual debate room.",
+          tags: ["Character Under Pressure"],
+        },
+      ],
+    },
+  },
+];
+
+export function seedApplicantsIfEmpty(db: Database.Database): void {
+  const row = db.prepare("SELECT COUNT(*) as count FROM applicants").get() as {
+    count: number;
+  };
+  if (row.count > 0) return;
+
+  const insert = db.prepare(
+    `INSERT INTO applicants (name, grade, slug, token, answers, generated_pathways, status, approved_by, approved_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+
+  const seedTx = db.transaction(() => {
+    for (const applicant of APPLICANTS) {
+      insert.run(
+        applicant.name,
+        applicant.grade,
+        applicant.slug,
+        applicant.token,
+        JSON.stringify(applicant.answers),
+        JSON.stringify(applicant.generated),
+        applicant.status,
+        applicant.status === "approved" ? "Ms. Alvarez" : null,
+        applicant.status === "approved" ? new Date().toISOString() : null
+      );
+    }
+  });
+
+  seedTx();
+}
+
 interface SeedClass {
   name: string;
   memberNames: string[];
@@ -363,6 +605,138 @@ export function seedClassesIfEmpty(db: Database.Database): void {
           | { id: number }
           | undefined;
         if (student) enroll.run(classId, student.id);
+      }
+    }
+  });
+
+  seedTx();
+}
+
+interface SeedCourse {
+  name: string;
+  teacherName: string;
+  memberNames: string[];
+  skills: { name: string; description: string }[];
+  driveDocId: string;
+}
+
+const COURSES: SeedCourse[] = [
+  {
+    name: "Honors Physics",
+    teacherName: "Mr. Sato",
+    memberNames: [
+      "Devon Brooks",
+      "Sofia Reyes",
+      "Malik Thompson",
+      "Ethan Walker",
+      "Ben Whitfield",
+    ],
+    skills: [
+      { name: "Hypothesis & Reasoning", description: "States a falsifiable hypothesis and explains the physical reasoning behind it before collecting data." },
+      { name: "Experimental Design", description: "Controls variables deliberately and can explain why each control matters." },
+      { name: "Data & Error Analysis", description: "Reports uncertainty honestly, including sources of error, rather than hiding a messy result." },
+      { name: "Revision Under Feedback", description: "States plainly when a hypothesis turns out wrong and re-derives rather than quietly moving on." },
+      { name: "Collaboration", description: "Helps a lab partner debug their setup or reasoning without just handing over the answer." },
+      { name: "Mathematical Modeling", description: "Translates a physical situation into the right equation, not just plugging numbers into a formula." },
+    ],
+    driveDocId: "mock-physics-rubric",
+  },
+  {
+    name: "American Literature",
+    teacherName: "Ms. Alvarez",
+    memberNames: [
+      "Maya Chen",
+      "Jordan Ellis",
+      "Priya Patel",
+      "Grace Osei",
+      "Lucas Ferreira",
+      "Noor Hassan",
+    ],
+    skills: [
+      { name: "Close Reading", description: "Notices something in the text a first read would miss, and can point to the exact line that shows it." },
+      { name: "Argument Under Pressure", description: "When another student pushes back in discussion, sharpens the claim instead of abandoning it." },
+      { name: "Voice", description: "Essays sound like a specific person thinking, not a five-paragraph template." },
+      { name: "Historical Context", description: "Connects a text to the moment it was written without flattening the text into only that moment." },
+      { name: "Generosity as a Reader", description: "In peer review, finds the strongest version of a classmate's argument before critiquing it." },
+      { name: "Revision", description: "A second draft is a genuinely different, stronger piece of thinking, not a light polish of the first." },
+    ],
+    driveDocId: "mock-lit-notes",
+  },
+];
+
+export function seedCoursesIfEmpty(db: Database.Database): void {
+  const row = db.prepare("SELECT COUNT(*) as count FROM courses").get() as {
+    count: number;
+  };
+  if (row.count > 0) return;
+
+  const insertCourse = db.prepare(
+    "INSERT INTO courses (name, teacher_name, drive_doc_name, drive_doc_content, last_synced_at) VALUES (?, ?, ?, ?, datetime('now'))"
+  );
+  const insertSkill = db.prepare(
+    "INSERT INTO course_skills (course_id, name, description) VALUES (?, ?, ?)"
+  );
+  const findStudentByName = db.prepare("SELECT id, name FROM students WHERE name = ?");
+  const enroll = db.prepare(
+    "INSERT OR IGNORE INTO course_students (course_id, student_id) VALUES (?, ?)"
+  );
+  const insertSnapshot = db.prepare(
+    `INSERT INTO skill_snapshots (student_id, skill_id, narrative, evidence, updated_at)
+     VALUES (?, ?, ?, ?, datetime('now'))`
+  );
+
+  const seedTx = db.transaction(() => {
+    for (const course of COURSES) {
+      const doc = MOCK_DOCS.find((d) => d.id === course.driveDocId);
+      const info = insertCourse.run(
+        course.name,
+        course.teacherName,
+        doc?.name ?? null,
+        doc?.content ?? null
+      );
+      const courseId = info.lastInsertRowid as number;
+
+      const skillIds: number[] = course.skills.map((skill) => {
+        const skillInfo = insertSkill.run(courseId, skill.name, skill.description);
+        return skillInfo.lastInsertRowid as number;
+      });
+
+      const roster: { id: number; name: string }[] = [];
+      for (const name of course.memberNames) {
+        const student = findStudentByName.get(name) as
+          | { id: number; name: string }
+          | undefined;
+        if (student) {
+          enroll.run(courseId, student.id);
+          roster.push(student);
+        }
+      }
+
+      const canvasData = buildMockCanvasSyncResult(
+        course.name,
+        roster.map((s) => s.name)
+      );
+      const courseSkills = course.skills.map((s, i) => ({
+        id: skillIds[i],
+        course_id: courseId,
+        name: s.name,
+        description: s.description,
+        created_at: "",
+      }));
+      const drafts = fallbackSkillSnapshots(courseSkills, canvasData);
+
+      const skillIdByName = new Map(courseSkills.map((s) => [s.name, s.id]));
+      const studentIdByName = new Map(roster.map((s) => [s.name, s.id]));
+      for (const draft of drafts) {
+        const studentId = studentIdByName.get(draft.studentName);
+        const skillId = skillIdByName.get(draft.skillName);
+        if (!studentId || !skillId) continue;
+        insertSnapshot.run(
+          studentId,
+          skillId,
+          draft.narrative,
+          JSON.stringify(draft.evidence)
+        );
       }
     }
   });
