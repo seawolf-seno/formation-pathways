@@ -13,9 +13,11 @@ function latestOf(portraits: Portrait[], type: PortraitType): Portrait | null {
 export function PortraitPanel({
   studentId,
   initialPortraits,
+  admissionsAvailable,
 }: {
   studentId: number;
   initialPortraits: Portrait[];
+  admissionsAvailable: boolean;
 }) {
   const [portraits, setPortraits] = useState(initialPortraits);
   const [openId, setOpenId] = useState<number | string | null>(null);
@@ -51,14 +53,27 @@ export function PortraitPanel({
           onDraft={() => handleDraft("family")}
           onOpen={(id) => setOpenId(id)}
         />
-        <PortraitCard
-          title="Admissions story"
-          description="Same evidence, anonymized into a 150-word transformation arc."
-          latest={admissionsLatest}
-          loading={loading === "admissions"}
-          onDraft={() => handleDraft("admissions")}
-          onOpen={(id) => setOpenId(id)}
-        />
+        {admissionsAvailable ? (
+          <PortraitCard
+            title="Admissions story"
+            description="Same evidence, anonymized into a 150-word transformation arc."
+            latest={admissionsLatest}
+            loading={loading === "admissions"}
+            onDraft={() => handleDraft("admissions")}
+            onOpen={(id) => setOpenId(id)}
+          />
+        ) : (
+          <div className="flex flex-col justify-center rounded-xl border border-dashed border-[var(--color-border)] bg-white p-4 text-xs text-[var(--color-ink-muted)]">
+            <p className="font-display text-base text-[var(--color-navy-ink)]">
+              Admissions story
+            </p>
+            <p className="mt-1">
+              Needs Supabase configured (SUPABASE_URL /
+              SUPABASE_SERVICE_ROLE_KEY in .env.local) — not set up in this
+              environment.
+            </p>
+          </div>
+        )}
       </div>
 
       {open && (

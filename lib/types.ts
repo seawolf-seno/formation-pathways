@@ -23,6 +23,8 @@ export interface StudentWithStats extends Student {
   needs_attention: boolean;
 }
 
+export type ObservationSource = "voice" | "text" | "admissions" | "canvas";
+
 export interface Observation {
   id: number;
   student_id: number;
@@ -31,6 +33,7 @@ export interface Observation {
   clean_text: string;
   tags: FormationTag[];
   discipline_flag: string | null;
+  source: ObservationSource;
   created_at: string;
 }
 
@@ -66,4 +69,95 @@ export interface DraftObservationResult {
   suggestedTags: SuggestedTag[];
   disciplineFlag: string | null;
   usedFallback: boolean;
+}
+
+export type ApplicantStatus =
+  | "in_progress"
+  | "submitted"
+  | "approved"
+  | "enrolled";
+
+export interface ApplicantAnswer {
+  question: string;
+  answer: string;
+}
+
+export interface GeneratedPathway {
+  name: string;
+  firstSemester: string;
+  mentorArchetype: string;
+  stretchChallenge: string;
+  fourYearHorizon: string[];
+}
+
+export interface SeedObservationDraft {
+  text: string;
+  tags: FormationTag[];
+}
+
+export interface GeneratedPathwaysResult {
+  pathways: GeneratedPathway[];
+  seedObservations: SeedObservationDraft[];
+}
+
+export interface Applicant {
+  id: number;
+  name: string;
+  grade: number | null;
+  slug: string;
+  token: string;
+  answers: ApplicantAnswer[];
+  generated: GeneratedPathwaysResult | null;
+  status: ApplicantStatus;
+  approved_by: string | null;
+  approved_at: string | null;
+  converted_student_id: number | null;
+  created_at: string;
+}
+
+export interface Course {
+  id: number;
+  name: string;
+  teacher_name: string;
+  canvas_course_id: string | null;
+  drive_doc_name: string | null;
+  drive_doc_content: string | null;
+  last_synced_at: string | null;
+  created_at: string;
+}
+
+export interface CourseWithStats extends Course {
+  student_count: number;
+  skill_count: number;
+}
+
+export interface CourseSkill {
+  id: number;
+  course_id: number;
+  name: string;
+  description: string;
+  created_at: string;
+}
+
+export interface SkillEvidenceItem {
+  source: "canvas" | "drive";
+  label: string;
+  detail: string;
+}
+
+export interface SkillSnapshot {
+  id: number;
+  student_id: number;
+  skill_id: number;
+  narrative: string;
+  evidence: SkillEvidenceItem[];
+  updated_at: string;
+}
+
+export interface SkillSnapshotDraft {
+  studentName: string;
+  skillName: string;
+  narrative: string;
+  evidence: SkillEvidenceItem[];
+  proposedObservation: { text: string; tags: FormationTag[] } | null;
 }

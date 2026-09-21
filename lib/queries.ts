@@ -1,12 +1,20 @@
 import { db } from "./db";
-import { getSupabase } from "./supabase";
+import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { daysSince } from "./format";
 import type {
+  Applicant,
+  ApplicantAnswer,
   ClassWithStats,
+  Course,
+  CourseSkill,
+  CourseWithStats,
   FormationTag,
+  GeneratedPathwaysResult,
   Observation,
   Portrait,
   SchoolClass,
+  SkillEvidenceItem,
+  SkillSnapshot,
   Student,
   StudentWithStats,
 } from "./types";
@@ -21,6 +29,7 @@ interface ObservationRow {
   clean_text: string;
   tags: string;
   discipline_flag: string | null;
+  source: string | null;
   created_at: string;
 }
 
@@ -28,6 +37,7 @@ function parseObservation(row: ObservationRow): Observation {
   return {
     ...row,
     tags: JSON.parse(row.tags) as FormationTag[],
+    source: (row.source as Observation["source"]) ?? "voice",
   };
 }
 
@@ -154,6 +164,11 @@ export async function getPortraitsForStudent(id: number): Promise<Portrait[]> {
     )
     .all(id) as Portrait[];
 
+  // Admissions stories live in Supabase (see lib/actions.ts); when it isn't
+  // configured, degrade to family portraits only rather than blocking the
+  // whole Student page, matching every Claude call's offline-fallback contract.
+  if (!isSupabaseConfigured()) return familyPortraits;
+
   const { data, error } = await getSupabase()
     .from("admissions_stories")
     .select("*")
@@ -173,6 +188,7 @@ export async function getPortrait(
   id: number | string
 ): Promise<Portrait | undefined> {
   if (typeof id === "string") {
+    if (!isSupabaseConfigured()) return undefined;
     const { data, error } = await getSupabase()
       .from("admissions_stories")
       .select("*")
@@ -185,4 +201,127 @@ export async function getPortrait(
   return db.prepare("SELECT * FROM portraits WHERE id = ?").get(id) as
     | Portrait
     | undefined;
+}
+
+interface ApplicantRow {
+  id: number;
+  name: string;
+  grade: number | null;
+  slug: string;
+  token: string;
+  answers: string;
+  generated_pathways: string | null;
+  status: Applicant["status"];
+  approved_by: string | null;
+  approved_at: string | null;
+  converted_student_id: number | null;
+  created_at: string;
+}
+
+function parseApplicant(row: ApplicantRow): Applicant {
+  return {
+    ...row,
+    answers: JSON.parse(row.answers) as ApplicantAnswer[],
+    generated: row.generated_pathways
+      ? (JSON.parse(row.generated_pathways) as GeneratedPathwaysResult)
+      : null,
+  };
+}
+
+export function getApplicants(): Applicant[] {
+  const rows = db
+    .prepare("SELECT * FROM applicants ORDER BY created_at DESC")
+    .all() as ApplicantRow[];
+  return rows.map(parseApplicant);
+}
+
+export function getApplicant(id: number): Applicant | undefined {
+  const row = db.prepare("SELECT * FROM applicants WHERE id = ?").get(id) as
+    | ApplicantRow
+    | undefined;
+  return row ? parseApplicant(row) : undefined;
+}
+
+export function getApplicantByToken(token: string): Applicant | undefined {
+  const row = db
+    .prepare("SELECT * FROM applicants WHERE token = ?")
+    .get(token) as ApplicantRow | undefined;
+  return row ? parseApplicant(row) : undefined;
+}
+
+export function getCourses(): CourseWithStats[] {
+  return db
+    .prepare(
+      `SELECT c.*,
+              (SELECT COUNT(*) FROM course_students cs WHERE cs.course_id = c.id) as student_count,
+              (SELECT COUNT(*) FROM course_skills sk WHERE sk.course_id = c.id) as skill_count
+       FROM courses c
+       ORDER BY c.name`
+    )
+    .all() as CourseWithStats[];
+}
+
+export function getCourse(id: number): Course | undefined {
+  return db.prepare("SELECT * FROM courses WHERE id = ?").get(id) as
+    | Course
+    | undefined;
+}
+
+export function getCourseSkills(courseId: number): CourseSkill[] {
+  return db
+    .prepare("SELECT * FROM course_skills WHERE course_id = ? ORDER BY id")
+    .all(courseId) as CourseSkill[];
+}
+
+export function getCourseRoster(courseId: number): Student[] {
+  return db
+    .prepare(
+      `SELECT s.* FROM students s
+       JOIN course_students cs ON cs.student_id = s.id
+       WHERE cs.course_id = ?
+       ORDER BY s.name`
+    )
+    .all(courseId) as Student[];
+}
+
+interface SkillSnapshotRow {
+  id: number;
+  student_id: number;
+  skill_id: number;
+  narrative: string;
+  evidence: string;
+  updated_at: string;
+}
+
+function parseSkillSnapshot(row: SkillSnapshotRow): SkillSnapshot {
+  return { ...row, evidence: JSON.parse(row.evidence) as SkillEvidenceItem[] };
+}
+
+export function getSkillSnapshotsForCourse(courseId: number): SkillSnapshot[] {
+  const rows = db
+    .prepare(
+      `SELECT sn.* FROM skill_snapshots sn
+       JOIN course_skills sk ON sk.id = sn.skill_id
+       WHERE sk.course_id = ?`
+    )
+    .all(courseId) as SkillSnapshotRow[];
+  return rows.map(parseSkillSnapshot);
+}
+
+export function getSkillSnapshotsForStudent(studentId: number): SkillSnapshot[] {
+  const rows = db
+    .prepare("SELECT * FROM skill_snapshots WHERE student_id = ?")
+    .all(studentId) as SkillSnapshotRow[];
+  return rows.map(parseSkillSnapshot);
+}
+
+export function getCoursesForStudent(studentId: number): Course[] {
+  return db
+    .prepare(
+      `SELECT c.* FROM courses c
+       JOIN course_students cs ON cs.course_id = c.id
+       WHERE cs.student_id = ?
+       ORDER BY c.name`
+    )
+    .all(studentId) as Course[];
 }

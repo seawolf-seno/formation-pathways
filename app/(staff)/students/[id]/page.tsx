@@ -1,17 +1,23 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
+  getCourseSkills,
+  getCoursesForStudent,
   getObservationsForStudent,
   getPortraitsForStudent,
+  getSkillSnapshotsForStudent,
   getStudent,
   getTagCounts,
 } from "@/lib/queries";
+import { isSupabaseConfigured } from "@/lib/supabase";
 import { humanDaysAgo } from "@/lib/format";
 import { daysSince } from "@/lib/format";
 import { TagCountChips } from "@/components/TagChips";
 import { Timeline } from "@/components/Timeline";
 import { PortraitPanel } from "@/components/PortraitPanel";
 import { StudentPageCapture } from "@/components/StudentPageCapture";
+import { StudentSkills } from "@/components/StudentSkills";
+import type { CourseSkill } from "@/lib/types";
 
 export default async function StudentPage({
   params,
@@ -29,6 +35,12 @@ export default async function StudentPage({
   const lastObservedDays = observations[0]
     ? daysSince(observations[0].created_at)
     : null;
+
+  const courses = getCoursesForStudent(student.id);
+  const skillsByCourse = new Map<number, CourseSkill[]>(
+    courses.map((c) => [c.id, getCourseSkills(c.id)])
+  );
+  const skillSnapshots = getSkillSnapshotsForStudent(student.id);
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
@@ -64,8 +76,25 @@ export default async function StudentPage({
         <h2 className="mb-3 font-display text-lg text-[var(--color-navy-ink)]">
           Pathway Portrait
         </h2>
-        <PortraitPanel studentId={student.id} initialPortraits={portraits} />
+        <PortraitPanel
+          studentId={student.id}
+          initialPortraits={portraits}
+          admissionsAvailable={isSupabaseConfigured()}
+        />
       </div>
+
+      {courses.length > 0 && (
+        <div className="mb-8">
+          <h2 className="mb-3 font-display text-lg text-[var(--color-navy-ink)]">
+            Skills
+          </h2>
+          <StudentSkills
+            courses={courses}
+            skillsByCourse={skillsByCourse}
+            snapshots={skillSnapshots}
+          />
+        </div>
+      )}
 
       <div>
         <h2 className="mb-3 font-display text-lg text-[var(--color-navy-ink)]">
