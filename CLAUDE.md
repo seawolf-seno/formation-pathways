@@ -5,6 +5,31 @@ observations of student formation moments; AI synthesizes them into a
 forward-looking "Pathway" per student. Governing principle: AI works for the
 adults behind the scenes; students stay present, in person, with people.
 
+## Status (update as work happens — keep current, not historical)
+
+- **Built**: all three exec-demo features (spec Part 3) — Voice Capture (Day-1),
+  Admissions Personalized Pathways (`/apply` → `/admissions` → `/applicant/[slug-token]`),
+  Teacher Skills Page (`/courses` — Canvas + Google Drive → skill snapshots). Merged to
+  `main` via PR #3, CI green, as of 2026-09-20.
+- **Blocked 2026-09-21**: live Google Drive setup — seno has no access to the Google
+  Cloud/OAuth 2.0 developer console needed to generate a Drive token, waiting on Pacifica
+  IT. Don't push on this until he says it's unblocked. Everything else (mock Canvas/Drive,
+  the whole app) works with zero live credentials in the meantime.
+- **Next concrete actions, in order**: (1) once IT unblocks Drive, wire a real Canvas
+  sandbox (Free-for-Teacher account, not the real school Canvas) + the Drive doc, using
+  the Canvas-course-ID field on `/courses/[id]` and `.env.local` (`MOCK_INTEGRATIONS=false`
+  + `CANVAS_BASE_URL`/`CANVAS_API_TOKEN`/`GOOGLE_DRIVE_ACCESS_TOKEN`/`GOOGLE_DRIVE_FOLDER_ID`);
+  live Canvas fetches are auto-pseudonymized onto the local fictional roster — see
+  `lib/integrations/canvas.ts`'s doc comment before changing that. (2) Dry-run and
+  rehearse the 10-minute board demo (spec Part 3) — use the "🎲 Simulate Canvas activity"
+  button on `/courses/[id]` for a safe, zero-real-data live moment on stage. (3) Design an
+  alumni consent-reset + light-touch capture model (sketched on the Pacifica Systems Map,
+  not yet built here).
+- Tracked live at https://claude.ai/artifact/3L9fUkHmf4q6d378289uP6 (Formation Pathways
+  section) and narrated architecturally at
+  https://claude.ai/artifact/GWGzrdfMSr8vfWsRycGM1T — keep both current alongside this file
+  when something changes (see the global `~/.claude/CLAUDE.md`'s "Living artifacts" note).
+
 ## Background context
 `/context` holds the business/product background this project was built
 from. At the start of a session, read `context/formation-pathways-agent-context.md`
@@ -23,6 +48,9 @@ conflicts with this file, this file wins for what's already built.
 - Voice capture: browser Web Speech API for live dictation (Chrome), with a
   plain textarea fallback. (Production will use a dedicated speech-to-text
   service; do not block on audio quality now.)
+- Canvas + Google Drive integrations (`lib/integrations/`) are mock-by-default
+  (`MOCK_INTEGRATIONS`); a real per-teacher Canvas token or Drive OAuth token
+  switches to the live client. See "Live-data safety" below before touching either.
 
 ## Product principles — enforce in UI copy and logic, every session
 1. Humans author, AI drafts. Every AI output is labeled "Draft" until a named
@@ -52,8 +80,11 @@ Test for every screen: "would a parent trust this with their child's story?"
 - All Claude system prompts live in /prompts as .txt files, loaded at runtime.
 - Every Claude call has a canned-fallback path so demos never break offline.
 - Keep it boring: no extra services, no Docker, no cloud until asked.
+- Existing pages/nav live under `app/(staff)/` with their own layout; `/apply`
+  and `/applicant/[slugToken]` stay outside that group so public-facing pages
+  never inherit the internal staff header/nav.
 
-## Architecture notes (established building the Day-1 slice — follow these)
+## Architecture notes (follow these — extend, don't duplicate)
 - Reads vs. writes split: `lib/queries.ts` holds plain read functions called
   directly from Server Components (no API routes for reads). `lib/actions.ts`
   holds `"use server"` Server Actions — the only way data is ever written —
@@ -76,13 +107,16 @@ Test for every screen: "would a parent trust this with their child's story?"
 - Formation tags are stored as a JSON-encoded array in the `observations`
   table's `tags` TEXT column. Always validate against the fixed 6-tag enum
   in `lib/types.ts` server-side before writing; never trust client input for
-  tag values.
+  tag values. `observations.source` (added for Features 1/2) is one of
+  `voice | text | admissions | canvas` — extend the union in `lib/types.ts`
+  before writing a new source value, never a bare string.
 - Fonts: Lora (display/serif headings) + Inter (body), both via
   `next/font/google`, exposed as `--font-display` / `--font-sans` CSS
   variables in `globals.css` alongside the brand color variables.
 - SQLite connection is a singleton in `lib/db.ts` cached on `globalThis` to
-  survive dev-mode hot reload; seeding (`lib/seed.ts`) runs once, guarded by
-  `SELECT COUNT(*) FROM students` — safe to call on every boot.
+  survive dev-mode hot reload; seeding (`lib/seed.ts`) runs once per table,
+  each guarded by its own `SELECT COUNT(*)` check — safe to call on every boot.
+  New tables get their own `seed*IfEmpty(db)` function called from `db.ts`.
 - Admissions stories (Phase 4) live in Supabase's `admissions_stories` table
   (project "Formation Pathways", `cvppxixatcreyptpkymh`), not SQLite. RLS is
   enabled with zero policies — access is server-only via the service_role
@@ -90,10 +124,45 @@ Test for every screen: "would a parent trust this with their child's story?"
   `.env.local`, never committed). The client in `lib/supabase.ts` is built
   lazily on first use (not at module load) specifically so importing it
   can't crash pages/builds that don't touch admissions stories — keep that
-  contract for any new Supabase-backed table. Portrait ids are `number |
-  string`: a plain number is a SQLite `portraits.id` (family type), a
-  string is a Supabase `admissions_stories.id` (uuid) — `getPortrait` in
-  `lib/queries.ts` branches on `typeof id` to route to the right store.
+  contract for any new Supabase-backed table. `isSupabaseConfigured()` gates
+  every Supabase read/write; when it's false, degrade gracefully (return
+  empty/undefined, hide the UI affordance) rather than throwing — the
+  Student page must never 500 just because Supabase isn't configured in this
+  environment. Portrait ids are `number | string`: a plain number is a
+  SQLite `portraits.id` (family type), a string is a Supabase
+  `admissions_stories.id` (uuid) — `getPortrait` in `lib/queries.ts` branches
+  on `typeof id` to route to the right store.
+- Applicants (Feature 1): `applicants` table holds the admissions questionnaire
+  (`answers` JSON), `generated_pathways` JSON (`GeneratedPathwaysResult`), and
+  a `status` lifecycle (`in_progress → submitted → approved → enrolled`).
+  `draftAdmissionsPathways` in `lib/claude.ts` names a **real Pacifica faculty
+  member by department only** for the mentor field — see
+  `prompts/admissions-pathways.txt` and `prompts/pacifica-context.txt` for the
+  hard rule: never invent a personal habit/teaching-style claim about a real,
+  named person, since only their name + department is public. Converting an
+  approved applicant to a student (`convertApplicantToStudentAction`) writes
+  their `seedObservations` with `source: 'admissions'`.
+- Courses/skills (Feature 2): `courses` / `course_students` / `course_skills` /
+  `skill_snapshots` tables. `lib/integrations/canvas.ts` and `drive.ts` each
+  export a `CanvasSource`/`DriveSource` interface with a `Mock*` (default) and
+  `Live*` implementation, selected by `getCanvasSource()`/`getDriveSource()`
+  reading `MOCK_INTEGRATIONS`/credentials — never call the Live classes
+  directly. **Live-data safety**: `isLiveCanvasConfigured()` gates a
+  mandatory `pseudonymizeToRoster()` call in `lib/actions.ts`'s
+  `runCourseSync` — real Canvas student names must be renamed onto the app's
+  local fictional roster by array position *before* the data is used in a
+  Claude prompt or written to `skill_snapshots`. Keep this contract for any
+  new live data source: a real name from an external system should never
+  persist in this app or reach a third-party API call. The mock path also
+  supports a stateful "world" per course (`lib/integrations/canvas.ts`'s
+  `getOrCreateMockWorld`/`simulateCanvasActivity`) so a demo can click
+  "Simulate Canvas activity" and watch the sync pipeline react live, with
+  zero real data — reuse this pattern rather than making the mock stateless
+  again.
+- Canvas client auth/pagination (`LiveCanvasSource`) is reused from a Pacifica
+  student's own app — Levi Gibbons, github.com/levihgibbons1/canvasnotifications
+  — credited in the `(staff)` layout's footer. Keep that credit if the
+  integration code is substantially rewritten.
 
 <!-- BEGIN:nextjs-agent-rules -->
 
