@@ -16,6 +16,8 @@ export const metadata: Metadata = {
   title: "Formation Pathways — Pacifica Christian",
   description:
     "Capture formation moments. Draft a Pathway. Keep AI behind the scenes.",
+  // "Add to Home Screen" on iPhone opens full screen, titled "Capture".
+  appleWebApp: { capable: true, title: "Capture", statusBarStyle: "default" },
 };
 
 export default function RootLayout({

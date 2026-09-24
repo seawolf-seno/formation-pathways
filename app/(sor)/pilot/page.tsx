@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getImportRuns, getPilotSettings, getRoster, requireStaff } from "@/lib/sor/queries";
+import { getImportRuns, getPilotSettings, getRoster, getStaffList, requireStaff } from "@/lib/sor/queries";
 import { isLiveBlackbaudConfigured } from "@/lib/sor/importers/blackbaud";
 import { isLiveCanvasPilotConfigured } from "@/lib/sor/importers/canvas";
-import { AddParticipantForm, GatePanel, ImportPanel, SamplePilotButton } from "@/components/sor/PilotControls";
+import {
+  AddParticipantForm,
+  GatePanel,
+  ImportPanel,
+  SamplePilotButton,
+  StaffPanel,
+} from "@/components/sor/PilotControls";
 import { CONSENT_SCOPES, displayName } from "@/lib/sor/types";
 
 const STAGE: Record<string, string> = {
@@ -18,7 +24,12 @@ export default async function PilotPage() {
   const staff = await requireStaff();
   if (staff.role !== "admin" && staff.role !== "admissions") redirect("/capture");
   const isAdmin = staff.role === "admin";
-  const [settings, roster, runs] = await Promise.all([getPilotSettings(), getRoster(), getImportRuns()]);
+  const [settings, roster, runs, staffList] = await Promise.all([
+    getPilotSettings(),
+    getRoster(),
+    getImportRuns(),
+    isAdmin ? getStaffList() : Promise.resolve([]),
+  ]);
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
@@ -31,6 +42,12 @@ export default async function PilotPage() {
       </div>
 
       <GatePanel settings={settings} isAdmin={isAdmin} />
+
+      {staffList.some((m) => !m.active) && (
+        <a href="#staff" className="block rounded-xl bg-[var(--color-pacific-light)] p-4 text-sm text-[var(--color-navy-ink)]">
+          {staffList.filter((m) => !m.active).length} staff waiting for approval (Staff section below) →
+        </a>
+      )}
 
       <section>
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
@@ -103,6 +120,15 @@ export default async function PilotPage() {
               ))}
             </ul>
           )}
+        </section>
+      )}
+
+      {isAdmin && (
+        <section id="staff">
+          <h2 className="mb-3 font-display text-lg text-[var(--color-navy-ink)]">
+            Staff ({staffList.filter((m) => m.active).length})
+          </h2>
+          <StaffPanel staff={staffList} selfId={staff.user_id} autoApprove={settings.auto_approve_staff} />
         </section>
       )}
     </div>

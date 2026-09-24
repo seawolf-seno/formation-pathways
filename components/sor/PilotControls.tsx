@@ -5,10 +5,12 @@ import {
   addParticipantAction,
   loadSamplePilotAction,
   runImportAction,
+  setAutoApproveStaffAction,
   setGateAction,
+  setStaffAction,
 } from "@/lib/sor/actions";
 import type { ImportOutcome } from "@/lib/sor/importers/run";
-import type { PilotSettings, SourceSystem } from "@/lib/sor/types";
+import type { PilotSettings, SourceSystem, StaffListEntry, StaffRole } from "@/lib/sor/types";
 
 const input =
   "w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm";
@@ -183,5 +185,130 @@ export function AddParticipantForm({ gateOpen }: { gateOpen: boolean }) {
       </button>
       <div className="sm:col-span-4"><Err msg={error} /></div>
     </form>
+  );
+}
+
+const ROLE_LABEL: Record<StaffRole, string> = {
+  staff: "Staff (capture only)",
+  teacher: "Teacher",
+  admissions: "Admissions",
+  admin: "Admin",
+};
+
+function StaffRow({ member, isSelf }: { member: StaffListEntry; isSelf: boolean }) {
+  const [role, setRole] = useState<StaffRole>(member.role);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const run = (change: { role?: StaffRole; active?: boolean }) =>
+    start(async () => {
+      const res = await setStaffAction(member.user_id, change);
+      setError(res.ok ? null : res.error);
+    });
+
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-2 px-5 py-3">
+      <span className="text-sm">
+        <span className="font-medium text-[var(--color-navy-ink)]">{member.display_name}</span>{" "}
+        <span className="text-[var(--color-ink-muted)]">{member.email}</span>
+        {!member.active && (
+          <span className="ml-2 rounded bg-[var(--color-gold-light)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+            No access
+          </span>
+        )}
+      </span>
+      {isSelf ? (
+        <span className="text-xs text-[var(--color-ink-muted)]">{ROLE_LABEL[member.role]} · you</span>
+      ) : (
+        <span className="flex flex-wrap items-center gap-2">
+          <select
+            value={role}
+            disabled={pending}
+            onChange={(e) => {
+              const next = e.target.value as StaffRole;
+              setRole(next);
+              if (member.active) run({ role: next });
+            }}
+            className="rounded-lg border border-[var(--color-border)] bg-white px-2 py-1.5 text-sm"
+          >
+            {(Object.keys(ROLE_LABEL) as StaffRole[]).map((r) => (
+              <option key={r} value={r}>
+                {ROLE_LABEL[r]}
+              </option>
+            ))}
+          </select>
+          {member.active ? (
+            <button disabled={pending} onClick={() => run({ active: false })} className={quiet}>
+              Remove access
+            </button>
+          ) : (
+            <button disabled={pending} onClick={() => run({ role, active: true })} className={button}>
+              Approve
+            </button>
+          )}
+        </span>
+      )}
+      <Err msg={error} />
+    </li>
+  );
+}
+
+export function StaffPanel({
+  staff,
+  selfId,
+  autoApprove,
+}: {
+  staff: StaffListEntry[];
+  selfId: string;
+  autoApprove: boolean;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const waiting = staff.filter((s) => !s.active).length;
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 text-sm">
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={autoApprove}
+            disabled={pending}
+            onChange={(e) =>
+              start(async () => {
+                const res = await setAutoApproveStaffAction(e.target.checked);
+                setError(res.ok ? null : res.error);
+              })
+            }
+            className="mt-1"
+          />
+          <span>
+            <span className="font-medium text-[var(--color-navy-ink)]">
+              Approve new @pacificachristian.org sign-ins automatically
+            </span>
+            <span className="block text-[var(--color-ink-muted)]">
+              They start as Staff (capture only). Turn this on only once you&apos;ve confirmed students
+              don&apos;t have @pacificachristian.org addresses. Student subdomains never match.
+            </span>
+          </span>
+        </label>
+        <Err msg={error} />
+      </div>
+      <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-white">
+        {staff.length === 0 ? (
+          <p className="p-5 text-sm text-[var(--color-ink-muted)]">No one has signed in yet.</p>
+        ) : (
+          <ul className="divide-y divide-[var(--color-border)]">
+            {staff.map((m) => (
+              <StaffRow key={m.user_id} member={m} isSelf={m.user_id === selfId} />
+            ))}
+          </ul>
+        )}
+      </div>
+      {waiting > 0 && (
+        <p className="text-xs text-[var(--color-ink-muted)]">
+          {waiting} without access. Staff sign in themselves at the capture URL; approving them here
+          is the only step.
+        </p>
+      )}
+    </div>
   );
 }

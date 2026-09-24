@@ -71,8 +71,9 @@ export function PhoneCapture({ roster, staffName }: { roster: Candidate[]; staff
   function toggleMic() {
     if (!rec.current) return;
     if (listening) {
-      rec.current.stop();
+      // "Done" moves straight on; no separate Next tap.
       setListening(false);
+      findWho();
     } else {
       setUsedVoice(true);
       rec.current.start();
@@ -92,6 +93,7 @@ export function PhoneCapture({ roster, staffName }: { roster: Candidate[]; staff
     setBusy(false);
     if (!res.ok) return setError(res.error);
     setCandidates(res.candidates);
+    if (res.confident) return choose(res.candidates[0]);
     setStep("who");
   }
 
@@ -155,12 +157,12 @@ export function PhoneCapture({ roster, staffName }: { roster: Candidate[]; staff
           {supported && (
             <button
               onClick={toggleMic}
-              aria-label={listening ? "Stop recording" : "Start recording"}
+              aria-label={listening ? "Done talking" : "Start talking"}
               className={`mx-auto flex h-40 w-40 items-center justify-center rounded-full text-6xl shadow-lg transition ${
                 listening ? "animate-pulse bg-red-600 text-white" : "bg-[var(--color-gold)] text-[var(--color-navy-ink)]"
               }`}
             >
-              {listening ? "■" : "🎙"}
+              {listening ? <span className="text-2xl font-semibold">Done</span> : "🎙"}
             </button>
           )}
           <textarea
