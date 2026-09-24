@@ -78,24 +78,79 @@ Then an admin records the sign-off on `/pilot`. That flip is logged too.
    add new ones there too, then re-run Supabase's security and performance advisors.
 2. **Auth.** In Supabase → Authentication → URL configuration, set the
    Site URL and add `http://localhost:3000/auth/callback` plus the deployed
-   `https://…/auth/callback` to redirect URLs. Sign-in uses an emailed link
-   (no Google OAuth needed, which is still blocked on IT). Supabase's built-in
-   email is rate-limited to a few messages an hour; set up custom SMTP before
-   more than a couple of staff use it.
+   `https://…/auth/callback` to redirect URLs. Sign-in is a **6-digit code**
+   emailed to a school address (the email also carries a link, for laptops).
+   Codes matter on phones: a link often opens in another browser or inside the
+   mail app, and an iPhone home-screen app never shares Safari's cookies. In
+   Authentication → Emails, put `{{ .Token }}` in **both** the *Magic Link* and
+   *Confirm signup* templates (first-time staff get the second one). Supabase's
+   built-in email is rate-limited to a few messages an hour; set up custom SMTP
+   before more than a couple of staff use it. Google sign-in replaces all of
+   this once IT creates the OAuth client (see "Google sign-in" below).
 3. **Env.** Copy `NEXT_PUBLIC_SUPABASE_URL` and the publishable key
    (`sb_publishable_…`, Project settings → API keys) into `.env.local` as
    `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-4. **First admin.** Sign in once at `/login`, then in the SQL editor:
+4. **First admin.** Sign in once at `/login` (you'll be *pending*), then in
+   the SQL editor:
    ```sql
-   insert into staff (user_id, email, display_name, role)
-   select id, email, 'Seno', 'admin' from auth.users
+   update staff set role = 'admin', active = true
    where email = 'seno@pacificachristian.org';
    ```
-   Add other staff the same way with role `admissions`, `teacher` or `staff`.
-   There's no staff-management UI yet.
-5. **Try it on fiction.** Go to `/pilot`, click *Load fictional sample pilot*,
+5. **Everyone else signs themselves up.** Any confirmed sign-in from an
+   `@pacificachristian.org` address creates a **pending** Staff account (a
+   database trigger; subdomains like `@students.…` never match). Pending
+   accounts see nothing. Admins approve them, set roles, or remove access in
+   the Staff section of `/pilot`. Once you've confirmed students don't hold
+   `@pacificachristian.org` addresses, tick *Approve new sign-ins
+   automatically* there and new staff start as Staff (capture only) straight
+   away. Nobody can change their own access.
+6. **Try it on fiction.** Go to `/pilot`, click *Load fictional sample pilot*,
    then run all three imports (sample mode), open a student, click *Draft*,
    and capture on `/capture`.
+
+## Staff phones
+
+- **Install:** open the capture URL in Safari or Chrome, sign in once, then
+  *Share → Add to Home Screen* (iPhone) or *Install app* (Android). The
+  **Capture** icon opens `/capture` full screen and stays signed in.
+- **Capture:** tap the mic, talk ("Iris stayed after chapel to…"), tap
+  **Done**, tap **Save**. The name step is skipped when one pilot name
+  clearly matches; *Wrong student* is always there.
+- **Voice:** reliable in Chrome on Android; less so in Safari. The
+  keyboard's own dictation mic, typing into the text box, works on every phone.
+  Safari asks for the mic each visit unless Settings → Safari → Microphone is
+  set to *Allow*.
+- **Privacy:** browser speech recognition sends the audio to Google (Chrome)
+  or Apple (Safari) to transcribe. Fine for fictional data; for real students
+  it's on the leadership list alongside the Anthropic terms.
+
+## Deploying (Vercel)
+
+- Import the GitHub repo in Vercel. `main` deploys to production; every PR
+  gets a preview.
+- Env: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+  (publishable key). Optional: `ANTHROPIC_API_KEY` (fictional data only until
+  vendor terms). **Never** set `SUPABASE_SERVICE_ROLE_KEY` there.
+- Then add `https://<domain>/auth/callback` to Supabase redirect URLs and
+  make the Site URL the production domain.
+- In production **every** page needs a signed-in `@pacificachristian.org`
+  account (`proxy.ts`), including the fictional exec demo, which has no auth
+  of its own and makes paid Claude calls. The demo stays open in `npm run dev`.
+- The demo's SQLite lives in `/tmp` on Vercel: it works but resets on cold
+  start. The system of record is unaffected (Supabase).
+- `next.config.ts` ships `prompts/` and `fixtures/sample/` with every route,
+  because they're read with `fs` at runtime.
+
+## Google sign-in (when IT creates the OAuth client)
+
+Staff already signed into their school Google account on their phone get in
+with one tap. Needs from IT: one OAuth client ID in the school's Google Cloud,
+consent screen **Internal** (school accounts only), scopes `openid`, `email`,
+`profile` only (no Drive/Gmail, so no Google verification), and the
+redirect URI Supabase shows under Authentication → Providers → Google.
+Optionally, mark the app trusted in the Workspace Admin console. Then enable
+the Google provider in Supabase; the staff trigger already handles Google
+sign-ins (they arrive confirmed, with the person's full name).
 
 ## Going live per source
 
@@ -110,8 +165,11 @@ gate is open.
 
 ## Known gaps
 
-- No staff-management UI (SQL only) and no consent-form upload (evidence is
-  a text pointer to where the paper form lives).
+- No consent-form upload (evidence is a text pointer to where the paper form
+  lives).
+- Google sign-in isn't wired yet (waiting on the IT OAuth client).
+- No session inactivity timeout: a lost, unlocked phone stays signed in.
+  Supabase's time-boxed / inactivity sessions (paid plan) are the fix.
 - The Blackbaud field mapping is unverified against a real SKY response.
 - The Finalsite API isn't wired; CSV export is the proof-of-concept path.
 - Observation edit/delete UI, alumni stage transitions, and data-retention

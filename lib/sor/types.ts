@@ -30,8 +30,16 @@ export interface StaffMember {
   role: StaffRole;
 }
 
+/** A row on the /pilot staff list: pending (active = false) or active. */
+export interface StaffListEntry extends StaffMember {
+  active: boolean;
+  created_at: string;
+}
+
 export interface PilotSettings {
   real_data_enabled: boolean;
+  /** New @pacificachristian.org sign-ins become active staff without approval. */
+  auto_approve_staff: boolean;
   approved_by: string | null;
   approval_reference: string | null;
   approved_at: string | null;

@@ -2,9 +2,11 @@ import { LoginForm } from "@/components/sor/LoginForm";
 import { isSorConfigured } from "@/lib/sor/supabase-server";
 
 const ERRORS: Record<string, string> = {
-  link: "That sign-in link expired or was already used. Request a new one.",
+  link: "That sign-in link expired or was already used. Request a new code below.",
+  pending:
+    "You're signed in. The pilot admin needs to approve your account before you can capture. You don't need to do anything else.",
   "not-staff":
-    "You're signed in, but not on the Formation Pathways staff list yet. Ask the pilot admin to add you.",
+    "That account isn't on the Formation Pathways staff list. Sign in with your @pacificachristian.org address.",
 };
 
 export default async function LoginPage({

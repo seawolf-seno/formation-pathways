@@ -8,7 +8,11 @@ import {
   seedIfEmpty,
 } from "./seed";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+// The demo's SQLite file. Vercel's filesystem is read-only apart from /tmp,
+// which is per-instance and wiped on cold start: the demo still works there
+// (re-seeded on boot), but its writes don't persist. The system of record
+// lives in Supabase and is unaffected.
+const DATA_DIR = process.env.VERCEL ? "/tmp/formation-data" : path.join(process.cwd(), "data");
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const DB_PATH = path.join(DATA_DIR, "formation.db");

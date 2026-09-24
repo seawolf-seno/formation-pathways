@@ -8,11 +8,13 @@ import type {
   Person,
   PersonProfile,
   PilotSettings,
+  StaffListEntry,
   StaffMember,
 } from "./types";
 
 /** The signed-in, active staff member, or a redirect to /login. Signed in
- *  but not on the staff table → /login?error=not-staff. */
+ *  and waiting for an admin → /login?error=pending; not on the staff table at
+ *  all (e.g. a non-school address) → /login?error=not-staff. */
 export async function requireStaff(): Promise<StaffMember> {
   await connection(); // per-request, never prerendered, even if env is missing at build time
   if (!isSorConfigured()) redirect("/login");
@@ -21,14 +23,16 @@ export async function requireStaff(): Promise<StaffMember> {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  // Staff can always read their own row (RLS), active or not.
   const { data } = await supabase
     .from("staff")
-    .select("user_id, email, display_name, role")
+    .select("user_id, email, display_name, role, active")
     .eq("user_id", user.id)
-    .eq("active", true)
     .maybeSingle();
   if (!data) redirect("/login?error=not-staff");
-  return data as StaffMember;
+  if (!data.active) redirect("/login?error=pending");
+  const { user_id, email, display_name, role } = data as StaffMember;
+  return { user_id, email, display_name, role };
 }
 
 export async function logAccess(
@@ -48,6 +52,7 @@ export async function getPilotSettings(): Promise<PilotSettings> {
   const { data } = await supabase.from("pilot_settings").select("*").single();
   return (data as PilotSettings) ?? {
     real_data_enabled: false,
+    auto_approve_staff: false,
     approved_by: null,
     approval_reference: null,
     approved_at: null,
@@ -136,4 +141,15 @@ export async function getImportRuns(): Promise<ImportRun[]> {
     .order("started_at", { ascending: false })
     .limit(10);
   return (data as ImportRun[]) ?? [];
+}
+
+/** Everyone who has signed in with a school address; admins only (RLS). */
+export async function getStaffList(): Promise<StaffListEntry[]> {
+  const supabase = await getSorClient();
+  const { data } = await supabase
+    .from("staff")
+    .select("user_id, email, display_name, role, active, created_at")
+    .order("active")
+    .order("display_name");
+  return (data as StaffListEntry[]) ?? [];
 }

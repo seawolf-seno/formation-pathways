@@ -1,33 +1,77 @@
 "use client";
 
 import { useState } from "react";
-import { sendSignInLinkAction } from "@/lib/sor/actions";
+import { sendSignInLinkAction, verifySignInCodeAction } from "@/lib/sor/actions";
 
+const field = "w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-base";
+const primary =
+  "w-full rounded-xl bg-[var(--color-navy)] px-4 py-3 text-base font-medium text-white disabled:opacity-60";
+
+// Two steps: email, then the 6-digit code from that email. The code works in
+// whatever browser or home-screen app asked for it; the emailed link is a
+// convenience for laptops.
 export function LoginForm({ next }: { next: string }) {
-  const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
+  const [email, setEmail] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit(formData: FormData) {
-    setState("sending");
+  async function sendCode(formData: FormData) {
+    setBusy(true);
     setError(null);
     const res = await sendSignInLinkAction(formData);
-    if (res.ok) setState("sent");
-    else {
-      setError(res.error);
-      setState("idle");
-    }
+    setBusy(false);
+    if (res.ok) setEmail(String(formData.get("email")).trim().toLowerCase());
+    else setError(res.error);
   }
 
-  if (state === "sent") {
+  async function verify(formData: FormData) {
+    setBusy(true);
+    setError(null);
+    // Redirects on success, so only a failure comes back.
+    const res = await verifySignInCodeAction(formData);
+    setBusy(false);
+    if (!res.ok) setError(res.error);
+  }
+
+  if (email) {
     return (
-      <p className="rounded-xl bg-[var(--color-pacific-light)] p-4 text-sm text-[var(--color-navy-ink)]">
-        Check your school email for a sign-in link. You can close this tab.
-      </p>
+      <form action={verify} className="space-y-3">
+        <p className="text-sm text-[var(--color-ink)]">
+          We emailed a code to <strong>{email}</strong>. Enter it here.
+        </p>
+        <input type="hidden" name="email" value={email} />
+        <input type="hidden" name="next" value={next} />
+        <input
+          name="code"
+          required
+          autoFocus
+          autoComplete="one-time-code"
+          inputMode="numeric"
+          pattern="[0-9 ]{6,12}"
+          maxLength={12}
+          placeholder="123456"
+          className={`${field} text-center font-mono text-2xl tracking-[0.3em]`}
+        />
+        <button disabled={busy} className={primary}>
+          {busy ? "Signing in…" : "Sign in"}
+        </button>
+        {error && <p className="text-sm text-red-700">{error}</p>}
+        <button
+          type="button"
+          onClick={() => {
+            setEmail(null);
+            setError(null);
+          }}
+          className="w-full text-sm text-[var(--color-ink-muted)] underline"
+        >
+          Use a different email or send a new code
+        </button>
+      </form>
     );
   }
 
   return (
-    <form action={submit} className="space-y-3">
+    <form action={sendCode} className="space-y-3">
       <input type="hidden" name="next" value={next} />
       <input
         type="email"
@@ -36,13 +80,10 @@ export function LoginForm({ next }: { next: string }) {
         autoComplete="email"
         inputMode="email"
         placeholder="you@pacificachristian.org"
-        className="w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-base"
+        className={field}
       />
-      <button
-        disabled={state === "sending"}
-        className="w-full rounded-xl bg-[var(--color-navy)] px-4 py-3 text-base font-medium text-white disabled:opacity-60"
-      >
-        {state === "sending" ? "Sending…" : "Email me a sign-in link"}
+      <button disabled={busy} className={primary}>
+        {busy ? "Sending…" : "Email me a sign-in code"}
       </button>
       {error && <p className="text-sm text-red-700">{error}</p>}
     </form>

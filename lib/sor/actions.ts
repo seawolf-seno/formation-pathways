@@ -40,9 +40,18 @@ function hasConsent(profile: PersonProfile, scope: ConsentScope): boolean {
 
 // ---------------------------------------------------------------- auth
 
+/** Only same-site paths, so a crafted ?next= can't bounce staff elsewhere. */
+function safeNext(next: FormDataEntryValue | null): string {
+  const n = String(next ?? "/capture");
+  return n.startsWith("/") && !n.startsWith("//") ? n : "/capture";
+}
+
+/** Emails a 6-digit sign-in code (and a link, for laptops). The code is what
+ *  makes phones work: the link often opens in a different browser or inside
+ *  the mail app, and an iPhone home-screen app never sees Safari's cookies. */
 export async function sendSignInLinkAction(formData: FormData): Promise<Result> {
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  const next = String(formData.get("next") ?? "/capture");
+  const next = safeNext(formData.get("next"));
   if (!email.endsWith("@pacificachristian.org")) {
     return { ok: false, error: "Use your @pacificachristian.org address." };
   }
@@ -54,6 +63,16 @@ export async function sendSignInLinkAction(formData: FormData): Promise<Result> 
     options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}` },
   });
   return error ? fail(error) : { ok: true };
+}
+
+export async function verifySignInCodeAction(formData: FormData): Promise<Result> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const token = String(formData.get("code") ?? "").replace(/\s/g, "");
+  if (!/^\d{6,10}$/.test(token)) return { ok: false, error: "Enter the code from the email." };
+  const supabase = await getSorClient();
+  const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+  if (error) return { ok: false, error: "That code didn't work. It may have expired, so request a new one." };
+  redirect(safeNext(formData.get("next")));
 }
 
 export async function signOutAction() {
@@ -84,6 +103,47 @@ export async function setGateAction(formData: FormData): Promise<Result> {
       .eq("id", true);
     if (error) return fail(error);
     await logAccess(staff, open ? "gate_open" : "gate_close", null, open ? { approvedBy, reference } : {});
+    revalidatePath("/pilot");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+const STAFF_ROLES: StaffMember["role"][] = ["admin", "admissions", "teacher", "staff"];
+
+/** Approve, change the role of, or deactivate a staff member. Never your own
+ *  row, so an admin can't lock themselves (and everyone else) out. */
+export async function setStaffAction(
+  userId: string,
+  change: { role?: StaffMember["role"]; active?: boolean }
+): Promise<Result> {
+  try {
+    const staff = await requireRole("admin");
+    if (userId === staff.user_id) return { ok: false, error: "Ask another admin to change your own access." };
+    if (change.role && !STAFF_ROLES.includes(change.role)) return { ok: false, error: "Unknown role." };
+    const update: { role?: StaffMember["role"]; active?: boolean } = {};
+    if (change.role) update.role = change.role;
+    if (typeof change.active === "boolean") update.active = change.active;
+    const supabase = await getSorClient();
+    const { data, error } = await supabase.from("staff").update(update).eq("user_id", userId).select("user_id");
+    if (error) return fail(error);
+    if (!data?.length) return { ok: false, error: "No such staff member." };
+    await logAccess(staff, "staff_change", null, { userId, ...update });
+    revalidatePath("/pilot");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function setAutoApproveStaffAction(on: boolean): Promise<Result> {
+  try {
+    const staff = await requireRole("admin");
+    const supabase = await getSorClient();
+    const { error } = await supabase.from("pilot_settings").update({ auto_approve_staff: on }).eq("id", true);
+    if (error) return fail(error);
+    await logAccess(staff, on ? "auto_approve_staff_on" : "auto_approve_staff_off", null);
     revalidatePath("/pilot");
     return { ok: true };
   } catch (e) {
@@ -260,16 +320,20 @@ export async function runImportAction(system: SourceSystem, formData?: FormData)
 
 export async function matchCaptureAction(
   transcript: string
-): Promise<Result<{ candidates: { id: string; name: string; stage: string }[] }>> {
+): Promise<Result<{ candidates: { id: string; name: string; stage: string }[]; confident: boolean }>> {
   try {
     await requireStaff();
     const roster = await getCaptureRoster();
-    const candidates = matchPeople(transcript, roster).map((m) => ({
+    const matches = matchPeople(transcript, roster);
+    const candidates = matches.map((m) => ({
       id: m.person.id,
       name: displayName(m.person),
       stage: m.person.stage,
     }));
-    return { ok: true, candidates };
+    // Skip the "who is this?" step only when one name clearly wins. The
+    // review screen still names the student, with a "Wrong student" link.
+    const confident = matches.length > 0 && (matches.length === 1 || matches[0].score - matches[1].score >= 1);
+    return { ok: true, candidates, confident };
   } catch (e) {
     return fail(e);
   }

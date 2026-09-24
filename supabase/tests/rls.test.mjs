@@ -63,6 +63,39 @@ await expect("admissions cannot add people", "adm", `insert into people (first_n
 await expect("admin can still update staff", "admin", `update staff set display_name='Adm2' where user_id='${ids.adm}' returning *`, true, r => r.rows.length === 1);
 await expect("teacher cannot update staff", "teach", `update staff set role='admin' where user_id='${ids.teach}' returning *`, true, r => r.rows.length === 0);
 await expect("trigger functions not callable by users", "teach", `select private.enforce_consent()`, false);
+// Staff self-provisioning (first confirmed sign-in from a school address).
+const u = { p1: "00000000-0000-0000-0000-0000000000e1", p2: "00000000-0000-0000-0000-0000000000e2", sub: "00000000-0000-0000-0000-0000000000e3", gm: "00000000-0000-0000-0000-0000000000e4", un: "00000000-0000-0000-0000-0000000000e5" };
+Object.assign(ids, { pending: u.p1 });
+await db.exec(`insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data) values
+  ('${u.p1}','New.Teacher@pacificachristian.org', now(), '{"full_name":"New Teacher"}'),
+  ('${u.sub}','kid@students.pacificachristian.org', now(), '{}'),
+  ('${u.gm}','someone@gmail.com', now(), '{}');
+  insert into auth.users (id, email) values ('${u.un}','unconfirmed@pacificachristian.org');`);
+const prov = await db.query(`select user_id, email, display_name, role, active from staff where user_id in ('${u.p1}','${u.sub}','${u.gm}','${u.un}')`);
+const provOk = prov.rows.length === 1 && prov.rows[0].user_id === u.p1 && prov.rows[0].active === false && prov.rows[0].role === "staff" && prov.rows[0].display_name === "New Teacher" && prov.rows[0].email === "new.teacher@pacificachristian.org";
+if (provOk) pass++; else fail++;
+console.log(`${provOk ? "PASS" : "FAIL"}  confirmed school address → one PENDING staff row; subdomain, gmail, unconfirmed → none`, prov.rows);
+await expect("pending staff sees no people", "pending", `select * from people`, true, r => r.rows.length === 0);
+const samplePerson = (await db.query("select id from people limit 1")).rows[0].id;
+await expect("pending staff cannot write an observation", "pending", `insert into observations (person_id, author_id, author_name, raw_text, body) values ('${samplePerson}', '${u.p1}', 'N', 'x', 'x')`, false);
+await expect("pending staff cannot approve themselves", "pending", `update staff set active = true where user_id = '${u.p1}' returning *`, true, r => r.rows.length === 0);
+await expect("pending staff can read their own row", "pending", `select active from staff`, true, r => r.rows.length === 1 && r.rows[0].active === false);
+await expect("teacher cannot turn on auto-approve", "teach", `update pilot_settings set auto_approve_staff = true returning *`, true, r => r.rows.length === 0);
+await db.exec(`update auth.users set email_confirmed_at = now() where id = '${u.un}'`);
+const late = await db.query(`select active from staff where user_id = '${u.un}'`);
+const lateOk = late.rows.length === 1 && late.rows[0].active === false; if (lateOk) pass++; else fail++;
+console.log(`${lateOk ? "PASS" : "FAIL"}  unconfirmed user gets a pending row once they confirm`);
+await expect("admin turns on auto-approve", "admin", `update pilot_settings set auto_approve_staff = true returning *`, true, r => r.rows.length === 1);
+await db.exec(`insert into auth.users (id, email, email_confirmed_at) values ('${u.p2}','auto@pacificachristian.org', now())`);
+const auto = await db.query(`select active from staff where user_id = '${u.p2}'`);
+const autoOk = auto.rows.length === 1 && auto.rows[0].active === true; if (autoOk) pass++; else fail++;
+console.log(`${autoOk ? "PASS" : "FAIL"}  with auto-approve on, a new school sign-in is active staff`);
+await db.exec(`update auth.users set email_confirmed_at = now() where id = '${ids.admin}'`);
+const kept = await db.query(`select role from staff where user_id = '${ids.admin}'`);
+const keptOk = kept.rows[0]?.role === "admin"; if (keptOk) pass++; else fail++;
+console.log(`${keptOk ? "PASS" : "FAIL"}  re-confirming never overwrites an existing staff row`);
+await expect("admin approves a pending teacher", "admin", `update staff set active = true, role = 'teacher' where user_id = '${u.p1}' returning *`, true, r => r.rows.length === 1);
+await expect("...who can now see people", "pending", `select * from people`, true, r => r.rows.length >= 1);
 const exposed = await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef");
 const noneExposed = exposed.rows.length === 0; if (noneExposed) pass++; else fail++;
 console.log(`${noneExposed ? "PASS" : "FAIL"}  no SECURITY DEFINER function in the API-exposed public schema`, exposed.rows.map(r => r.proname));
