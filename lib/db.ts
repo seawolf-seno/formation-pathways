@@ -91,6 +91,19 @@ function createDb(): Database.Database {
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_applicants_token ON applicants(token);
 
+    -- Parent-curated public shares. content is a whitelisted snapshot (see
+    -- lib/share.ts); nothing else about the applicant is ever public.
+    CREATE TABLE IF NOT EXISTS pathway_shares (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      applicant_id INTEGER NOT NULL REFERENCES applicants(id) ON DELETE CASCADE,
+      token TEXT NOT NULL UNIQUE,
+      content TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      revoked_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_pathway_shares_applicant ON pathway_shares(applicant_id);
+
     CREATE TABLE IF NOT EXISTS courses (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,

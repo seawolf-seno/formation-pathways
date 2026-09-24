@@ -21,8 +21,10 @@ import {
   simulateCanvasActivity,
 } from "./integrations/canvas";
 import { getDriveSource, type DriveDoc } from "./integrations/drive";
+import { buildPublicShareContent, type ShareSelection } from "./share";
 import {
   getApplicant,
+  getApplicantByToken,
   getCourse,
   getCourseRoster,
   getCourseSkills,
@@ -658,4 +660,48 @@ export async function approveSkillSignalObservationAction(input: {
   };
 
   return { ...row, tags: JSON.parse(row.tags) as FormationTag[] };
+}
+
+// ---- Public pathway shares -------------------------------------------------
+// The family's applicant token is the proof of access, same as the page it is
+// used from. Shares are only possible after staff have approved the page.
+
+function approvedApplicantByToken(applicantToken: string): Applicant {
+  const applicant = getApplicantByToken(applicantToken);
+  if (!applicant || !applicant.generated) throw new Error("Page not found");
+  if (applicant.status !== "approved" && applicant.status !== "enrolled") {
+    throw new Error("Sharing opens after Pacifica has approved this page");
+  }
+  return applicant;
+}
+
+export async function createPathwayShareAction(
+  applicantToken: string,
+  selection: ShareSelection
+): Promise<{ token: string }> {
+  const applicant = approvedApplicantByToken(applicantToken);
+  const content = buildPublicShareContent(
+    applicant.name,
+    applicant.generated!.pathways,
+    selection
+  );
+  const token = randomBytes(16).toString("base64url");
+  db.prepare(
+    "INSERT INTO pathway_shares (applicant_id, token, content) VALUES (?, ?, ?)"
+  ).run(applicant.id, token, JSON.stringify(content));
+  revalidatePath(`/applicant/${applicant.slug}-${applicant.token}`);
+  return { token };
+}
+
+export async function revokePathwayShareAction(
+  applicantToken: string,
+  shareToken: string
+): Promise<void> {
+  const applicant = approvedApplicantByToken(applicantToken);
+  db.prepare(
+    `UPDATE pathway_shares SET revoked_at = datetime('now')
+     WHERE token = ? AND applicant_id = ? AND revoked_at IS NULL`
+  ).run(shareToken, applicant.id);
+  revalidatePath(`/applicant/${applicant.slug}-${applicant.token}`);
+  revalidatePath(`/share/${shareToken}`);
 }

@@ -1,3 +1,4 @@
+import { parsePublicShareContent, type PublicShareContent } from "./share";
 import { db } from "./db";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { daysSince } from "./format";
@@ -324,4 +325,59 @@ export function getCoursesForStudent(studentId: number): Course[] {
        ORDER BY c.name`
     )
     .all(studentId) as Course[];
+}
+
+// ---- Public pathway shares -------------------------------------------------
+
+export interface PathwayShareRow {
+  id: number;
+  applicant_id: number;
+  token: string;
+  content: PublicShareContent;
+  created_at: string;
+  revoked_at: string | null;
+}
+
+interface RawShareRow extends Omit<PathwayShareRow, "content"> {
+  content: string;
+}
+
+function parseShareRow(row: RawShareRow): PathwayShareRow | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(row.content);
+  } catch {
+    return undefined;
+  }
+  const content = parsePublicShareContent(parsed);
+  return content ? { ...row, content } : undefined;
+}
+
+export function getSharesForApplicant(applicantId: number): PathwayShareRow[] {
+  const rows = db
+    .prepare(
+      "SELECT * FROM pathway_shares WHERE applicant_id = ? AND revoked_at IS NULL ORDER BY id DESC"
+    )
+    .all(applicantId) as RawShareRow[];
+  return rows.map(parseShareRow).filter((r): r is PathwayShareRow => !!r);
+}
+
+/**
+ * The only read the public /share route uses. Returns the whitelisted snapshot
+ * and nothing else; revoked shares and shares whose applicant is no longer
+ * approved resolve to undefined (the route 404s).
+ */
+export function getPublicShare(token: string): PublicShareContent | undefined {
+  const row = db
+    .prepare(
+      `SELECT s.*, a.status AS applicant_status
+       FROM pathway_shares s JOIN applicants a ON a.id = s.applicant_id
+       WHERE s.token = ? AND s.revoked_at IS NULL`
+    )
+    .get(token) as (RawShareRow & { applicant_status: string }) | undefined;
+  if (!row) return undefined;
+  if (row.applicant_status !== "approved" && row.applicant_status !== "enrolled") {
+    return undefined;
+  }
+  return parseShareRow(row)?.content;
 }

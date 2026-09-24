@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { getApplicantByToken } from "@/lib/queries";
+import { getApplicantByToken, getSharesForApplicant } from "@/lib/queries";
+import { ShareStudio } from "@/components/ShareStudio";
 import { PathwaysDisplay } from "@/components/PathwaysDisplay";
 
 function extractToken(slugToken: string): string {
@@ -63,6 +64,15 @@ export default async function ApplicantPathwayPage({
             generated={applicant.generated}
           />
         </div>
+        <ShareStudio
+          applicantToken={applicant.token}
+          applicantName={applicant.name}
+          pathways={applicant.generated.pathways}
+          existing={getSharesForApplicant(applicant.id).map((s) => ({
+            token: s.token,
+            content: s.content,
+          }))}
+        />
       </div>
     </div>
   );
