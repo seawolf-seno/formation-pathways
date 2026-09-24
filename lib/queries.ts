@@ -1,4 +1,5 @@
 import { parsePublicShareContent, type PublicShareContent } from "./share";
+import type { AlumniStory, Inquiry } from "./inquiry";
 import { db } from "./db";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { daysSince } from "./format";
@@ -380,4 +381,17 @@ export function getPublicShare(token: string): PublicShareContent | undefined {
     return undefined;
   }
   return parseShareRow(row)?.content;
+}
+
+// ---- Inquiry stage ---------------------------------------------------------
+
+export function getInquiries(): Inquiry[] {
+  return db.prepare("SELECT * FROM inquiries ORDER BY id DESC").all() as Inquiry[];
+}
+
+/** Only consent-confirmed stories ever leave the database. */
+export function getConsentedAlumniStories(): AlumniStory[] {
+  return db
+    .prepare("SELECT * FROM alumni_stories WHERE consent_confirmed = 1 ORDER BY grad_year DESC, id")
+    .all() as AlumniStory[];
 }

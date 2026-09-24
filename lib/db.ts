@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import {
   seedApplicantsIfEmpty,
+  seedInquiryDemoIfEmpty,
   seedClassesIfEmpty,
   seedCoursesIfEmpty,
   seedIfEmpty,
@@ -104,6 +105,36 @@ function createDb(): Database.Database {
 
     CREATE INDEX IF NOT EXISTS idx_pathway_shares_applicant ON pathway_shares(applicant_id);
 
+    -- Inquiry stage: someone who has told us their prior school but has not
+    -- applied. No essays, no answers, nothing sensitive.
+    CREATE TABLE IF NOT EXISTS inquiries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      first_name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      prior_school TEXT NOT NULL,
+      interests TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Pacifica students/alumni whose story may be shown to families from the
+    -- same prior school. consent_confirmed gates every read: nothing is shown
+    -- unless someone has recorded consent for it.
+    CREATE TABLE IF NOT EXISTS alumni_stories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_key TEXT NOT NULL,
+      first_name TEXT NOT NULL,
+      grad_year INTEGER NOT NULL,
+      headline TEXT NOT NULL,
+      story TEXT NOT NULL,
+      pathway_name TEXT NOT NULL,
+      where_now TEXT NOT NULL,
+      is_fictional INTEGER NOT NULL DEFAULT 1,
+      consent_confirmed INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_alumni_school ON alumni_stories(school_key);
+
     CREATE TABLE IF NOT EXISTS courses (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -156,6 +187,7 @@ function createDb(): Database.Database {
   seedIfEmpty(db);
   seedClassesIfEmpty(db);
   seedApplicantsIfEmpty(db);
+  seedInquiryDemoIfEmpty(db);
   seedCoursesIfEmpty(db);
 
   return db;

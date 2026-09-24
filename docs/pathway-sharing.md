@@ -68,3 +68,30 @@ Query: `/share/[token]/card?format=feed|story|og`, add `&download=1` to download
 QR code on the card, custom Lora display font in the PNG (currently the
 default sans), short animated/video version, a "shared" indicator in the
 admissions staff view.
+
+## Inquiry stage: prior-school outreach
+
+Once admissions knows only a family's prior school (before essays, parent
+questionnaire or interview), staff can send an encouraging three-message
+sequence (day 0, 5, 12) that features Pacifica students who came from the
+same school. Demo: `/admissions/inquiries` (staff) and `/from/[school]` (public).
+
+- **Public page has no personal data.** `/from/paul-revere` shows only
+  consent-confirmed stories chosen by the school in the URL; unknown schools
+  fall back to the general set (`/from/all`). Safe to forward to a friend.
+- **Consent gate.** `alumni_stories.consent_confirmed` must be 1 or the story is
+  never read (`getConsentedAlumniStories`, tested). The demo stories are
+  fictional (`is_fictional = 1`) and labeled on the page. Before any real story
+  is added, the consent it relies on must be confirmed against what the
+  enrollment consent actually covers (public/marketing use, naming, minors).
+- **Drafts only.** Messages are deterministic templates, not AI-written, and
+  nothing sends from the app. A staff member copies and sends them.
+- **Honest copy.** Drafts talk about *other* students and never claim to know
+  the inquirer.
+- **Mid-application ideas.** `/apply` shows a "Not sure where to start?" panel
+  under each question, from `prompts/admissions-question-help.txt` (editable by
+  staff). They are things to think about, never suggested answers.
+
+Open: inquiries are seeded, not captured; a real intake (Finalsite or a form)
+and an email-sending path (with unsubscribe and consent for minors) still need
+Mr. Eno's decision. `/from/*` is a second public route to approve.

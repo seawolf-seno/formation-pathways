@@ -10,7 +10,7 @@ import type { Applicant } from "@/lib/types";
 
 type Step = "name" | number | "submitting" | "done";
 
-export function ApplicantQuestionnaire() {
+export function ApplicantQuestionnaire({ helpIdeas = [] }: { helpIdeas?: string[][] }) {
   const [applicant, setApplicant] = useState<Applicant | null>(null);
   const [name, setName] = useState("");
   const [step, setStep] = useState<Step>("name");
@@ -126,6 +126,19 @@ export function ApplicantQuestionnaire() {
       <h2 className="mt-3 font-display text-2xl leading-snug text-[var(--color-navy-ink)]">
         {current.question}
       </h2>
+      {helpIdeas[index] && helpIdeas[index].length > 0 && (
+        <details className="mt-4 rounded-xl bg-[var(--color-pacific-light)] px-4 py-3 text-sm text-[var(--color-navy-ink)]">
+          <summary className="cursor-pointer font-semibold">Not sure where to start?</summary>
+          <p className="mt-2 text-[var(--color-ink-muted)]">
+            A short, honest answer is enough. A few things to think about, in your own words:
+          </p>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            {helpIdeas[index].map((idea, i) => (
+              <li key={i}>{idea}</li>
+            ))}
+          </ul>
+        </details>
+      )}
       <textarea
         autoFocus
         value={current.answer}

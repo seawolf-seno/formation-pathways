@@ -15,7 +15,7 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   // Parent-curated public shares (and their card images) are the one public
   // surface. They serve only a whitelisted snapshot; see docs/pathway-sharing.md.
-  if (path.startsWith("/share/")) return NextResponse.next();
+  if (path.startsWith("/share/") || path.startsWith("/from/")) return NextResponse.next();
   const isSor = SOR_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
   if (!isSor && process.env.NODE_ENV !== "production") return NextResponse.next();
 

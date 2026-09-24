@@ -28,6 +28,12 @@ export default function AdmissionsPage() {
           Applicants who&apos;ve started or finished the Pathway questionnaire
           at <span className="font-mono text-xs">/apply</span>.
         </p>
+        <Link
+          href="/admissions/inquiries"
+          className="mt-2 inline-block text-sm font-semibold text-[var(--color-navy)] underline"
+        >
+          Inquiries and prior-school outreach →
+        </Link>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-[var(--color-border)] bg-white">
