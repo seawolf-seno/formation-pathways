@@ -1,0 +1,17 @@
+{
+  "_note": "FICTIONAL sample pilot. Every name here is invented. Loaded with is_sample=true, so it never mixes with real records.",
+  "people": [
+    { "first_name": "Amara", "last_name": "Delacroix", "stage": "applicant", "grad_year": 2031, "current_grade": 8,
+      "ids": { "finalsite": "FS-S-1001" } },
+    { "first_name": "Theo", "last_name": "Lindqvist", "stage": "applicant", "grad_year": 2031, "current_grade": 8,
+      "ids": { "finalsite": "FS-S-1002" } },
+    { "first_name": "Rosalind", "last_name": "Achterberg", "preferred_name": "Roz", "stage": "admitted", "grad_year": 2031, "current_grade": 8,
+      "ids": { "finalsite": "FS-S-1003" } },
+    { "first_name": "Mateo", "last_name": "Villanueva-Park", "stage": "enrolled", "grad_year": 2029,
+      "ids": { "finalsite": "FS-S-0877", "blackbaud": "BB-S-5501", "canvas": "CV-S-9001" } },
+    { "first_name": "Iris", "last_name": "Okonkwo-Hale", "stage": "enrolled", "grad_year": 2028,
+      "ids": { "finalsite": "FS-S-0612", "blackbaud": "BB-S-5502", "canvas": "CV-S-9002" } },
+    { "first_name": "Benedict", "last_name": "Szabo", "preferred_name": "Ben", "stage": "enrolled", "grad_year": 2029,
+      "ids": { "blackbaud": "BB-S-5503", "canvas": "CV-S-9003" } }
+  ]
+}

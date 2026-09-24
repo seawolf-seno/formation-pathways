@@ -574,3 +574,118 @@ export async function draftAdmissionsStory(
     };
   }
 }
+
+/** What the system of record hands Claude for a "who they are today" draft.
+ *  First name only, no ids, no timeliness data — see prompts/ruakh-today.txt. */
+export interface RuakhInput {
+  firstName: string;
+  stage: string;
+  grade: number | null;
+  previousSchool: string | null;
+  interests: string[];
+  activities: string[];
+  applicationResponses: ApplicantAnswer[];
+  courses: { name: string; teacher: string | null }[];
+  teacherComments: { course: string; assignment: string; comment: string }[];
+  observations: { author: string; text: string; tags: string[]; date: string }[];
+}
+
+export interface RuakhDraft {
+  portrait: string;
+  pathways: GeneratedPathway[];
+  usedFallback: boolean;
+}
+
+/** Ends a quoted snippet with exactly one period, never `…".` or `?".`. */
+function quoteSentence(text: string): string {
+  const snippet = quoteSnippet(text);
+  return /[.!?…]$/.test(snippet) ? `"${snippet}"` : `"${snippet}."`;
+}
+
+// Unlike the admissions fallback, these never splice evidence into the
+// pathway sentences: a teacher comment or a hard-season answer reads wrong
+// dropped into a template, and this student may be years past "first semester".
+const RUAKH_FALLBACK_STEPS: Record<string, { step: (when: string) => string; stretch: string }> = {
+  "The Builder": {
+    step: (when) => `${when}: time in the Makers Space or a STEM Scholars project, building something for someone else rather than for a grade.`,
+    stretch: "Presenting something they built to the Minchin Center's Insight Speaker Series, in front of working professionals, not just a teacher.",
+  },
+  "The Steady Servant": {
+    step: (when) => `${when}: weekly chapel and an invitation into a service club, somewhere their care for people has a regular place to go.`,
+    stretch: "Turning a good instinct into an ongoing commitment: showing up for the same person or cause every week, not just once.",
+  },
+  "The Asker of Real Questions": {
+    step: (when) => `${when}: a seat in an Oxford-style seminar in the Center for Philosophy & Theology, where real questions are the point.`,
+    stretch: "Making a case out loud in seminar, then hearing the strongest possible case against it, and staying in the room.",
+  },
+};
+
+function fallbackRuakh(input: RuakhInput): RuakhDraft {
+  const evidence =
+    input.applicationResponses.length + input.teacherComments.length + input.observations.length;
+  const where = input.previousSchool
+    ? `${input.firstName} came to us from ${input.previousSchool}`
+    : `${input.firstName} is ${input.stage === "applicant" ? "applying to" : "at"} Pacifica`;
+  const portrait =
+    `${where}. ` +
+    (input.applicationResponses[0]
+      ? `In their own words: ${quoteSentence(input.applicationResponses[0].answer)} `
+      : "") +
+    (input.teacherComments[0]
+      ? `A teacher recently wrote: ${quoteSentence(input.teacherComments[0].comment)} `
+      : "") +
+    (input.observations[0]
+      ? `${input.observations[0].author} noticed: ${quoteSentence(input.observations[0].text)}`
+      : "") +
+    `\n\nAI assist is offline, so this is a template, not a synthesis. ` +
+    `${evidence} ${evidence === 1 ? "piece" : "pieces"} of evidence are on file above for whoever writes the real one.`;
+  const when =
+    input.stage === "applicant" || input.stage === "admitted" ? "First semester" : "Next semester";
+  return {
+    portrait,
+    pathways: FALLBACK_EMPHASES.map((e) => ({
+      name: e.name,
+      firstSemester: RUAKH_FALLBACK_STEPS[e.name].step(when),
+      mentorArchetype: e.mentor,
+      stretchChallenge: RUAKH_FALLBACK_STEPS[e.name].stretch,
+      fourYearHorizon: [
+        "a selective college or university, chosen for fit rather than prestige",
+        "a gap-year fellowship or apprenticeship that tests the same instinct in the real world",
+      ],
+    })),
+    usedFallback: true,
+  };
+}
+
+/**
+ * Drafts "who this student is today" plus three Ruakh 2.0 pathways from the
+ * system of record. Always resolves — canned fallback if Claude is
+ * unreachable. Callers must check ai_drafting consent BEFORE calling (the
+ * pathway_drafts insert trigger enforces it again on save).
+ */
+export async function draftRuakhPathways(input: RuakhInput): Promise<RuakhDraft> {
+  const anthropic = getClient();
+  const fallback = fallbackRuakh(input);
+  if (!anthropic) return fallback;
+
+  try {
+    const system =
+      readPrompt("ruakh-today.txt") + "\n\n---\n\n" + readPrompt("pacifica-context.txt");
+    const message = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 2500,
+      system,
+      messages: [{ role: "user", content: JSON.stringify(input, null, 2) }],
+    });
+    const textBlock = message.content.find((b) => b.type === "text");
+    if (!textBlock || textBlock.type !== "text") return fallback;
+    const parsed = extractJson(textBlock.text) as { portrait?: unknown; pathways?: unknown };
+    const pathways = Array.isArray(parsed.pathways)
+      ? parsed.pathways.filter(isGeneratedPathway).slice(0, 3)
+      : [];
+    if (typeof parsed.portrait !== "string" || pathways.length < 3) return fallback;
+    return { portrait: parsed.portrait, pathways, usedFallback: false };
+  } catch {
+    return fallback;
+  }
+}

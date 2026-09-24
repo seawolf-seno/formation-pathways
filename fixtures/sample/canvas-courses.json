@@ -1,0 +1,23 @@
+{
+  "_note": "FICTIONAL sample shaped like Canvas REST responses. No scores are included because the importer never stores them.",
+  "courses": [
+    { "id": "CV-C-301", "name": "Honors Physics", "teacher": "Dr. Lena Marsh",
+      "submissions": [
+        { "user_id": "CV-S-9001", "assignment": "Lab: Projectile Motion", "submitted_at": "2026-09-08T19:12:00Z", "late": false, "missing": false,
+          "comment": "Mateo built a launcher from spare parts when the lab one jammed — and explained the error bars better than anyone." },
+        { "user_id": "CV-S-9001", "assignment": "Problem Set 2", "submitted_at": "2026-09-15T23:40:00Z", "late": true, "missing": false, "comment": null },
+        { "user_id": "CV-S-9003", "assignment": "Lab: Projectile Motion", "submitted_at": "2026-09-08T18:00:00Z", "late": false, "missing": false,
+          "comment": "Ben asked the question that stumped the whole class: what if the air isn't still?" },
+        { "user_id": "CV-S-9003", "assignment": "Problem Set 2", "submitted_at": null, "late": false, "missing": true, "comment": null }
+      ] },
+    { "id": "CV-C-412", "name": "AP Literature", "teacher": "Mr. Owen Calloway",
+      "submissions": [
+        { "user_id": "CV-S-9002", "assignment": "Essay: The Unseen Character", "submitted_at": "2026-09-12T16:30:00Z", "late": false, "missing": false,
+          "comment": "Iris chose the nurse nobody notices in the novel and made her the moral center. Brave reading." },
+        { "user_id": "CV-S-9002", "assignment": "Seminar Reflection 1", "submitted_at": "2026-09-19T20:05:00Z", "late": false, "missing": false,
+          "comment": "You listened more than you spoke, and when you spoke everyone turned around." },
+        { "user_id": "CV-S-9001", "assignment": "Essay: The Unseen Character", "submitted_at": "2026-09-12T22:10:00Z", "late": false, "missing": false,
+          "comment": "Mateo wrote about the brother who keeps losing the game. Tender and funny." }
+      ] }
+  ]
+}

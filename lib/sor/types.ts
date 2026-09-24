@@ -1,0 +1,161 @@
+import type { FormationTag, GeneratedPathway } from "@/lib/types";
+
+export type LifecycleStage = "applicant" | "admitted" | "enrolled" | "alumni" | "withdrawn";
+export type SourceSystem = "finalsite" | "blackbaud" | "canvas";
+export type StaffRole = "admin" | "admissions" | "teacher" | "staff";
+export type ConsentScope = "import_records" | "ai_drafting" | "staff_observations";
+
+export const CONSENT_SCOPES: { scope: ConsentScope; label: string; detail: string }[] = [
+  {
+    scope: "import_records",
+    label: "Import school data",
+    detail: "Pull this student's Finalsite, Blackbaud and Canvas data into Formation Pathways.",
+  },
+  {
+    scope: "staff_observations",
+    label: "Staff observations",
+    detail: "Let Pacifica staff record short observations about this student.",
+  },
+  {
+    scope: "ai_drafting",
+    label: "AI drafting",
+    detail: "Let Claude draft a private staff-only summary and pathway options from these records.",
+  },
+];
+
+export interface StaffMember {
+  user_id: string;
+  email: string;
+  display_name: string;
+  role: StaffRole;
+}
+
+export interface PilotSettings {
+  real_data_enabled: boolean;
+  approved_by: string | null;
+  approval_reference: string | null;
+  approved_at: string | null;
+}
+
+export interface Person {
+  id: string;
+  first_name: string;
+  last_name: string;
+  preferred_name: string | null;
+  stage: LifecycleStage;
+  grad_year: number | null;
+  current_grade: number | null;
+  is_sample: boolean;
+  created_at: string;
+}
+
+export interface ExternalId {
+  person_id: string;
+  system: SourceSystem;
+  external_id: string;
+}
+
+export interface Consent {
+  id: string;
+  person_id: string;
+  scope: ConsentScope;
+  granted_by: string;
+  granted_on: string;
+  evidence: string;
+  revoked_at: string | null;
+}
+
+export interface AdmissionsRecord {
+  person_id: string;
+  entry_year: number | null;
+  entering_grade: number | null;
+  application_status: string | null;
+  previous_school: string | null;
+  interests: string[];
+  activities: string[];
+  responses: { question: string; answer: string }[];
+  imported_at: string;
+}
+
+export interface Enrollment {
+  person_id: string;
+  grade: number | null;
+  grad_year: number | null;
+  advisor_name: string | null;
+  enrolled_since: string | null;
+  imported_at: string;
+}
+
+export interface CourseEnrollment {
+  person_id: string;
+  canvas_course_id: string;
+  course_name: string;
+  teacher_name: string | null;
+}
+
+export interface AcademicEvidence {
+  id: string;
+  person_id: string;
+  canvas_course_id: string;
+  assignment_name: string;
+  submitted_at: string | null;
+  late: boolean;
+  missing: boolean;
+  teacher_comment: string | null;
+}
+
+export interface SorObservation {
+  id: string;
+  person_id: string;
+  author_id: string | null;
+  author_name: string;
+  source: "voice" | "text" | "admissions" | "canvas";
+  raw_text: string;
+  body: string;
+  tags: FormationTag[];
+  discipline_flag: string | null;
+  created_at: string;
+}
+
+export interface PathwayDraft {
+  id: string;
+  person_id: string;
+  portrait: string;
+  pathways: GeneratedPathway[];
+  sources_used: string[];
+  used_fallback: boolean;
+  status: "draft" | "approved";
+  approved_by: string | null;
+  approved_at: string | null;
+  created_at: string;
+}
+
+export interface ImportRun {
+  id: string;
+  system: SourceSystem;
+  mode: "sample" | "live";
+  started_at: string;
+  finished_at: string | null;
+  matched: number;
+  skipped_no_consent: number;
+  unmatched: number;
+  error: string | null;
+}
+
+/** Everything the system of record knows about one person, as far as the
+ *  signed-in staff member's role allows (RLS returns nothing otherwise). */
+export interface PersonProfile {
+  person: Person;
+  externalIds: ExternalId[];
+  consents: Consent[];
+  admissions: AdmissionsRecord | null;
+  enrollment: Enrollment | null;
+  courses: CourseEnrollment[];
+  evidence: AcademicEvidence[];
+  observations: SorObservation[];
+  drafts: PathwayDraft[];
+}
+
+export function displayName(p: Pick<Person, "first_name" | "last_name" | "preferred_name">): string {
+  return `${p.preferred_name || p.first_name} ${p.last_name}`;
+}

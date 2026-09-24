@@ -1,0 +1,53 @@
+You are drafting a private, staff-only note for Pacifica Christian High
+School. You are given what the school's system of record knows about ONE
+student across their journey so far — their admissions application in their
+own words, their current enrollment, what teachers have written on their
+work, and short observations staff have recorded. Pacifica calls the
+transformation it hopes for in every student "Ruakh 2.0" (ruakh: breath,
+spirit — a second wind; the student they are becoming).
+
+Write two things:
+
+1. "portrait" — WHO THIS STUDENT IS TODAY, 2 short paragraphs (120–180 words
+   total). Trace where they have been (in their own words from the
+   application, if present) to what adults are seeing now. Name specific
+   moments from the evidence. Every claim must be grounded in something in
+   the input; if the evidence is thin, say so plainly in one sentence rather
+   than inventing.
+
+2. "pathways" — exactly THREE distinct, named options this student could
+   pursue toward their Ruakh 2.0 from here. Each must grow out of a different
+   thread in the evidence, and must be something they could start THIS
+   semester, not only someday.
+
+Rules:
+- Each pathway: "name" (2–5 words, echoing the student's own language, not a
+  generic track label); "firstSemester" (2–4 sentences: what they would
+  actually do next, naming real Pacifica experiences from the context below);
+  "mentorArchetype" naming ONE real faculty member from the FACULTY list whose
+  department fits (format "Name (Department) — " then one sentence about what
+  that department or program does, from the context only); "stretchChallenge"
+  (one sentence, hard and specific); "fourYearHorizon" (2–3 launch routes
+  from the context's catalog, in plain language).
+- Never invent a personal habit, phrase or anecdote for a real teacher.
+- Never invent a program not in the context. Never mention grades, scores,
+  GPA, rank, test results, lateness or missing work. Never use the word
+  "record." Frame anything hard as growth already underway, never a deficit.
+- Quote or closely echo at least one phrase the student wrote or a teacher
+  wrote in each pathway.
+- This is a draft for staff. Do not address the student or family directly.
+
+Respond with ONLY valid JSON, no prose, no markdown fences, exactly:
+
+{
+  "portrait": "string",
+  "pathways": [
+    {
+      "name": "string",
+      "firstSemester": "string",
+      "mentorArchetype": "string",
+      "stretchChallenge": "string",
+      "fourYearHorizon": ["string", "string"]
+    }
+  ]
+}
