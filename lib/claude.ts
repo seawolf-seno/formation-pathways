@@ -596,33 +596,58 @@ export interface RuakhDraft {
   usedFallback: boolean;
 }
 
+/** Ends a quoted snippet with exactly one period, never `…".` or `?".`. */
+function quoteSentence(text: string): string {
+  const snippet = quoteSnippet(text);
+  return /[.!?…]$/.test(snippet) ? `"${snippet}"` : `"${snippet}."`;
+}
+
+// Unlike the admissions fallback, these never splice evidence into the
+// pathway sentences: a teacher comment or a hard-season answer reads wrong
+// dropped into a template, and this student may be years past "first semester".
+const RUAKH_FALLBACK_STEPS: Record<string, { step: (when: string) => string; stretch: string }> = {
+  "The Builder": {
+    step: (when) => `${when}: time in the Makers Space or a STEM Scholars project, building something for someone else rather than for a grade.`,
+    stretch: "Presenting something they built to the Minchin Center's Insight Speaker Series, in front of working professionals, not just a teacher.",
+  },
+  "The Steady Servant": {
+    step: (when) => `${when}: weekly chapel and an invitation into a service club, somewhere their care for people has a regular place to go.`,
+    stretch: "Turning a good instinct into an ongoing commitment: showing up for the same person or cause every week, not just once.",
+  },
+  "The Asker of Real Questions": {
+    step: (when) => `${when}: a seat in an Oxford-style seminar in the Center for Philosophy & Theology, where real questions are the point.`,
+    stretch: "Making a case out loud in seminar, then hearing the strongest possible case against it, and staying in the room.",
+  },
+};
+
 function fallbackRuakh(input: RuakhInput): RuakhDraft {
-  const quotes = [
-    ...input.applicationResponses.map((r) => r.answer),
-    ...input.teacherComments.map((c) => c.comment),
-    ...input.observations.map((o) => o.text),
-  ].filter(Boolean);
-  const q = (i: number) => quoteSnippet(quotes[i % Math.max(quotes.length, 1)] ?? "");
+  const evidence =
+    input.applicationResponses.length + input.teacherComments.length + input.observations.length;
   const where = input.previousSchool
     ? `${input.firstName} came to us from ${input.previousSchool}`
     : `${input.firstName} is ${input.stage === "applicant" ? "applying to" : "at"} Pacifica`;
   const portrait =
     `${where}. ` +
     (input.applicationResponses[0]
-      ? `In their own words: "${quoteSnippet(input.applicationResponses[0].answer)}". `
+      ? `In their own words: ${quoteSentence(input.applicationResponses[0].answer)} `
       : "") +
     (input.teacherComments[0]
-      ? `A teacher recently wrote: "${quoteSnippet(input.teacherComments[0].comment)}". `
+      ? `A teacher recently wrote: ${quoteSentence(input.teacherComments[0].comment)} `
       : "") +
-    `\n\nAI assist is offline, so this is a template stitched from the evidence above, not a synthesis. ` +
-    `${quotes.length} pieces of evidence are on file.`;
+    (input.observations[0]
+      ? `${input.observations[0].author} noticed: ${quoteSentence(input.observations[0].text)}`
+      : "") +
+    `\n\nAI assist is offline, so this is a template, not a synthesis. ` +
+    `${evidence} ${evidence === 1 ? "piece" : "pieces"} of evidence are on file above for whoever writes the real one.`;
+  const when =
+    input.stage === "applicant" || input.stage === "admitted" ? "First semester" : "Next semester";
   return {
     portrait,
-    pathways: FALLBACK_EMPHASES.map((e, i) => ({
+    pathways: FALLBACK_EMPHASES.map((e) => ({
       name: e.name,
-      firstSemester: e.firstSemester(q(i)),
+      firstSemester: RUAKH_FALLBACK_STEPS[e.name].step(when),
       mentorArchetype: e.mentor,
-      stretchChallenge: e.stretchChallenge(q(i + 1)),
+      stretchChallenge: RUAKH_FALLBACK_STEPS[e.name].stretch,
       fourYearHorizon: [
         "a selective college or university, chosen for fit rather than prestige",
         "a gap-year fellowship or apprenticeship that tests the same instinct in the real world",

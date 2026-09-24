@@ -4,7 +4,7 @@ The new Formation Pathways database for a student's whole time with Pacifica:
 one `people` row from applicant to alumni, filled in from **Finalsite**
 (admissions), **Blackbaud** (enrollment) and **Canvas** (coursework), plus
 what staff see and say. Supabase Postgres, schema in
-`supabase/migrations/20260923000000_system_of_record.sql`.
+`supabase/migrations/20260924025527_system_of_record.sql`.
 
 It powers three tools:
 
@@ -43,7 +43,7 @@ still runs on local SQLite.
 - **AI drafts, people decide.** Pathway drafts are watermarked DRAFT until a
   named staff member signs them, and none of this reaches a family.
 
-`npm run test:db` runs 29 tests of these rules against the real migration
+`npm run test:db` runs 34 tests of these rules against the real migration
 (PGlite). CI runs it on every PR.
 
 ## Before any real student goes in
@@ -71,16 +71,20 @@ Then an admin records the sign-off on `/pilot`. That flip is logged too.
 
 ## Setup
 
-1. **Apply the migration.** Paste the migration file into the Supabase SQL
-   editor for project `cvppxixatcreyptpkymh`, or run `supabase db push`.
+1. **Apply the migrations** in `supabase/migrations/`, in order (`supabase db push`,
+   or paste each into the SQL editor). Done for `cvppxixatcreyptpkymh` on
+   2026-09-23; file names match the versions recorded there. The RLS helper
+   functions live in the `private` schema so the API never exposes them;
+   add new ones there too, then re-run Supabase's security and performance advisors.
 2. **Auth.** In Supabase → Authentication → URL configuration, set the
    Site URL and add `http://localhost:3000/auth/callback` plus the deployed
    `https://…/auth/callback` to redirect URLs. Sign-in uses an emailed link
    (no Google OAuth needed, which is still blocked on IT). Supabase's built-in
    email is rate-limited to a few messages an hour; set up custom SMTP before
    more than a couple of staff use it.
-3. **Env.** Copy `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-   (Project settings → API) into `.env.local`.
+3. **Env.** Copy `NEXT_PUBLIC_SUPABASE_URL` and the publishable key
+   (`sb_publishable_…`, Project settings → API keys) into `.env.local` as
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 4. **First admin.** Sign in once at `/login`, then in the SQL editor:
    ```sql
    insert into staff (user_id, email, display_name, role)

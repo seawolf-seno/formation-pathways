@@ -17,8 +17,10 @@ adults behind the scenes; students stay present, in person, with people.
   today" plus three Ruakh 2.0 pathways), and `/capture` (phone voice capture for any staff member).
   Runs on fictional `fixtures/sample/*` until leadership sign-off. See
   `docs/system-of-record.md`, which is the source of truth for setup, guardrails and gaps.
-  **Not yet applied to the live Supabase project**; the migration is tested locally only
-  (`npm run test:db`). Leadership sign-off, consent form and AI-vendor terms are still pending.
+  **Applied to the live Supabase project 2026-09-23** (both migrations; advisors clean), with
+  seno as the only `staff` admin and the six fictional sample students loaded. End-to-end
+  tested in the browser on sample data only; the leadership gate is still LOCKED. Not yet
+  deployed over HTTPS. Leadership sign-off, consent form and AI-vendor terms are still pending.
 - **Blocked 2026-09-21**: live Google Drive setup — seno has no access to the Google
   Cloud/OAuth 2.0 developer console needed to generate a Drive token, waiting on Pacifica
   IT. Don't push on this until he says it's unblocked. Everything else (mock Canvas/Drive,
