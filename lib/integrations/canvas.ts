@@ -64,7 +64,7 @@ export class LiveCanvasSource implements CanvasSource {
     this.baseUrl = baseUrl.replace(/\/+$/, "");
   }
 
-  private async request<T>(
+  async request<T>(
     path: string,
     params: Record<string, unknown> = {}
   ): Promise<{ data: T; next?: string }> {
@@ -95,7 +95,7 @@ export class LiveCanvasSource implements CanvasSource {
     return { data: (await res.json()) as T, next };
   }
 
-  private async getAll<T>(
+  async getAll<T>(
     path: string,
     params: Record<string, unknown> = {},
     maxPages = 20

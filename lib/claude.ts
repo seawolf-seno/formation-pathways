@@ -574,3 +574,93 @@ export async function draftAdmissionsStory(
     };
   }
 }
+
+/** What the system of record hands Claude for a "who they are today" draft.
+ *  First name only, no ids, no timeliness data — see prompts/ruakh-today.txt. */
+export interface RuakhInput {
+  firstName: string;
+  stage: string;
+  grade: number | null;
+  previousSchool: string | null;
+  interests: string[];
+  activities: string[];
+  applicationResponses: ApplicantAnswer[];
+  courses: { name: string; teacher: string | null }[];
+  teacherComments: { course: string; assignment: string; comment: string }[];
+  observations: { author: string; text: string; tags: string[]; date: string }[];
+}
+
+export interface RuakhDraft {
+  portrait: string;
+  pathways: GeneratedPathway[];
+  usedFallback: boolean;
+}
+
+function fallbackRuakh(input: RuakhInput): RuakhDraft {
+  const quotes = [
+    ...input.applicationResponses.map((r) => r.answer),
+    ...input.teacherComments.map((c) => c.comment),
+    ...input.observations.map((o) => o.text),
+  ].filter(Boolean);
+  const q = (i: number) => quoteSnippet(quotes[i % Math.max(quotes.length, 1)] ?? "");
+  const where = input.previousSchool
+    ? `${input.firstName} came to us from ${input.previousSchool}`
+    : `${input.firstName} is ${input.stage === "applicant" ? "applying to" : "at"} Pacifica`;
+  const portrait =
+    `${where}. ` +
+    (input.applicationResponses[0]
+      ? `In their own words: "${quoteSnippet(input.applicationResponses[0].answer)}". `
+      : "") +
+    (input.teacherComments[0]
+      ? `A teacher recently wrote: "${quoteSnippet(input.teacherComments[0].comment)}". `
+      : "") +
+    `\n\nAI assist is offline, so this is a template stitched from the evidence above, not a synthesis. ` +
+    `${quotes.length} pieces of evidence are on file.`;
+  return {
+    portrait,
+    pathways: FALLBACK_EMPHASES.map((e, i) => ({
+      name: e.name,
+      firstSemester: e.firstSemester(q(i)),
+      mentorArchetype: e.mentor,
+      stretchChallenge: e.stretchChallenge(q(i + 1)),
+      fourYearHorizon: [
+        "a selective college or university, chosen for fit rather than prestige",
+        "a gap-year fellowship or apprenticeship that tests the same instinct in the real world",
+      ],
+    })),
+    usedFallback: true,
+  };
+}
+
+/**
+ * Drafts "who this student is today" plus three Ruakh 2.0 pathways from the
+ * system of record. Always resolves — canned fallback if Claude is
+ * unreachable. Callers must check ai_drafting consent BEFORE calling (the
+ * pathway_drafts insert trigger enforces it again on save).
+ */
+export async function draftRuakhPathways(input: RuakhInput): Promise<RuakhDraft> {
+  const anthropic = getClient();
+  const fallback = fallbackRuakh(input);
+  if (!anthropic) return fallback;
+
+  try {
+    const system =
+      readPrompt("ruakh-today.txt") + "\n\n---\n\n" + readPrompt("pacifica-context.txt");
+    const message = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 2500,
+      system,
+      messages: [{ role: "user", content: JSON.stringify(input, null, 2) }],
+    });
+    const textBlock = message.content.find((b) => b.type === "text");
+    if (!textBlock || textBlock.type !== "text") return fallback;
+    const parsed = extractJson(textBlock.text) as { portrait?: unknown; pathways?: unknown };
+    const pathways = Array.isArray(parsed.pathways)
+      ? parsed.pathways.filter(isGeneratedPathway).slice(0, 3)
+      : [];
+    if (typeof parsed.portrait !== "string" || pathways.length < 3) return fallback;
+    return { portrait: parsed.portrait, pathways, usedFallback: false };
+  } catch {
+    return fallback;
+  }
+}

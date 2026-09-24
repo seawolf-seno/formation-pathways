@@ -11,6 +11,14 @@ adults behind the scenes; students stay present, in person, with people.
   Admissions Personalized Pathways (`/apply` → `/admissions` → `/applicant/[slug-token]`),
   Teacher Skills Page (`/courses` — Canvas + Google Drive → skill snapshots). Merged to
   `main` via PR #3, CI green, as of 2026-09-20.
+- **Built 2026-09-23 (branch `seno/system-of-record`)**: the **system of record** for a
+  consented real-student pilot. Supabase Postgres, staff login, `/pilot` (leadership gate,
+  roster, consent, Finalsite/Blackbaud/Canvas imports), `/pilot/people/[id]` ("who they are
+  today" plus three Ruakh 2.0 pathways), and `/capture` (phone voice capture for any staff member).
+  Runs on fictional `fixtures/sample/*` until leadership sign-off. See
+  `docs/system-of-record.md`, which is the source of truth for setup, guardrails and gaps.
+  **Not yet applied to the live Supabase project**; the migration is tested locally only
+  (`npm run test:db`). Leadership sign-off, consent form and AI-vendor terms are still pending.
 - **Blocked 2026-09-21**: live Google Drive setup — seno has no access to the Google
   Cloud/OAuth 2.0 developer console needed to generate a Drive token, waiting on Pacifica
   IT. Don't push on this until he says it's unblocked. Everything else (mock Canvas/Drive,
@@ -41,10 +49,16 @@ conflicts with this file, this file wins for what's already built.
 
 ## Stack
 - Next.js (App Router) + Tailwind, SQLite via better-sqlite3, Anthropic SDK
-  (model: claude-sonnet-4-6). Single repo, runs with `npm run dev`. No auth yet.
-- Supabase (Postgres) holds one slice so far: the admissions-story pathway
-  (see Architecture notes below). Everything else stays on SQLite until a
-  later phase.
+  (model: claude-sonnet-4-6). Single repo, runs with `npm run dev`.
+- Two data stores, deliberately separate:
+  - **Demo (SQLite, no auth)**: `app/(staff)/`, `/apply`, `/applicant/*`, all
+    fictional. Plus one Supabase slice, the admissions-story pathway (see below).
+  - **System of record (Supabase Postgres + Supabase Auth)**: `app/(sor)/`,
+    `lib/sor/`, `supabase/migrations/`. Staff sign in with an emailed link
+    (`@pacificachristian.org` only; no Google OAuth, which is blocked on IT). All reads
+    and writes go through `getSorClient()` as the signed-in staff member, so **Postgres
+    RLS is the authorization layer**. Never use the service-role key for system-of-record
+    data. `proxy.ts` (Next 16's renamed middleware) only redirects signed-out users.
 - Voice capture: browser Web Speech API for live dictation (Chrome), with a
   plain textarea fallback. (Production will use a dedicated speech-to-text
   service; do not block on audio quality now.)
@@ -62,8 +76,15 @@ conflicts with this file, this file wins for what's already built.
    growth-in-progress and actively surface pattern-breaking positives.
 4. Warm, not clinical. AI writes about teenagers the way a teacher who loves
    them would. Never diagnose, label, or score.
-5. FICTIONAL DATA ONLY until consent and privacy review are complete. Seed
-   students are invented. Never suggest entering real student names.
+5. FICTIONAL DATA ONLY everywhere except the system of record's consented
+   pilot. The demo's seed students are invented; never put real names there.
+   Real students may exist ONLY in the system-of-record tables, and only after
+   (a) leadership sign-off is saved in `pilot_settings` and (b) that student has
+   an active consent for the specific scope (`import_records`,
+   `staff_observations`, `ai_drafting`). Both are enforced by Postgres triggers.
+   Never weaken, bypass or "temporarily disable" those triggers, and never add a
+   path that creates real people from an import (importers only enrich
+   allowlisted people).
 6. No gamification, ever. No points, badges, streaks, leaderboards.
 
 ## Formation Framework (tag vocabulary — faculty owns this; keep editable in /prompts)
@@ -159,6 +180,18 @@ Test for every screen: "would a parent trust this with their child's story?"
   "Simulate Canvas activity" and watch the sync pipeline react live, with
   zero real data — reuse this pattern rather than making the mock stateless
   again.
+  (The pseudonymize-before-use contract above governs the **demo**. The system
+  of record is the one sanctioned exception. It stores real names only under
+  the consent and gate rules in principle #5, sends Claude the first name only (no
+  ids, no timeliness data) and only with `ai_drafting` consent, never imports
+  Canvas scores, and matches spoken names locally (`lib/sor/match.ts`) so the
+  roster never reaches Claude. Keep all four properties.)
+- System of record specifics: one `people` row per student for the whole
+  lifecycle, linked to source ids via `external_ids`. The access log is
+  append-only (no app user can update or delete it), and its `person_id` is
+  deliberately not a foreign key so withdrawals stay auditable. New tables need
+  RLS policies plus a consent trigger if they hold per-student data. Add a case
+  to `supabase/tests/rls.test.mjs` for any new guardrail.
 - Canvas client auth/pagination (`LiveCanvasSource`) is reused from a Pacifica
   student's own app — Levi Gibbons, github.com/levihgibbons1/canvasnotifications
   — credited in the `(staff)` layout's footer. Keep that credit if the

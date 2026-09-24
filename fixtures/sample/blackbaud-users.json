@@ -1,0 +1,11 @@
+{
+  "_note": "FICTIONAL sample shaped like Blackbaud SKY API School responses (GET /school/v1/users/{id} plus enrollment fields). Verify field names against your first live response.",
+  "users": [
+    { "id": "BB-S-5501", "first_name": "Mateo", "last_name": "Villanueva-Park", "preferred_name": null,
+      "student_info": { "grad_year": 2029, "grade_level": 11, "advisor_name": "Ms. Harriet Fenwick", "enroll_date": "2025-08-19" } },
+    { "id": "BB-S-5502", "first_name": "Iris", "last_name": "Okonkwo-Hale", "preferred_name": null,
+      "student_info": { "grad_year": 2028, "grade_level": 12, "advisor_name": "Mr. Desmond Achebe", "enroll_date": "2024-08-20" } },
+    { "id": "BB-S-5503", "first_name": "Benedict", "last_name": "Szabo", "preferred_name": "Ben",
+      "student_info": { "grad_year": 2029, "grade_level": 11, "advisor_name": "Ms. Harriet Fenwick", "enroll_date": "2026-01-06" } }
+  ]
+}
