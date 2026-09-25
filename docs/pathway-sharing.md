@@ -10,9 +10,11 @@ Demo scope: fictional applicants only, like the rest of the admissions demo.
 
 ## What is public, and what is not
 
-There is exactly one public surface, `/share/[token]` and its PNG at
-`/share/[token]/card`. Everything else, including `/applicant/*`, stays behind
-sign-in in production (`proxy.ts` exempts only `/share/`).
+The family-sharing public surface is `/share/[token]` and its PNG at
+`/share/[token]/card`; the existing outreach prototype also has `/from/*`.
+These exceptions are read-only (GET/HEAD); POSTs return 405 so public pages
+cannot bypass the staff gate for Server Actions. `/applicant/*` remains
+behind school sign-in in production.
 
 The public page renders a **snapshot** (`PublicShareContent`, `lib/share.ts`)
 copied into the `pathway_shares` table when the family confirms the preview.
@@ -21,7 +23,9 @@ public, and later edits or regeneration cannot change or leak into it.
 
 | Always | Only if the family opts in | Never |
 |---|---|---|
-| First name, Pathway name, one chosen sentence | Four-year horizon (max 3), stretch challenge, mentor's **department** | Last name, essays or answers, a teacher's name, grade, status, seed observations |
+| First-name field, Pathway name, one chosen sentence | Four-year horizon (max 3), stretch challenge, mentor's **department** | Separate surname, application-answer, grade, status, and seed-observation fields |
+
+Approved narrative text may itself quote application details or names. Field selection does not anonymize prose. The family preview explicitly calls this out; it no longer promises that names or essay details can never appear.
 
 Other rules, enforced in code:
 - Sharing requires the applicant to be `approved` or `enrolled`; the staff
@@ -95,3 +99,37 @@ same school. Demo: `/admissions/inquiries` (staff) and `/from/[school]` (public)
 Open: inquiries are seeded, not captured; a real intake (Finalsite or a form)
 and an email-sending path (with unsubscribe and consent for minors) still need
 Mr. Eno's decision. `/from/*` is a second public route to approve.
+
+
+## September 25: pathways-first presentation
+
+The October 5 experience opens directly at `/applicant/emma-r-8f3k2a` on the
+local demo. No dashboard is part of this journey. Three selectable possibilities
+lead to a focused first-semester, mentor, stretch, and horizon view. Sharing opens
+in a keyboard-dismissable modal with the current pathway selected.
+
+Optional details start off. Changing the selection clears the preview confirmation.
+Confirmation is a UI review aid, not a stored guardian-consent policy or server-side
+consent record. The original staff approval check still runs on share creation.
+The public page renders all selected details as HTML, while feed/story/OG PNGs
+are deliberately shorter headline cards with bounded text and a fictional-demo label.
+Download copy explains this difference. Revoked routes and images return 404;
+responses use no-store, though saved images and third-party cached previews cannot
+be recalled.
+
+### Verification for this revision
+
+- Lint: no errors (two pre-existing unused-variable warnings in Canvas integration).
+- 13 sharing/inquiry tests and 46 local database policy checks pass.
+- Production build and TypeScript pass.
+- Browser: selected a different pathway, opened its share preview, opted into a
+  department, confirmed and created a fictional share, viewed the public HTML and
+  generated feed PNG, revoked the link, and observed a 404 on reload.
+- HTTP: public share POST returns 405.
+- Desktop layout visually inspected. Mobile CSS is present; device-size browser
+  verification remains to be completed because the available viewport override
+  did not change the actual viewport.
+
+This remains a local fictional demonstration. Production family authentication,
+persistent share storage on serverless hosting, and school launch approval remain
+open; no live Supabase data or deployed settings were changed.

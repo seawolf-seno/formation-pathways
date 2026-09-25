@@ -59,6 +59,14 @@ when you run the demo.)
 
 ---
 
+## October 5 family-pathway demonstration
+
+After `npm run dev`, open `http://localhost:3000/applicant/emma-r-8f3k2a`.
+Explore the three fictional pathways, open **Share this possibility**, choose
+public details, confirm the preview, then create a link or download a card.
+The public page works without staff navigation. This is a local demonstration;
+production parent access is still unresolved. See [sharing notes](docs/pathway-sharing.md).
+
 ## 10-minute demo script
 
 ### 1. The roster (1 min)

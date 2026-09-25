@@ -1,155 +1,131 @@
 import { ImageResponse } from "next/og";
 import { CARD_SIZES, type CardFormat, type PublicShareContent } from "./share";
 
-// Brand values mirror app/globals.css (satori can't read CSS variables).
-const NAVY = "#16324f";
-const NAVY_INK = "#0f2338";
-const PACIFIC = "#8fb3d9";
-const GOLD = "#c9a24b";
-const CREAM = "#f6ecd9";
-
-/** Where "Discover Pacifica" points. Override per deployment. */
+/** Existing configurable admissions destination; confirm with school before launch. */
 export function admissionsUrl(): string {
-  return process.env.NEXT_PUBLIC_ADMISSIONS_URL ?? "https://www.pacificachristian.org/admissions";
+  return (
+    process.env.NEXT_PUBLIC_ADMISSIONS_URL ??
+    "https://www.pacificachristian.org/admissions"
+  );
 }
 
-function displayHost(url: string): string {
-  try {
-    const u = new URL(url);
-    return `${u.host}${u.pathname === "/" ? "" : u.pathname}`;
-  } catch {
-    return url;
-  }
+function excerpt(text: string, limit: number) {
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit - 1).trimEnd()}…`;
 }
 
+// Image is deliberately a headline card; all selected details remain on the public page.
+// Bounded copy prevents long approved narratives from overflowing fixed social dimensions.
 export function renderShareCard(
   content: PublicShareContent,
-  format: CardFormat
+  format: CardFormat,
 ): ImageResponse {
   const { width, height } = CARD_SIZES[format];
   const wide = format === "og";
-  const tall = format === "story";
-  const pad = wide ? 56 : 84;
-  const nameSize = wide ? 62 : tall ? 116 : 104;
-  const bodySize = wide ? 26 : tall ? 46 : 38;
-  const chipSize = wide ? 20 : tall ? 32 : 28;
-  const horizon = wide ? (content.horizon ?? []).slice(0, 2) : (content.horizon ?? []);
-
+  const story = format === "story";
+  const title = excerpt(content.pathwayName, 95);
   return new ImageResponse(
     (
       <div
         style={{
-          width: "100%",
-          height: "100%",
           display: "flex",
           flexDirection: "column",
           justifyContent: "space-between",
-          background: `linear-gradient(160deg, ${NAVY} 0%, ${NAVY_INK} 100%)`,
-          color: "white",
-          // Stories: keep text clear of Instagram's own top and bottom UI.
-          padding: tall ? `220px ${pad}px` : pad,
-          borderTop: `14px solid ${GOLD}`,
+          width: "100%",
+          height: "100%",
+          background: "#f8f5ed",
+          color: "#16324f",
+          padding: story ? "240px 80px" : wide ? "46px 60px" : "70px 80px",
+          fontFamily: "serif",
         }}
       >
         <div
           style={{
             display: "flex",
+            justifyContent: "space-between",
+            borderBottom: "1px solid #16324f40",
+            paddingBottom: 25,
+            fontFamily: "sans-serif",
+            fontSize: wide ? 18 : 23,
+            letterSpacing: 3,
+          }}
+        >
+          <span>PACIFICA CHRISTIAN</span>
+          <span style={{ color: "#81622e" }}>POSSIBILITIES</span>
+        </div>
+        <div
+          style={{
+            display: "flex",
             flexDirection: "column",
-            flex: 1,
-            justifyContent: tall ? "center" : "flex-start",
+            marginTop: 28,
+            marginBottom: 28,
           }}
         >
           <div
             style={{
               display: "flex",
-              fontSize: wide ? 20 : 26,
-              letterSpacing: 6,
-              color: GOLD,
-              textTransform: "uppercase",
+              fontFamily: "sans-serif",
+              fontSize: wide ? 22 : 30,
+              color: "#526474",
             }}
           >
-            Pacifica Christian High School
+            Imagine what’s possible for {excerpt(content.firstName, 32)}.
           </div>
           <div
             style={{
               display: "flex",
-              marginTop: wide ? 24 : 56,
-              fontSize: wide ? 26 : 36,
-              color: PACIFIC,
+              fontSize: wide
+                ? title.length > 45
+                  ? 44
+                  : 64
+                : title.length > 45
+                  ? 66
+                  : 92,
+              lineHeight: 1.13,
+              marginTop: 22,
+              marginBottom: wide ? 22 : 40,
             }}
           >
-            {content.firstName}&apos;s Pathway
+            {title}
           </div>
           <div
             style={{
               display: "flex",
-              marginTop: 12,
-              fontSize: nameSize,
-              fontWeight: 700,
-              lineHeight: 1.05,
+              fontFamily: "sans-serif",
+              fontSize: wide ? 24 : 34,
+              lineHeight: 1.55,
+              color: "#526474",
             }}
           >
-            {content.pathwayName}
+            {excerpt(content.highlight, wide ? 170 : 260)}
           </div>
-          <div
-            style={{
-              display: "flex",
-              marginTop: wide ? 24 : 48,
-              paddingLeft: 28,
-              borderLeft: `6px solid ${GOLD}`,
-              fontSize: bodySize,
-              lineHeight: 1.4,
-              color: CREAM,
-            }}
-          >
-            {content.highlight}
-          </div>
-          {content.stretchChallenge && !wide ? (
+          {content.program && (
             <div
               style={{
                 display: "flex",
-                flexDirection: "column",
-                marginTop: 40,
-                fontSize: bodySize - 6,
-                lineHeight: 1.4,
-                color: "white",
+                fontFamily: "sans-serif",
+                fontSize: wide ? 18 : 25,
+                color: "#81622e",
+                marginTop: 26,
               }}
             >
-              <div style={{ display: "flex", fontSize: 22, letterSpacing: 4, color: PACIFIC, textTransform: "uppercase" }}>
-                A stretch challenge
-              </div>
-              <div style={{ display: "flex", marginTop: 8 }}>{content.stretchChallenge}</div>
+              With Pacifica {excerpt(content.program, 50)}
             </div>
-          ) : null}
-          <div style={{ display: "flex", flexWrap: "wrap", marginTop: wide ? 20 : 40 }}>
-            {[...(content.program ? [`With Pacifica ${content.program}`] : []), ...horizon].map(
-              (chip, i) => (
-                <div
-                  key={i}
-                  style={{
-                    display: "flex",
-                    marginRight: 14,
-                    marginBottom: 14,
-                    padding: wide ? "8px 16px" : "12px 24px",
-                    borderRadius: 999,
-                    border: `2px solid ${PACIFIC}`,
-                    fontSize: chipSize,
-                    color: "white",
-                  }}
-                >
-                  {chip}
-                </div>
-              )
-            )}
-          </div>
+          )}
         </div>
-        <div style={{ display: "flex", flexDirection: "column" }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            borderTop: "1px solid #16324f40",
+            paddingTop: 24,
+          }}
+        >
           <div
             style={{
               display: "flex",
-              fontSize: wide ? 22 : 30,
+              fontSize: wide ? 22 : 32,
               fontStyle: "italic",
-              color: CREAM,
             }}
           >
             An invitation, not a prediction.
@@ -157,16 +133,17 @@ export function renderShareCard(
           <div
             style={{
               display: "flex",
-              marginTop: 12,
-              fontSize: wide ? 20 : 28,
-              color: GOLD,
+              fontFamily: "sans-serif",
+              fontSize: wide ? 14 : 19,
+              marginTop: 16,
+              color: "#526474",
             }}
           >
-            Discover your child&apos;s Pathway · {displayHost(admissionsUrl())}
+            Discover Pacifica · Fictional applicant / demonstration
           </div>
         </div>
       </div>
     ),
-    { width, height }
+    { width, height },
   );
 }

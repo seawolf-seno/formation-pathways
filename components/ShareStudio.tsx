@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   createPathwayShareAction,
   revokePathwayShareAction,
@@ -20,42 +21,35 @@ export interface ExistingShare {
 
 function PreviewCard({ content }: { content: PublicShareContent }) {
   return (
-    <div className="rounded-2xl border-t-8 border-[var(--color-gold)] bg-gradient-to-br from-[var(--color-navy)] to-[var(--color-navy-ink)] p-6 text-white shadow-xl">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[var(--color-gold)]">
-        Pacifica Christian High School
-      </p>
-      <p className="mt-4 text-sm text-[var(--color-pacific)]">
-        {content.firstName}&apos;s Pathway
-      </p>
-      <p className="font-display text-3xl font-bold leading-tight">{content.pathwayName}</p>
-      <p className="mt-4 border-l-4 border-[var(--color-gold)] pl-3 text-sm leading-relaxed text-[var(--color-gold-light)]">
-        {content.highlight}
-      </p>
+    <div className="share-preview">
+      <p className="share-card-brand">PACIFICA CHRISTIAN</p>
+      <span className="share-card-kicker">
+        Imagine what’s possible for {content.firstName}.
+      </span>
+      <h3>{content.pathwayName}</h3>
+      <p className="share-card-highlight">{content.highlight}</p>
+      {content.program && (
+        <p className="share-card-program">With Pacifica {content.program}</p>
+      )}
       {content.stretchChallenge && (
-        <div className="mt-4 text-xs leading-relaxed">
-          <p className="font-semibold uppercase tracking-widest text-[var(--color-pacific)]">
-            A stretch challenge
-          </p>
-          <p className="mt-1">{content.stretchChallenge}</p>
+        <div className="share-card-extra">
+          <strong>Room to stretch</strong>
+          <p>{content.stretchChallenge}</p>
         </div>
       )}
-      <div className="mt-4 flex flex-wrap gap-2">
-        {content.program && (
-          <span className="rounded-full border border-[var(--color-pacific)] px-3 py-1 text-xs">
-            With Pacifica {content.program}
-          </span>
-        )}
-        {content.horizon?.map((h, i) => (
-          <span
-            key={i}
-            className="rounded-full border border-[var(--color-pacific)] px-3 py-1 text-xs"
-          >
-            {h}
-          </span>
-        ))}
-      </div>
-      <p className="mt-5 text-xs italic text-[var(--color-gold-light)]">
-        An invitation, not a prediction.
+      {content.horizon && (
+        <div className="share-card-extra">
+          <strong>Where this could lead</strong>
+          <ul>
+            {content.horizon.map((h, i) => (
+              <li key={i}>{h}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <p className="share-card-footer">
+        A possibility to explore. A story to make your own.
+        <span>Fictional applicant · Pacifica demonstration</span>
       </p>
     </div>
   );
@@ -66,228 +60,227 @@ export function ShareStudio({
   applicantName,
   pathways,
   existing,
+  initialPathwayIndex = 0,
 }: {
   applicantToken: string;
   applicantName: string;
   pathways: GeneratedPathway[];
   existing: ExistingShare[];
+  initialPathwayIndex?: number;
 }) {
+  const router = useRouter();
   const [selection, setSelection] = useState<ShareSelection>({
-    pathwayIndex: 0,
+    pathwayIndex: initialPathwayIndex,
     highlightIndex: 0,
     includeStretch: false,
-    includeHorizon: true,
-    includeProgram: true,
+    includeHorizon: false,
+    includeProgram: false,
   });
-  const [shares, setShares] = useState<ExistingShare[]>(existing);
+  const [shares, setShares] = useState(existing);
+  const [created, setCreated] = useState<ExistingShare | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [copied, setCopied] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
   const [pending, start] = useTransition();
-
-  const sentences = splitSentences(pathways[selection.pathwayIndex]?.firstSemester ?? "");
+  const sentences = splitSentences(
+    pathways[selection.pathwayIndex]?.firstSemester ?? "",
+  );
   let preview: PublicShareContent | null = null;
   try {
     preview = buildPublicShareContent(applicantName, pathways, selection);
   } catch {
-    preview = null;
+    /* invalid selection disables sharing */
   }
-
   const link = (token: string) => `${window.location.origin}/share/${token}`;
-
+  function update(next: Partial<ShareSelection>) {
+    setSelection((s) => ({ ...s, ...next }));
+    setConfirmed(false);
+    setCreated(null);
+    setError(null);
+  }
   function create() {
+    if (!confirmed || !preview) return;
+    const snapshot = preview;
     setError(null);
     start(async () => {
       try {
-        const { token } = await createPathwayShareAction(applicantToken, selection);
-        if (preview) setShares((s) => [{ token, content: preview! }, ...s]);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Something went wrong");
+        const { token } = await createPathwayShareAction(
+          applicantToken,
+          selection,
+        );
+        const share = { token, content: snapshot };
+        setShares((s) => [share, ...s]);
+        setCreated(share);
+        setMessage(
+          "Your link is ready. Only the previewed content is on the public page.",
+        );
+        router.refresh();
+      } catch {
+        setError("We couldn’t create your link. Please try again.");
       }
     });
   }
-
   function revoke(token: string) {
+    setError(null);
     start(async () => {
-      await revokePathwayShareAction(applicantToken, token);
-      setShares((s) => s.filter((x) => x.token !== token));
+      try {
+        await revokePathwayShareAction(applicantToken, token);
+        setShares((s) => s.filter((x) => x.token !== token));
+        if (created?.token === token) setCreated(null);
+        setMessage(
+          "This link is no longer available. Previously downloaded images cannot be recalled.",
+        );
+        router.refresh();
+      } catch {
+        setError("We couldn’t stop sharing. Please try again.");
+      }
     });
   }
-
   async function copy(token: string) {
     try {
       await navigator.clipboard.writeText(link(token));
-      setCopied(token);
-      setTimeout(() => setCopied(null), 2000);
+      setMessage("Link copied. Ready to send to someone you know.");
     } catch {
-      window.prompt("Copy this link", link(token));
+      window.prompt("Copy your share link", link(token));
     }
   }
-
-  const label = "text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]";
-
   return (
-    <section
-      aria-labelledby="share-heading"
-      className="mt-14 rounded-3xl border border-[var(--color-border)] bg-white p-6 sm:p-8 print:hidden"
-    >
-      <h2 id="share-heading" className="font-display text-2xl text-[var(--color-navy-ink)]">
-        Share {applicantName.split(" ")[0]}&apos;s Pathway
+    <section className="share-studio" aria-labelledby="share-title">
+      <h2 id="share-title">
+        Let someone else see
+        <br />
+        what you see.
       </h2>
-      <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
-        Pick the Pathway that feels most like {applicantName.split(" ")[0]}, choose what to
-        show, and see exactly what others will see. Your child&apos;s essays, last name and any
-        teacher&apos;s name are never included.
+      <p className="share-intro">
+        Choose a little of {applicantName.split(" ")[0]}’s story to share. The
+        full application stays here.
       </p>
-
-      <div className="mt-6 grid gap-8 lg:grid-cols-2">
-        <div className="space-y-6">
-          <fieldset>
-            <legend className={label}>1 · Which Pathway is yours?</legend>
-            <div className="mt-2 space-y-2">
+      <div className="share-layout">
+        <div className="share-controls">
+          <label className="share-field">
+            The possibility
+            <select
+              disabled={pending}
+              value={selection.pathwayIndex}
+              onChange={(e) =>
+                update({
+                  pathwayIndex: Number(e.target.value),
+                  highlightIndex: 0,
+                })
+              }
+            >
               {pathways.map((p, i) => (
-                <label
-                  key={i}
-                  className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm ${
-                    selection.pathwayIndex === i
-                      ? "border-[var(--color-navy)] bg-[var(--color-pacific-light)]"
-                      : "border-[var(--color-border)]"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="pathway"
-                    checked={selection.pathwayIndex === i}
-                    onChange={() =>
-                      setSelection((s) => ({ ...s, pathwayIndex: i, highlightIndex: 0 }))
-                    }
-                  />
-                  <span className="font-display text-base text-[var(--color-navy-ink)]">
-                    {p.name}
-                  </span>
-                </label>
+                <option key={i} value={i}>
+                  {p.name}
+                </option>
               ))}
-            </div>
+            </select>
+          </label>
+          <fieldset disabled={pending}>
+            <legend>A moment to highlight</legend>
+            {sentences.map((sentence, i) => (
+              <label
+                className={`share-sentence ${selection.highlightIndex === i ? "selected" : ""}`}
+                key={i}
+              >
+                <input
+                  type="radio"
+                  name="highlight"
+                  checked={selection.highlightIndex === i}
+                  onChange={() => update({ highlightIndex: i })}
+                />
+                <span>{sentence}</span>
+              </label>
+            ))}
           </fieldset>
-
-          <fieldset>
-            <legend className={label}>2 · Choose a highlight</legend>
-            <div className="mt-2 space-y-2">
-              {sentences.map((sentence, i) => (
-                <label
-                  key={i}
-                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm ${
-                    selection.highlightIndex === i
-                      ? "border-[var(--color-navy)] bg-[var(--color-pacific-light)]"
-                      : "border-[var(--color-border)]"
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="highlight"
-                    className="mt-1"
-                    checked={selection.highlightIndex === i}
-                    onChange={() => setSelection((s) => ({ ...s, highlightIndex: i }))}
-                  />
-                  <span>{sentence}</span>
-                </label>
-              ))}
-            </div>
+          <fieldset disabled={pending}>
+            <legend>Include a little more</legend>
+            {(
+              [
+                ["includeProgram", "The Pacifica department"],
+                ["includeHorizon", "Possibilities beyond graduation"],
+                ["includeStretch", "The stretch challenge"],
+              ] as const
+            ).map(([key, label]) => (
+              <label className="share-toggle" key={key}>
+                <input
+                  type="checkbox"
+                  checked={selection[key]}
+                  onChange={(e) => update({ [key]: e.target.checked })}
+                />
+                {label}
+              </label>
+            ))}
           </fieldset>
-
-          <fieldset>
-            <legend className={label}>3 · Add more (optional)</legend>
-            <div className="mt-2 space-y-2 text-sm">
-              {(
-                [
-                  ["includeHorizon", "Where this could lead in four years"],
-                  ["includeProgram", "The Pacifica department that would guide it"],
-                  ["includeStretch", "A stretch challenge"],
-                ] as const
-              ).map(([key, text]) => (
-                <label key={key} className="flex items-center gap-3">
-                  <input
-                    type="checkbox"
-                    checked={selection[key]}
-                    onChange={(e) => setSelection((s) => ({ ...s, [key]: e.target.checked }))}
-                  />
-                  {text}
-                </label>
-              ))}
-            </div>
-          </fieldset>
-        </div>
-
-        <div>
-          <p className={label}>What others will see</p>
-          <div className="mt-2">{preview && <PreviewCard content={preview} />}</div>
+          <p className="share-note">
+            The preview includes a first name and may quote details from the
+            application. Read all of it before sharing. Anyone with the link can
+            view or forward it.
+          </p>
+          <label className="share-consent">
+            <input
+              type="checkbox"
+              checked={confirmed}
+              disabled={pending}
+              onChange={(e) => setConfirmed(e.target.checked)}
+            />
+            <span>
+              I’ve reviewed this preview and want these details on the public
+              demo page.
+            </span>
+          </label>
           <button
-            type="button"
+            className="family-button"
+            disabled={!preview || !confirmed || pending || !!created}
             onClick={create}
-            disabled={pending || !preview}
-            className="mt-4 w-full rounded-full bg-[var(--color-navy)] px-6 py-3 text-sm font-semibold text-white disabled:opacity-50"
           >
-            {pending ? "Working…" : "Create share link"}
+            {pending
+              ? "Working…"
+              : created
+                ? "Your link is ready ✓"
+                : "Create this share link ↗"}
           </button>
           {error && (
-            <p role="alert" className="mt-2 text-sm text-red-700">
+            <p role="alert" className="share-note">
               {error}
             </p>
           )}
         </div>
+        <div>
+          <p className="family-eyebrow">Public page preview</p>
+          {preview && <PreviewCard content={preview} />}
+          <p className="share-note">
+            Downloaded cards use a shorter headline layout. The public page
+            retains all selected details.
+          </p>
+        </div>
       </div>
-
+      <p className="share-status" role="status">
+        {message}
+      </p>
       {shares.length > 0 && (
-        <div className="mt-10 border-t border-[var(--color-border)] pt-6">
-          <p className={label}>Your share links</p>
-          <ul className="mt-3 space-y-4">
-            {shares.map((s) => (
-              <li
-                key={s.token}
-                className="rounded-xl border border-[var(--color-border)] p-4 text-sm"
-              >
-                <p className="font-display text-base text-[var(--color-navy-ink)]">
-                  {s.content.pathwayName}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => copy(s.token)}
-                    className="rounded-full bg-[var(--color-navy)] px-4 py-2 text-xs font-semibold text-white"
-                  >
-                    {copied === s.token ? "Copied" : "Copy link"}
-                  </button>
-                  <a
-                    href={`/share/${s.token}/card?format=feed&download=1`}
-                    className="rounded-full border border-[var(--color-navy)] px-4 py-2 text-xs font-semibold text-[var(--color-navy)]"
-                  >
-                    Download for Instagram post
-                  </a>
-                  <a
-                    href={`/share/${s.token}/card?format=story&download=1`}
-                    className="rounded-full border border-[var(--color-navy)] px-4 py-2 text-xs font-semibold text-[var(--color-navy)]"
-                  >
-                    Download for Story
-                  </a>
-                  <a
-                    href={`/share/${s.token}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="rounded-full border border-[var(--color-border)] px-4 py-2 text-xs"
-                  >
-                    Open public page
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => revoke(s.token)}
-                    disabled={pending}
-                    className="rounded-full px-4 py-2 text-xs text-red-700 underline"
-                  >
-                    Stop sharing
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
+        <div className="share-results">
+          <h3>Your shared possibilities</h3>
+          {shares.map((s) => (
+            <div className="share-result" key={s.token}>
+              <p>{s.content.pathwayName}</p>
+              <div>
+                <button onClick={() => copy(s.token)}>Copy link</button>
+                <a href={`/share/${s.token}`} target="_blank" rel="noreferrer">
+                  View public page ↗
+                </a>
+                <a href={`/share/${s.token}/card?format=feed&download=1`}>
+                  Download post
+                </a>
+                <a href={`/share/${s.token}/card?format=story&download=1`}>
+                  Download story
+                </a>
+                <button disabled={pending} onClick={() => revoke(s.token)}>
+                  Stop sharing
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </section>

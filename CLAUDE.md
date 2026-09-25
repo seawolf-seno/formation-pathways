@@ -7,6 +7,12 @@ adults behind the scenes; students stay present, in person, with people.
 
 ## Status (update as work happens — keep current, not historical)
 
+- **September 25 contribution (`codex/pathways-first-experience`)**: family-facing
+  pathway exploration and focused sharing preview for the October 5 demonstration.
+  Start locally at `/applicant/emma-r-8f3k2a`; no dashboard is part of this flow.
+  Public HTML and image cards use selected snapshots. See `docs/pathway-sharing.md`
+  for verification and unresolved production-family access/storage requirements.
+
 - **Built**: all three exec-demo features (spec Part 3) — Voice Capture (Day-1),
   Admissions Personalized Pathways (`/apply` → `/admissions` → `/applicant/[slug-token]`),
   Teacher Skills Page (`/courses` — Canvas + Google Drive → skill snapshots). Merged to

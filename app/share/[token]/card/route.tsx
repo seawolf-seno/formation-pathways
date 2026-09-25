@@ -6,7 +6,7 @@ import { renderShareCard } from "@/lib/share-card";
 // story, or og (link-preview size). ?download=1 sets a filename.
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ token: string }> }
+  { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
   const content = getPublicShare(token);
@@ -18,11 +18,11 @@ export async function GET(
 
   const image = renderShareCard(content, format);
   const headers = new Headers(image.headers);
-  headers.set("Cache-Control", "public, max-age=300");
+  headers.set("Cache-Control", "no-store");
   if (url.searchParams.get("download") === "1") {
     headers.set(
       "Content-Disposition",
-      `attachment; filename="pacifica-pathway-${format}.png"`
+      `attachment; filename="pacifica-pathway-${format}.png"`,
     );
   }
   return new Response(image.body, { status: 200, headers });

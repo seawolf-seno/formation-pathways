@@ -15,9 +15,25 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   // Parent-curated public shares (and their card images) are the one public
   // surface. They serve only a whitelisted snapshot; see docs/pathway-sharing.md.
-  if (path.startsWith("/share/") || path.startsWith("/from/")) return NextResponse.next();
-  const isSor = SOR_PREFIXES.some((p) => path === p || path.startsWith(`${p}/`));
-  if (!isSor && process.env.NODE_ENV !== "production") return NextResponse.next();
+  if (path.startsWith("/share/") || path.startsWith("/from/")) {
+    // A public preview must not become a bypass for POSTed staff Server Actions.
+    if (request.method !== "GET" && request.method !== "HEAD") {
+      return new NextResponse("Method not allowed", {
+        status: 405,
+        headers: { Allow: "GET, HEAD" },
+      });
+    }
+    const response = NextResponse.next();
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return response;
+  }
+  const isSor = SOR_PREFIXES.some(
+    (p) => path === p || path.startsWith(`${p}/`),
+  );
+  if (!isSor && process.env.NODE_ENV !== "production")
+    return NextResponse.next();
 
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -36,7 +52,7 @@ export async function proxy(request: NextRequest) {
         toSet.forEach(({ name, value }) => request.cookies.set(name, value));
         response = NextResponse.next({ request });
         toSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options)
+          response.cookies.set(name, value, options),
         );
       },
     },
@@ -45,7 +61,9 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const schoolAccount = user?.email?.toLowerCase().endsWith("@pacificachristian.org");
+  const schoolAccount = user?.email
+    ?.toLowerCase()
+    .endsWith("@pacificachristian.org");
   if (!user || (!isSor && !schoolAccount)) {
     const login = new URL("/login", request.url);
     login.searchParams.set("next", path);
