@@ -1,5 +1,9 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { CARD_SIZES, type CardFormat, type PublicShareContent } from "./share";
+
+const logo = `data:image/svg+xml;base64,${readFileSync(join(process.cwd(), "public/brand/pacifica-logo.svg")).toString("base64")}`;
 
 /** Existing configurable admissions destination; confirm with school before launch. */
 export function admissionsUrl(): string {
@@ -44,14 +48,18 @@ export function renderShareCard(
             display: "flex",
             justifyContent: "space-between",
             borderBottom: "1px solid #16324f40",
-            paddingBottom: 25,
+            padding: 24,
+            background: "#003260",
+            alignItems: "center",
             fontFamily: "sans-serif",
             fontSize: wide ? 18 : 23,
             letterSpacing: 3,
           }}
         >
-          <span>PACIFICA CHRISTIAN</span>
-          <span style={{ color: "#81622e" }}>POSSIBILITIES</span>
+          {/* ImageResponse renders an embedded asset, not a browser image. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logo} alt="Pacifica Christian High School" width={306} height={72} />
+          <span style={{ color: "#ffffff" }}>POSSIBILITIES</span>
         </div>
         <div
           style={{

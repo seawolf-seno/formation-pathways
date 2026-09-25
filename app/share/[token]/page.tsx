@@ -1,3 +1,4 @@
+import { PacificaLogo } from "@/components/PacificaLogo";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicShare } from "@/lib/queries";
@@ -48,13 +49,7 @@ export default async function SharePage({ params }: Props) {
     <main className="family-experience public-pathway">
       <header className="family-header">
         <a className="family-wordmark" href={admissionsUrl()}>
-          <span className="family-seal" aria-hidden="true">
-            P
-          </span>
-          <span>
-            PACIFICA
-            <span className="family-wordmark-sub">CHRISTIAN HIGH SCHOOL</span>
-          </span>
+          <PacificaLogo />
         </a>
         <span className="family-demo">Fictional family · Demo</span>
       </header>

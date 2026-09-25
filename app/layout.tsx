@@ -13,6 +13,7 @@ const display = Lora({
 });
 
 export const metadata: Metadata = {
+  icons: { icon: "/brand/favicon-32.png" },
   title: "Formation Pathways — Pacifica Christian",
   description:
     "Capture formation moments. Draft a Pathway. Keep AI behind the scenes.",

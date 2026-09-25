@@ -1,5 +1,6 @@
 "use client";
 
+import { PacificaLogo } from "./PacificaLogo";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -22,7 +23,7 @@ export interface ExistingShare {
 function PreviewCard({ content }: { content: PublicShareContent }) {
   return (
     <div className="share-preview">
-      <p className="share-card-brand">PACIFICA CHRISTIAN</p>
+      <div className="share-card-brand"><PacificaLogo /></div>
       <span className="share-card-kicker">
         Imagine what’s possible for {content.firstName}.
       </span>

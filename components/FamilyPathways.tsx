@@ -1,5 +1,6 @@
 "use client";
 
+import { PacificaLogo } from "@/components/PacificaLogo";
 import { useRef, useState } from "react";
 import type { GeneratedPathway } from "@/lib/types";
 import { ShareStudio, type ExistingShare } from "./ShareStudio";
@@ -37,13 +38,7 @@ export function FamilyPathways({
           href="#possibilities"
           aria-label="Pacifica Christian — your pathways"
         >
-          <span className="family-seal" aria-hidden="true">
-            P
-          </span>
-          <span>
-            PACIFICA
-            <span className="family-wordmark-sub">CHRISTIAN HIGH SCHOOL</span>
-          </span>
+          <PacificaLogo />
         </a>
         <span className="family-demo">Fictional family · Demo</span>
       </header>
