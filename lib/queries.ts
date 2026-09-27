@@ -218,16 +218,35 @@ interface ApplicantRow {
   approved_at: string | null;
   converted_student_id: number | null;
   created_at: string;
+  spark_token: string | null;
+  spark_response: string | null;
+  spark_completed_at: string | null;
 }
 
 function parseApplicant(row: ApplicantRow): Applicant {
+  let spark_response: Applicant["spark_response"] = null;
+  if (row.spark_response) {
+    try {
+      spark_response = JSON.parse(row.spark_response) as Applicant["spark_response"];
+    } catch {
+      spark_response = null;
+    }
+  }
   return {
     ...row,
     answers: JSON.parse(row.answers) as ApplicantAnswer[],
     generated: row.generated_pathways
       ? (JSON.parse(row.generated_pathways) as GeneratedPathwaysResult)
       : null,
+    spark_response,
   };
+}
+
+export function getApplicantBySparkToken(token: string): Applicant | undefined {
+  const row = db
+    .prepare("SELECT * FROM applicants WHERE spark_token = ?")
+    .get(token) as ApplicantRow | undefined;
+  return row ? parseApplicant(row) : undefined;
 }
 
 export function getApplicants(): Applicant[] {

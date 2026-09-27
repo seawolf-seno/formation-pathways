@@ -252,9 +252,13 @@ const FALLBACK_EMPHASES: FallbackEmphasis[] = [
 ];
 
 function fallbackAdmissionsPathways(
-  answers: ApplicantAnswer[]
+  answers: ApplicantAnswer[],
+  sparkContext?: string | null
 ): GeneratedPathwaysResult {
-  const a = (i: number) => answers[i]?.answer ?? "";
+  // When an essay is still blank, quote the Spark context instead so the
+  // fallback pathway isn't built entirely on "something they're still
+  // discovering" while real signal already exists.
+  const a = (i: number) => answers[i]?.answer?.trim() || sparkContext || "";
 
   const pathways: GeneratedPathway[] = FALLBACK_EMPHASES.map(
     (emphasis, i) => ({
@@ -302,10 +306,17 @@ function isGeneratedPathway(value: unknown): value is GeneratedPathway {
  * canned-but-still-quoting response if Claude is unreachable.
  */
 export async function draftAdmissionsPathways(
-  answers: ApplicantAnswer[]
+  answers: ApplicantAnswer[],
+  /**
+   * Plain-language Spark-survey context (lib/spark.ts's formatSparkContext),
+   * when the applicant has completed it. Self-reported interests only, never
+   * essay text — appended, not blended into the Q/A block, so the model can
+   * tell the two apart and lean on Spark only where essays are thin or empty.
+   */
+  sparkContext?: string | null
 ): Promise<{ result: GeneratedPathwaysResult; usedFallback: boolean }> {
   const anthropic = getClient();
-  const fallback = fallbackAdmissionsPathways(answers);
+  const fallback = fallbackAdmissionsPathways(answers, sparkContext);
   if (!anthropic) return { result: fallback, usedFallback: true };
 
   try {
@@ -313,9 +324,12 @@ export async function draftAdmissionsPathways(
       readPrompt("admissions-pathways.txt") +
       "\n\n---\n\n" +
       readPrompt("pacifica-context.txt");
-    const user = answers
+    const answerBlock = answers
       .map((a, i) => `Q${i + 1}: ${a.question}\nA${i + 1}: ${a.answer}`)
       .join("\n\n");
+    const user = sparkContext
+      ? `${answerBlock}\n\n---\nAdditional context from a pre-essay interest survey (not an essay answer):\n${sparkContext}`
+      : answerBlock;
     const message = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 2200,

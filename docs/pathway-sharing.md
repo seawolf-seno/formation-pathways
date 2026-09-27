@@ -133,3 +133,39 @@ be recalled.
 This remains a local fictional demonstration. Production family authentication,
 persistent share storage on serverless hosting, and school launch approval remain
 open; no live Supabase data or deployed settings were changed.
+
+## Interest survey: "Spark" (pre-essay, mid-application)
+
+A short, tap-based survey (interests, a few either/ors, an optional note —
+about a minute) an applicant can fill out at any point during their
+application, even before essays, the parent questionnaire or an interview
+exist. It supplements those; it never replaces them. Demo: `/spark/[token]`
+(public) and the "Spark survey" panel on `/admissions/[id]` (staff).
+
+- **The one public write.** Every other public route in this app is read-only;
+  `/spark/*` is the exception (`proxy.ts` allows POST there). It is narrowly
+  scoped: `submitSparkResponseAction` (`lib/actions.ts`) can only set one
+  applicant's `spark_response`/`spark_completed_at` columns, matched by a
+  128-bit `spark_token` separate from the applicant's page token. It cannot
+  touch essays, status, or generated pathways, and it refuses once an
+  applicant is `approved`/`enrolled`.
+- **Nothing untrusted is stored as-is.** `validateSparkResponse` (`lib/spark.ts`)
+  rejects anything outside the fixed, staff-editable vocabulary
+  (`prompts/spark-interests.txt`, `prompts/spark-choices.txt`), enforces
+  3–6 interests and one answer per either/or, and caps the free-text note at
+  280 characters. `npm run test:share` covers this validator directly, since
+  it is the security boundary for the one public write in the app.
+- **Feeds pathway generation, doesn't gate it.** `regenerateApplicantPathwaysAction`
+  passes a plain-language Spark summary to Claude as separate, clearly-labeled
+  context (never blended into the essay Q/A), and the offline fallback quotes
+  Spark instead of "something they're still discovering" when an essay is
+  still blank. It never overrides an actual essay answer.
+- **Staff sends the link**, same pattern as the inquiry drafts: nothing emails
+  itself. `ensureSparkLinkAction` creates the token on demand; it's also
+  created automatically when `/apply` starts an application.
+- Revisiting a completed link re-shows the same choices (pre-filled) rather
+  than starting over, and resubmitting overwrites rather than duplicating.
+
+Open for Mr. Eno: `/spark/*` is a second kind of public route (public write,
+not just public read) and needs its own approval, separate from `/share/*`
+and `/from/*`. A real link-sending path (email) doesn't exist yet.

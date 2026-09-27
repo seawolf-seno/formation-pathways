@@ -23,8 +23,15 @@ import {
 import { getDriveSource, type DriveDoc } from "./integrations/drive";
 import { buildPublicShareContent, type ShareSelection } from "./share";
 import {
+  formatSparkContext,
+  parseChoiceLines,
+  parseVocabLines,
+  validateSparkResponse,
+} from "./spark";
+import {
   getApplicant,
   getApplicantByToken,
+  getApplicantBySparkToken,
   getCourse,
   getCourseRoster,
   getCourseSkills,
@@ -56,6 +63,18 @@ const ADMISSIONS_QUESTIONS = fs
   .split("\n")
   .map((q) => q.trim())
   .filter(Boolean);
+
+function loadSparkInterestOptions() {
+  return parseVocabLines(
+    fs.readFileSync(path.join(process.cwd(), "prompts", "spark-interests.txt"), "utf-8")
+  );
+}
+
+function loadSparkChoicePairs() {
+  return parseChoiceLines(
+    fs.readFileSync(path.join(process.cwd(), "prompts", "spark-choices.txt"), "utf-8")
+  );
+}
 
 function slugify(name: string): string {
   const base = name
@@ -308,9 +327,15 @@ export async function startApplicantAction(name: string): Promise<Applicant> {
 
   const info = db
     .prepare(
-      `INSERT INTO applicants (name, slug, token, answers) VALUES (?, ?, ?, ?)`
+      `INSERT INTO applicants (name, slug, token, answers, spark_token) VALUES (?, ?, ?, ?, ?)`
     )
-    .run(trimmed, slugify(trimmed), newToken(), JSON.stringify(answers));
+    .run(
+      trimmed,
+      slugify(trimmed),
+      newToken(),
+      JSON.stringify(answers),
+      randomBytes(16).toString("base64url")
+    );
 
   return applicantRow(info.lastInsertRowid as number);
 }
@@ -353,7 +378,10 @@ export async function regenerateApplicantPathwaysAction(
   applicantId: number
 ): Promise<Applicant> {
   const applicant = applicantRow(applicantId);
-  const { result } = await draftAdmissionsPathways(applicant.answers);
+  const sparkContext = applicant.spark_response
+    ? formatSparkContext(applicant.spark_response, loadSparkChoicePairs())
+    : null;
+  const { result } = await draftAdmissionsPathways(applicant.answers, sparkContext);
 
   db.prepare(`UPDATE applicants SET generated_pathways = ? WHERE id = ?`).run(
     JSON.stringify(result),
@@ -704,4 +732,42 @@ export async function revokePathwayShareAction(
   ).run(shareToken, applicant.id);
   revalidatePath(`/applicant/${applicant.slug}-${applicant.token}`);
   revalidatePath(`/share/${shareToken}`);
+}
+
+// ---- Spark: pre-essay interest survey --------------------------------------
+// The only public write in this app. Deliberately narrow: it can only ever
+// set an applicant's spark_response, never their answers, status, or
+// generated pathways. See docs/interest-survey.md.
+
+export async function ensureSparkLinkAction(applicantId: number): Promise<string> {
+  const applicant = applicantRow(applicantId);
+  if (applicant.spark_token) return applicant.spark_token;
+  const token = randomBytes(16).toString("base64url");
+  db.prepare("UPDATE applicants SET spark_token = ? WHERE id = ?").run(token, applicantId);
+  revalidatePath(`/admissions/${applicantId}`);
+  return token;
+}
+
+export async function submitSparkResponseAction(
+  sparkToken: string,
+  raw: unknown
+): Promise<{ ok: true }> {
+  const applicant = getApplicantBySparkToken(sparkToken);
+  if (!applicant) throw new Error("This survey link isn't valid. Ask admissions for a new one.");
+  if (applicant.status === "approved" || applicant.status === "enrolled") {
+    throw new Error("This application has already been decided, so the survey is closed.");
+  }
+
+  const response = validateSparkResponse(
+    raw,
+    loadSparkInterestOptions(),
+    loadSparkChoicePairs()
+  );
+
+  db.prepare(
+    "UPDATE applicants SET spark_response = ?, spark_completed_at = datetime('now') WHERE id = ?"
+  ).run(JSON.stringify(response), applicant.id);
+
+  revalidatePath(`/admissions/${applicant.id}`);
+  return { ok: true };
 }

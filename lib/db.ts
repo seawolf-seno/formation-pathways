@@ -184,6 +184,29 @@ function createDb(): Database.Database {
     // column already exists
   }
 
+  // Spark: an interactive interest survey an applicant can fill any time
+  // during their application, even before essays or an interview exist. See
+  // docs/interest-survey.md. Added after applicants shipped — ALTER for
+  // existing dev DBs, same pattern as observations.source above.
+  for (const stmt of [
+    "ALTER TABLE applicants ADD COLUMN spark_token TEXT",
+    "ALTER TABLE applicants ADD COLUMN spark_response TEXT",
+    "ALTER TABLE applicants ADD COLUMN spark_completed_at TEXT",
+  ]) {
+    try {
+      db.exec(stmt);
+    } catch {
+      // column already exists
+    }
+  }
+  try {
+    db.exec(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_applicants_spark_token ON applicants(spark_token)"
+    );
+  } catch {
+    // index already exists
+  }
+
   seedIfEmpty(db);
   seedClassesIfEmpty(db);
   seedApplicantsIfEmpty(db);

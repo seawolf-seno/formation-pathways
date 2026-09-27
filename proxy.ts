@@ -29,6 +29,18 @@ export async function proxy(request: NextRequest) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
     return response;
   }
+  if (path.startsWith("/spark/")) {
+    // The one deliberate public WRITE surface: an applicant submits their
+    // Spark survey with no school sign-in. submitSparkResponseAction (see
+    // lib/actions.ts) is narrowly scoped by spark_token to a single
+    // applicant's spark_response column only — it cannot touch essays,
+    // status, or generated pathways. See docs/interest-survey.md.
+    const response = NextResponse.next();
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("Referrer-Policy", "no-referrer");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return response;
+  }
   const isSor = SOR_PREFIXES.some(
     (p) => path === p || path.startsWith(`${p}/`),
   );
