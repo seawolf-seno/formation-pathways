@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getClasses, getStudentsWithStats } from "@/lib/queries";
 import { ClassSwitcher } from "@/components/ClassSwitcher";
 import { GlobalCaptureButton } from "@/components/GlobalCaptureButton";
+import { PacificaLogo } from "@/components/PacificaLogo";
 
 export default async function StaffLayout({
   children,
@@ -20,10 +21,8 @@ export default async function StaffLayout({
       <header className="border-b border-[var(--color-border)] bg-[var(--color-navy)]">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-6 py-4">
           <Link href="/" className="flex items-center gap-3">
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-gold)] font-display text-sm font-semibold text-[var(--color-navy-ink)]">
-              FP
-            </span>
-            <span className="font-display text-lg tracking-wide text-white">
+            <PacificaLogo />
+            <span className="hidden font-display text-sm tracking-wide text-[var(--color-pacific)] sm:inline">
               Formation Pathways
             </span>
           </Link>

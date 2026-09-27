@@ -6,7 +6,9 @@ import {
   startApplicantAction,
   submitApplicantAction,
 } from "@/lib/actions";
+import { PacificaLogo } from "@/components/PacificaLogo";
 import type { Applicant } from "@/lib/types";
+import "./apply-experience.css";
 
 type Step = "name" | number | "submitting" | "done";
 
@@ -50,127 +52,121 @@ export function ApplicantQuestionnaire({ helpIdeas = [] }: { helpIdeas?: string[
     setStep("done");
   }
 
-  if (step === "name") {
-    return (
-      <div className="mx-auto max-w-lg px-6 py-20 text-center">
-        <h1 className="font-display text-3xl text-[var(--color-navy-ink)]">
-          Let&apos;s get to know you
-        </h1>
-        <p className="mt-3 text-sm text-[var(--color-ink-muted)]">
-          Five short questions. No multiple choice, no wrong answers.
-        </p>
-        <input
-          autoFocus
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && handleStart()}
-          placeholder="Your full name"
-          className="mt-8 w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-center font-display text-lg text-[var(--color-navy-ink)] focus:border-[var(--color-navy)] focus:outline-none"
-        />
-        <button
-          onClick={handleStart}
-          disabled={!name.trim() || starting}
-          className="mt-6 rounded-xl bg-[var(--color-navy)] px-6 py-3 text-sm font-medium text-white disabled:opacity-40"
-        >
-          {starting ? "One moment…" : "Begin"}
-        </button>
-      </div>
-    );
-  }
-
-  if (step === "submitting") {
-    return (
-      <div className="mx-auto max-w-lg px-6 py-24 text-center">
-        <p className="font-display text-xl text-[var(--color-navy-ink)]">
-          Reading what you wrote…
-        </p>
-      </div>
-    );
-  }
-
-  if (step === "done") {
-    return (
-      <div className="mx-auto max-w-lg px-6 py-24 text-center">
-        <h1 className="font-display text-2xl text-[var(--color-navy-ink)]">
-          Thank you, {applicant?.name.split(" ")[0]}.
-        </h1>
-        <p className="mt-4 text-sm leading-relaxed text-[var(--color-ink-muted)]">
-          Our admissions team is reading what you wrote. When they&apos;re
-          ready, they&apos;ll send you a page written just for you.
-        </p>
-      </div>
-    );
-  }
-
-  if (!applicant) return null;
-  const index = step;
-  const total = applicant.answers.length;
-  const current = applicant.answers[index];
-  const isLast = index === total - 1;
-
   return (
-    <div className="mx-auto max-w-xl px-6 py-16">
-      <div className="mb-8 flex items-center gap-2">
-        {applicant.answers.map((_, i) => (
-          <div
-            key={i}
-            className={`h-1.5 flex-1 rounded-full ${
-              i <= index ? "bg-[var(--color-gold)]" : "bg-[var(--color-border)]"
-            }`}
-          />
-        ))}
-      </div>
-      <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
-        Question {index + 1} of {total}
-      </p>
-      <h2 className="mt-3 font-display text-2xl leading-snug text-[var(--color-navy-ink)]">
-        {current.question}
-      </h2>
-      {helpIdeas[index] && helpIdeas[index].length > 0 && (
-        <details className="mt-4 rounded-xl bg-[var(--color-pacific-light)] px-4 py-3 text-sm text-[var(--color-navy-ink)]">
-          <summary className="cursor-pointer font-semibold">Not sure where to start?</summary>
-          <p className="mt-2 text-[var(--color-ink-muted)]">
-            A short, honest answer is enough. A few things to think about, in your own words:
-          </p>
-          <ul className="mt-2 list-disc space-y-1 pl-5">
-            {helpIdeas[index].map((idea, i) => (
-              <li key={i}>{idea}</li>
-            ))}
-          </ul>
-        </details>
-      )}
-      <textarea
-        autoFocus
-        value={current.answer}
-        onChange={(e) => handleAnswerChange(index, e.target.value)}
-        rows={6}
-        placeholder="Take your time…"
-        className="mt-6 w-full rounded-xl border border-[var(--color-border)] px-4 py-3 text-base leading-relaxed text-[var(--color-ink)] focus:border-[var(--color-navy)] focus:outline-none"
-      />
-      <div className="mt-6 flex items-center justify-between">
-        <button
-          onClick={() => setStep(index === 0 ? "name" : index - 1)}
-          className="text-sm text-[var(--color-ink-muted)] hover:text-[var(--color-navy-ink)]"
-        >
-          ← Back
-        </button>
-        {isLast ? (
-          <button
-            onClick={handleSubmit}
-            disabled={!current.answer.trim()}
-            className="rounded-xl bg-[var(--color-navy)] px-6 py-3 text-sm font-medium text-white disabled:opacity-40"
-          >
-            Submit
-          </button>
-        ) : (
-          <button
-            onClick={() => setStep(index + 1)}
-            disabled={!current.answer.trim()}
-            className="rounded-xl bg-[var(--color-navy)] px-6 py-3 text-sm font-medium text-white disabled:opacity-40"
-          >
-            Next
-          </button>
+    <div className="apply-experience">
+      <header className="apply-header">
+        <PacificaLogo />
+      </header>
+
+      <div className="apply-body">
+        {step === "name" && (
+          <>
+            <p className="apply-eyebrow">Admissions · Formation Pathways</p>
+            <div className="apply-card">
+              <h1>Let&apos;s get to know you</h1>
+              <p>Five short questions. No multiple choice, no wrong answers.</p>
+              <input
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleStart()}
+                placeholder="Your full name"
+                className="apply-name-input"
+              />
+              <div>
+                <button
+                  onClick={handleStart}
+                  disabled={!name.trim() || starting}
+                  className="apply-button is-gold"
+                >
+                  {starting ? "One moment…" : "Begin"}
+                </button>
+              </div>
+            </div>
+          </>
         )}
+
+        {step === "submitting" && (
+          <div className="apply-card">
+            <h1>Reading what you wrote…</h1>
+          </div>
+        )}
+
+        {step === "done" && (
+          <div className="apply-card">
+            <h1>Thank you, {applicant?.name.split(" ")[0]}.</h1>
+            <p>
+              Our admissions team is reading what you wrote. When they&apos;re
+              ready, they&apos;ll send you a page written just for you.
+            </p>
+          </div>
+        )}
+
+        {typeof step === "number" && applicant && (() => {
+          const index = step;
+          const total = applicant.answers.length;
+          const current = applicant.answers[index];
+          const isLast = index === total - 1;
+          return (
+            <>
+              <div className="apply-progress">
+                {applicant.answers.map((_, i) => (
+                  <span key={i} className={i <= index ? "is-filled" : ""} />
+                ))}
+              </div>
+              <div className="apply-question">
+                <p className="apply-question-label">
+                  Question {index + 1} of {total}
+                </p>
+                <h2>{current.question}</h2>
+                {helpIdeas[index] && helpIdeas[index].length > 0 && (
+                  <details className="apply-help">
+                    <summary>Not sure where to start?</summary>
+                    <p>A short, honest answer is enough. A few things to think about, in your own words:</p>
+                    <ul>
+                      {helpIdeas[index].map((idea, i) => (
+                        <li key={i}>{idea}</li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
+                <textarea
+                  autoFocus
+                  value={current.answer}
+                  onChange={(e) => handleAnswerChange(index, e.target.value)}
+                  rows={6}
+                  placeholder="Take your time…"
+                  className="apply-textarea"
+                />
+                <div className="apply-nav">
+                  <button
+                    onClick={() => setStep(index === 0 ? "name" : index - 1)}
+                    className="apply-back"
+                  >
+                    ← Back
+                  </button>
+                  {isLast ? (
+                    <button
+                      onClick={handleSubmit}
+                      disabled={!current.answer.trim()}
+                      className="apply-button"
+                    >
+                      Submit
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setStep(index + 1)}
+                      disabled={!current.answer.trim()}
+                      className="apply-button"
+                    >
+                      Next
+                    </button>
+                  )}
+                </div>
+              </div>
+            </>
+          );
+        })()}
       </div>
     </div>
   );
