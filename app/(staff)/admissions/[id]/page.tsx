@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getApplicant } from "@/lib/queries";
 import { PathwaysDisplay } from "@/components/PathwaysDisplay";
 import { ApplicantAdminActions } from "@/components/ApplicantAdminActions";
+import { SparkPanel } from "@/components/SparkPanel";
 
 export default async function ApplicantAdminPage({
   params,
@@ -72,8 +73,9 @@ export default async function ApplicantAdminPage({
           )}
         </div>
 
-        <div>
+        <div className="space-y-6">
           <ApplicantAdminActions applicant={applicant} />
+          <SparkPanel applicant={applicant} />
         </div>
       </div>
     </div>

@@ -743,3 +743,55 @@ export function seedCoursesIfEmpty(db: Database.Database): void {
 
   seedTx();
 }
+
+// ---- Inquiry-stage demo ----------------------------------------------------
+// All fictional. Real stories go in only with recorded consent
+// (consent_confirmed); these carry is_fictional = 1 and the UI labels them.
+type SeedAlumni = [school: string, first: string, year: number, headline: string, story: string, path: string, now: string];
+
+const ALUMNI: SeedAlumni[] = [
+  ["paul-revere", "Jordan", 2024, "Started in Makers Space, ended up leading it.",
+   "Jordan arrived from Paul Revere unsure about high school. A freshman visit to the Makers Space turned into a student-led build that ran all four years.",
+   "The Builder Who Leads", "Studying mechanical engineering, and still mentoring Makers Space freshmen."],
+  ["paul-revere", "Camila", 2023, "Found her voice in a Moral Philosophy seminar.",
+   "Camila was quiet at Paul Revere. Small Oxford-style seminars at the Center for Philosophy & Theology gave her room to think out loud, and she never stopped.",
+   "The Thoughtful Voice", "Pursuing philosophy and pre-law, and leading a debate club."],
+  ["paul-revere", "Malik", 2025, "Ran a real business before he could drive.",
+   "Malik joined the Wolf Shack in ninth grade and learned inventory, pricing and profit by doing them. By senior year he was pitching in the Shark-Tank-style Entrepreneurship class.",
+   "The Young Entrepreneur", "Starting at a business program, with a side project already selling."],
+  ["calvary-christian", "Elena", 2024, "Traded the stage lights for a film camera.",
+   "Elena came from Calvary Christian loving theater. PACARTS let her try film too, and her short screened at the Student Film Festival.",
+   "The Storyteller", "Studying film, and shooting her first short for a local nonprofit."],
+  ["calvary-christian", "Noah", 2023, "A baseball player who found a second calling.",
+   "Noah played baseball from his first week and joined Drone Club in tenth grade. Both stayed with him: athletics for the team, engineering for the curiosity.",
+   "The Athlete and the Tinkerer", "Playing college baseball while studying engineering."],
+  ["all", "Priya", 2024, "Came for the classes, stayed for the retreat.",
+   "Priya arrived not knowing anyone. The All-School Retreat and weekly chapel helped her find her people, and she now helps run new-student welcome.",
+   "The Welcomer", "In college, leading a campus ministry team."],
+  ["all", "Theo", 2025, "Discovered he loved the science behind the art.",
+   "Theo split his time between Visual Arts and STEM Scholars, then found a way to combine them in a senior project on materials.",
+   "The Artist-Engineer", "Studying materials science and design."],
+];
+
+export function seedInquiryDemoIfEmpty(db: Database.Database): void {
+  const n = (t: string) => (db.prepare(`SELECT COUNT(*) AS c FROM ${t}`).get() as { c: number }).c;
+  if (n("alumni_stories") === 0) {
+    const ins = db.prepare(
+      `INSERT INTO alumni_stories (school_key, first_name, grad_year, headline, story, pathway_name, where_now, is_fictional, consent_confirmed)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 1, 1)`
+    );
+    db.transaction(() => {
+      for (const [k, f, y, h, s, p, w] of ALUMNI) ins.run(k, f, y, h, s, p, w);
+    })();
+  }
+  if (n("inquiries") === 0) {
+    const ins = db.prepare(
+      "INSERT INTO inquiries (first_name, email, prior_school, interests) VALUES (?, ?, ?, ?)"
+    );
+    db.transaction(() => {
+      ins.run("Sofia", "sofia.demo@example.com", "Paul Revere Middle School", "building things");
+      ins.run("Marcus", "marcus.demo@example.com", "Calvary Christian School", null);
+      ins.run("Ava", "ava.demo@example.com", "Lincoln Middle School", "music");
+    })();
+  }
+}

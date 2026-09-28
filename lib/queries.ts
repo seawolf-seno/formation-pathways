@@ -1,3 +1,5 @@
+import { parsePublicShareContent, type PublicShareContent } from "./share";
+import type { AlumniStory, Inquiry } from "./inquiry";
 import { db } from "./db";
 import { getSupabase, isSupabaseConfigured } from "./supabase";
 import { daysSince } from "./format";
@@ -216,16 +218,35 @@ interface ApplicantRow {
   approved_at: string | null;
   converted_student_id: number | null;
   created_at: string;
+  spark_token: string | null;
+  spark_response: string | null;
+  spark_completed_at: string | null;
 }
 
 function parseApplicant(row: ApplicantRow): Applicant {
+  let spark_response: Applicant["spark_response"] = null;
+  if (row.spark_response) {
+    try {
+      spark_response = JSON.parse(row.spark_response) as Applicant["spark_response"];
+    } catch {
+      spark_response = null;
+    }
+  }
   return {
     ...row,
     answers: JSON.parse(row.answers) as ApplicantAnswer[],
     generated: row.generated_pathways
       ? (JSON.parse(row.generated_pathways) as GeneratedPathwaysResult)
       : null,
+    spark_response,
   };
+}
+
+export function getApplicantBySparkToken(token: string): Applicant | undefined {
+  const row = db
+    .prepare("SELECT * FROM applicants WHERE spark_token = ?")
+    .get(token) as ApplicantRow | undefined;
+  return row ? parseApplicant(row) : undefined;
 }
 
 export function getApplicants(): Applicant[] {
@@ -324,4 +345,72 @@ export function getCoursesForStudent(studentId: number): Course[] {
        ORDER BY c.name`
     )
     .all(studentId) as Course[];
+}
+
+// ---- Public pathway shares -------------------------------------------------
+
+export interface PathwayShareRow {
+  id: number;
+  applicant_id: number;
+  token: string;
+  content: PublicShareContent;
+  created_at: string;
+  revoked_at: string | null;
+}
+
+interface RawShareRow extends Omit<PathwayShareRow, "content"> {
+  content: string;
+}
+
+function parseShareRow(row: RawShareRow): PathwayShareRow | undefined {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(row.content);
+  } catch {
+    return undefined;
+  }
+  const content = parsePublicShareContent(parsed);
+  return content ? { ...row, content } : undefined;
+}
+
+export function getSharesForApplicant(applicantId: number): PathwayShareRow[] {
+  const rows = db
+    .prepare(
+      "SELECT * FROM pathway_shares WHERE applicant_id = ? AND revoked_at IS NULL ORDER BY id DESC"
+    )
+    .all(applicantId) as RawShareRow[];
+  return rows.map(parseShareRow).filter((r): r is PathwayShareRow => !!r);
+}
+
+/**
+ * The only read the public /share route uses. Returns the whitelisted snapshot
+ * and nothing else; revoked shares and shares whose applicant is no longer
+ * approved resolve to undefined (the route 404s).
+ */
+export function getPublicShare(token: string): PublicShareContent | undefined {
+  const row = db
+    .prepare(
+      `SELECT s.*, a.status AS applicant_status
+       FROM pathway_shares s JOIN applicants a ON a.id = s.applicant_id
+       WHERE s.token = ? AND s.revoked_at IS NULL`
+    )
+    .get(token) as (RawShareRow & { applicant_status: string }) | undefined;
+  if (!row) return undefined;
+  if (row.applicant_status !== "approved" && row.applicant_status !== "enrolled") {
+    return undefined;
+  }
+  return parseShareRow(row)?.content;
+}
+
+// ---- Inquiry stage ---------------------------------------------------------
+
+export function getInquiries(): Inquiry[] {
+  return db.prepare("SELECT * FROM inquiries ORDER BY id DESC").all() as Inquiry[];
+}
+
+/** Only consent-confirmed stories ever leave the database. */
+export function getConsentedAlumniStories(): AlumniStory[] {
+  return db
+    .prepare("SELECT * FROM alumni_stories WHERE consent_confirmed = 1 ORDER BY grad_year DESC, id")
+    .all() as AlumniStory[];
 }

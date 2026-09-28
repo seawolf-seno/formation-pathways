@@ -90,6 +90,8 @@ export interface GeneratedPathway {
   fourYearHorizon: string[];
 }
 
+import type { SparkResponse } from "./spark";
+
 export interface SeedObservationDraft {
   text: string;
   tags: FormationTag[];
@@ -113,6 +115,10 @@ export interface Applicant {
   approved_at: string | null;
   converted_student_id: number | null;
   created_at: string;
+  /** Separate, longer token for the public Spark survey link. Null until sent. */
+  spark_token: string | null;
+  spark_response: SparkResponse | null;
+  spark_completed_at: string | null;
 }
 
 export interface Course {

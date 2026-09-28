@@ -16,4 +16,5 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run test:db
+      - run: npm run test:share
       - run: npm run build

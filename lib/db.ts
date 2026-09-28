@@ -3,6 +3,7 @@ import path from "path";
 import fs from "fs";
 import {
   seedApplicantsIfEmpty,
+  seedInquiryDemoIfEmpty,
   seedClassesIfEmpty,
   seedCoursesIfEmpty,
   seedIfEmpty,
@@ -91,6 +92,49 @@ function createDb(): Database.Database {
 
     CREATE UNIQUE INDEX IF NOT EXISTS idx_applicants_token ON applicants(token);
 
+    -- Parent-curated public shares. content is a whitelisted snapshot (see
+    -- lib/share.ts); nothing else about the applicant is ever public.
+    CREATE TABLE IF NOT EXISTS pathway_shares (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      applicant_id INTEGER NOT NULL REFERENCES applicants(id) ON DELETE CASCADE,
+      token TEXT NOT NULL UNIQUE,
+      content TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      revoked_at TEXT
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_pathway_shares_applicant ON pathway_shares(applicant_id);
+
+    -- Inquiry stage: someone who has told us their prior school but has not
+    -- applied. No essays, no answers, nothing sensitive.
+    CREATE TABLE IF NOT EXISTS inquiries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      first_name TEXT NOT NULL,
+      email TEXT NOT NULL,
+      prior_school TEXT NOT NULL,
+      interests TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    -- Pacifica students/alumni whose story may be shown to families from the
+    -- same prior school. consent_confirmed gates every read: nothing is shown
+    -- unless someone has recorded consent for it.
+    CREATE TABLE IF NOT EXISTS alumni_stories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      school_key TEXT NOT NULL,
+      first_name TEXT NOT NULL,
+      grad_year INTEGER NOT NULL,
+      headline TEXT NOT NULL,
+      story TEXT NOT NULL,
+      pathway_name TEXT NOT NULL,
+      where_now TEXT NOT NULL,
+      is_fictional INTEGER NOT NULL DEFAULT 1,
+      consent_confirmed INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_alumni_school ON alumni_stories(school_key);
+
     CREATE TABLE IF NOT EXISTS courses (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -140,9 +184,33 @@ function createDb(): Database.Database {
     // column already exists
   }
 
+  // Spark: an interactive interest survey an applicant can fill any time
+  // during their application, even before essays or an interview exist. See
+  // docs/interest-survey.md. Added after applicants shipped — ALTER for
+  // existing dev DBs, same pattern as observations.source above.
+  for (const stmt of [
+    "ALTER TABLE applicants ADD COLUMN spark_token TEXT",
+    "ALTER TABLE applicants ADD COLUMN spark_response TEXT",
+    "ALTER TABLE applicants ADD COLUMN spark_completed_at TEXT",
+  ]) {
+    try {
+      db.exec(stmt);
+    } catch {
+      // column already exists
+    }
+  }
+  try {
+    db.exec(
+      "CREATE UNIQUE INDEX IF NOT EXISTS idx_applicants_spark_token ON applicants(spark_token)"
+    );
+  } catch {
+    // index already exists
+  }
+
   seedIfEmpty(db);
   seedClassesIfEmpty(db);
   seedApplicantsIfEmpty(db);
+  seedInquiryDemoIfEmpty(db);
   seedCoursesIfEmpty(db);
 
   return db;
