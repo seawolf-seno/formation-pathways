@@ -20,6 +20,11 @@ export default async function SorLayout({ children }: { children: React.ReactNod
               Capture
             </Link>
             {canAdmin && (
+              <Link href="/season" className="font-medium text-[var(--color-pacific)] hover:text-white">
+                Season
+              </Link>
+            )}
+            {canAdmin && (
               <Link href="/pilot" className="font-medium text-[var(--color-pacific)] hover:text-white">
                 Pilot
               </Link>

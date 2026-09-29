@@ -171,7 +171,9 @@ gate is open.
 - No session inactivity timeout: a lost, unlocked phone stays signed in.
   Supabase's time-boxed / inactivity sessions (paid plan) are the fix.
 - The Blackbaud field mapping is unverified against a real SKY response.
-- The Finalsite API isn't wired; CSV export is the proof-of-concept path.
+- The Finalsite API isn't wired for per-student pilot imports; CSV export is the
+  proof-of-concept path. (Whole-school admissions **counts** use the API: see
+  `docs/admissions-season.md`.)
 - Observation edit/delete UI, alumni stage transitions, and data-retention
   jobs are not built.
 - Drive content scanning (see CLAUDE.md) still applies if Drive joins this

@@ -11,6 +11,8 @@ import { getSorClient } from "./supabase-server";
 import { getCaptureRoster, getPersonProfile, logAccess, requireStaff } from "./queries";
 import { matchPeople } from "./match";
 import { runImport, type ImportOutcome } from "./importers/run";
+import { runFunnelImport, type FunnelImportOutcome } from "./importers/run-funnel";
+import { checkFinalsiteConnection } from "./importers/finalsite-api";
 import {
   displayName,
   type ConsentScope,
@@ -311,6 +313,70 @@ export async function runImportAction(system: SourceSystem, formData?: FormData)
     await logAccess(staff, "import", null, { system, mode: outcome.mode, matched: outcome.matched });
     revalidatePath("/pilot");
     return { ok: true, outcome };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ---------------------------------------------------------------- admissions season
+
+/** Record (or withdraw) approval to show LIVE Finalsite counts. Counts only,
+ *  no per-student data, so this is separate from the pilot gate, but it
+ *  still names who approved it and where, and the change is logged. */
+export async function setFunnelApprovalAction(formData: FormData): Promise<Result> {
+  try {
+    const staff = await requireRole("admin");
+    const open = formData.get("open") === "true";
+    const approvedBy = String(formData.get("approved_by") ?? "").trim();
+    const reference = String(formData.get("approval_reference") ?? "").trim();
+    if (open && (!approvedBy || !reference)) {
+      return { ok: false, error: "Enter who approved showing live counts and where that approval lives." };
+    }
+    const supabase = await getSorClient();
+    const { error } = await supabase
+      .from("pilot_settings")
+      .update(
+        open
+          ? {
+              funnel_live_enabled: true,
+              funnel_approved_by: approvedBy,
+              funnel_approval_reference: reference,
+              funnel_approved_at: new Date().toISOString(),
+            }
+          : { funnel_live_enabled: false }
+      )
+      .eq("id", true);
+    if (error) return fail(error);
+    await logAccess(staff, open ? "funnel_live_open" : "funnel_live_close", null, open ? { approvedBy, reference } : {});
+    revalidatePath("/season");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function runFunnelImportAction(mode: "sample" | "live"): Promise<Result<{ outcome: FunnelImportOutcome }>> {
+  try {
+    const staff = await requireRole("admin");
+    const supabase = await getSorClient();
+    const outcome = await runFunnelImport(supabase, staff, mode);
+    await logAccess(staff, "funnel_import", null, { mode, rows: outcome.rows, error: outcome.error });
+    revalidatePath("/season");
+    return { ok: true, outcome };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Field names and object count from one Finalsite page, never values. */
+export async function checkFinalsiteConnectionAction(): Promise<
+  Result<{ check: Awaited<ReturnType<typeof checkFinalsiteConnection>> }>
+> {
+  try {
+    const staff = await requireRole("admin");
+    const check = await checkFinalsiteConnection();
+    await logAccess(staff, "finalsite_check", null, { objects: check.objectsOnFirstPage });
+    return { ok: true, check };
   } catch (e) {
     return fail(e);
   }

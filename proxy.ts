@@ -9,7 +9,7 @@ import { createServerClient } from "@supabase/ssr";
 // open in local dev (board rehearsals), but once deployed it's behind a
 // signed-in @pacificachristian.org account too: it has no auth of its own and
 // its Claude calls cost money.
-const SOR_PREFIXES = ["/pilot", "/capture"];
+const SOR_PREFIXES = ["/pilot", "/capture", "/season"];
 
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;

@@ -1,0 +1,9 @@
+{
+  "_note": "FICTIONAL season totals for the Admissions season dashboard's sample mode. Not Pacifica's real numbers. The current season is set roughly level with the last one on purpose: sample figures must not suggest a result we haven't measured. Edit freely; lib/sor/importers/finalsite-funnel.ts spreads these into dated events.",
+  "seasons": [
+    { "entryYear": 2024, "inquiries": 410, "applications": 218, "admitted": 171, "enrolled": 94 },
+    { "entryYear": 2025, "inquiries": 438, "applications": 231, "admitted": 180, "enrolled": 99 },
+    { "entryYear": 2026, "inquiries": 452, "applications": 240, "admitted": 186, "enrolled": 101 },
+    { "entryYear": 2027, "inquiries": 449, "applications": 238, "admitted": 185, "enrolled": 100 }
+  ]
+}
