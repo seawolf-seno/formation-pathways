@@ -2,7 +2,7 @@
 
 import fs from "fs";
 import path from "path";
-import { headers } from "next/headers";
+import { requestOrigin } from "@/lib/origin";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { draftObservation, draftRuakhPathways, type RuakhInput } from "@/lib/claude";
@@ -57,8 +57,7 @@ export async function sendSignInLinkAction(formData: FormData): Promise<Result> 
   if (!email.endsWith("@pacificachristian.org")) {
     return { ok: false, error: "Use your @pacificachristian.org address." };
   }
-  const h = await headers();
-  const origin = `${h.get("x-forwarded-proto") ?? "http"}://${h.get("host")}`;
+  const origin = await requestOrigin();
   const supabase = await getSorClient();
   const { error } = await supabase.auth.signInWithOtp({
     email,

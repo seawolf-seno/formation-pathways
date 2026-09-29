@@ -3,8 +3,10 @@ import { getConsentedAlumniStories, getInquiries } from "@/lib/queries";
 import { buildNurtureDrafts, pickStories, schoolKey } from "@/lib/inquiry";
 import { admissionsUrl } from "@/lib/share-card";
 import { CopyButton } from "@/components/CopyButton";
+import { requestOrigin } from "@/lib/origin";
 
-export default function InquiriesPage() {
+export default async function InquiriesPage() {
+  const origin = await requestOrigin();
   const inquiries = getInquiries();
   const stories = getConsentedAlumniStories();
 
@@ -25,7 +27,7 @@ export default function InquiriesPage() {
           const { stories: picked, sameSchool } = pickStories(stories, q.prior_school);
           const key = sameSchool ? schoolKey(q.prior_school) : "all";
           const path = `/from/${key}`;
-          const pageUrl = `http://localhost:3000${path}`;
+          const pageUrl = `${origin}${path}`;
           const drafts = buildNurtureDrafts(q, picked, sameSchool, pageUrl, admissionsUrl());
           return (
             <section key={q.id} className="rounded-xl border border-[var(--color-border)] bg-white p-5">
