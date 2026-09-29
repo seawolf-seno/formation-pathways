@@ -35,7 +35,7 @@ adults behind the scenes; students stay present, in person, with people.
   mic → Done → Save, and Vercel readiness (every page signed-in in production, runtime files
   traced). Migration applied to live Supabase. Google One Tap sign-in is the next step once IT
   creates an Internal OAuth client (see `docs/system-of-record.md`, "Google sign-in").
-- **Built 2026-09-27 (uncommitted, for the Oct 5 demo)**: `/season`, the admissions
+- **Built 2026-09-27 (for the Oct 5 demo)**: `/season`, the admissions
   season dashboard. Whole-school Finalsite **counts only** (`admissions_funnel_counts`: no
   person/name/id column, 1–4 refused as too small to show), this season vs. the three before on
   the same date, pace chart, application rate, yield table, the family pathway walkthrough
@@ -44,8 +44,9 @@ adults behind the scenes; students stay present, in person, with people.
   External API client (`lib/sor/importers/finalsite-api.ts`) is built but OFF: needs
   `FINALSITE_API_*` env **and** a separate recorded approval (`pilot_settings.funnel_*`,
   DB-enforced). Its field map is unverified guesswork until checked against the school's
-  Swagger page. Migration `20260927180000_admissions_funnel.sql` is **not yet applied** to
-  live Supabase. See `docs/admissions-season.md`.
+  Swagger page. Merged via PR #8; migration `20260929022903_admissions_funnel.sql` **applied
+  to live Supabase 2026-09-28** (advisors: nothing new; funnel approval off; table empty until
+  an admin clicks *Load sample figures* on `/season`). See `docs/admissions-season.md`.
 - **Blocked 2026-09-21**: live Google Drive setup — seno has no access to the Google
   Cloud/OAuth 2.0 developer console needed to generate a Drive token, waiting on Pacifica
   IT. Don't push on this until he says it's unblocked. Everything else (mock Canvas/Drive,
