@@ -65,7 +65,8 @@ adults behind the scenes; students stay present, in person, with people.
   `requestOrigin()` (`lib/origin.ts`); never hard-code a host.
 - **Agent database access (2026-09-28)**: the account-level claude.ai Supabase connector (owner
   access, bypasses RLS and consent triggers) was disabled. The repo's `.mcp.json` Supabase
-  server is `read_only=true` (PR #11) but was not yet authenticated. Agents: never write to the
+  server is `read_only=true` (PR #11), authenticated 2026-09-28 and verified
+  (`transaction_read_only = on`). Agents: never write to the
   live database, never query per-student tables once real students exist, and apply new
   migrations only via the SQL editor or `supabase db push` run by seno.
 - **Decided, not built**: Anthropic auth on Vercel should be Workload Identity Federation
@@ -73,19 +74,20 @@ adults behind the scenes; students stay present, in person, with people.
   `TokenCache`), set up in the school's Anthropic org, not seno's personal one. Until then,
   no key, or a throwaway spend-capped key for the demo only.
 - **Next concrete actions, in order**:
-  1. Authenticate the read-only `supabase` MCP server (`/mcp`, from this directory).
-  2. Supabase → Authentication → Emails: add `{{ .Token }}` to *Magic Link* and *Confirm
+  1. Supabase → Authentication → Emails: add `{{ .Token }}` to *Magic Link* and *Confirm
      signup* (today's email has a link but no code); set up custom SMTP before other staff
      sign in.
-  3. Sign in on the live site (laptop + phone), `/season` → *Load sample figures*, run the
+  2. Sign in on the live site (laptop + phone), `/season` → *Load sample figures*, run the
      `docs/oct-5-demo.md` checklist on the live URL, rehearse. Check `/admissions/inquiries`
      drafts now read `https://formation-pathways.vercel.app/from/…` (PR #10, not yet eyeballed).
-  4. **Oct 5 board demo.**
-  5. After the demo: the real-student beta for a few of seno's own students (parents have
+     Admissions officer self-test: `docs/admissions-tester-guide.md` (approve her as
+     *Admissions* on `/pilot` after her first sign-in).
+  3. **Oct 5 board demo.**
+  4. After the demo: the real-student beta for a few of seno's own students (parents have
      approved). Steps and what's still required: `docs/system-of-record.md`, "Starting the
      real-student beta". Don't open the gate before the demo: real names would show on the
      `/pilot` roster on stage.
-  6. Later: Google One Tap (waiting on IT), live Finalsite counts (waiting on approval +
+  5. Later: Google One Tap (waiting on IT), live Finalsite counts (waiting on approval +
      credentials), alumni consent-reset design (sketched on the Systems Map).
 - Tracked live at https://claude.ai/artifact/3L9fUkHmf4q6d378289uP6 (Formation Pathways
   section) and narrated architecturally at
