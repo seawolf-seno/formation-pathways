@@ -59,6 +59,10 @@ when you run the demo.)
 
 ---
 
+## October 5 demo
+
+Setup, test checklist and run of show: [docs/oct-5-demo.md](docs/oct-5-demo.md).
+
 ## October 5 family-pathway demonstration
 
 After `npm run dev`, open `http://localhost:3000/applicant/emma-r-8f3k2a`.
