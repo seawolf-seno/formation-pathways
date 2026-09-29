@@ -11,6 +11,7 @@ import type {
   StaffListEntry,
   StaffMember,
 } from "./types";
+import type { FunnelCount } from "./funnel";
 
 /** The signed-in, active staff member, or a redirect to /login. Signed in
  *  and waiting for an admin → /login?error=pending; not on the staff table at
@@ -56,6 +57,10 @@ export async function getPilotSettings(): Promise<PilotSettings> {
     approved_by: null,
     approval_reference: null,
     approved_at: null,
+    funnel_live_enabled: false,
+    funnel_approved_by: null,
+    funnel_approval_reference: null,
+    funnel_approved_at: null,
   };
 }
 
@@ -152,4 +157,42 @@ export async function getStaffList(): Promise<StaffListEntry[]> {
     .order("active")
     .order("display_name");
   return (data as StaffListEntry[]) ?? [];
+}
+
+/** Admissions season counts (admin + admissions only, via RLS). Live counts
+ *  once any exist, otherwise the fictional sample ones. */
+export async function getFunnelCounts(): Promise<{ rows: FunnelCount[]; mode: "live" | "sample" | "none"; importedAt: string | null }> {
+  const supabase = await getSorClient();
+  for (const isSample of [false, true]) {
+    const rows: Record<string, unknown>[] = [];
+    // PostgREST caps a response (1,000 rows by default), so page through.
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase
+        .from("admissions_funnel_counts")
+        .select("entry_year, stage, cohort, as_of, count, imported_at")
+        .eq("is_sample", isSample)
+        .eq("cohort", "all")
+        .order("entry_year")
+        .order("stage")
+        .order("as_of")
+        .range(from, from + 999);
+      if (error) throw error;
+      rows.push(...(data ?? []));
+      if (!data || data.length < 1000) break;
+    }
+    if (rows.length) {
+      return {
+        mode: isSample ? "sample" : "live",
+        importedAt: rows.map((r) => String(r.imported_at)).sort().at(-1) ?? null,
+        rows: rows.map((r) => ({
+          entryYear: Number(r.entry_year),
+          stage: r.stage as FunnelCount["stage"],
+          cohort: "all",
+          asOf: String(r.as_of),
+          count: r.count == null ? null : Number(r.count),
+        })),
+      };
+    }
+  }
+  return { rows: [], mode: "none", importedAt: null };
 }

@@ -43,6 +43,11 @@ export interface PilotSettings {
   approved_by: string | null;
   approval_reference: string | null;
   approved_at: string | null;
+  /** Live Finalsite admissions counts (no per-student data) may be shown. */
+  funnel_live_enabled: boolean;
+  funnel_approved_by: string | null;
+  funnel_approval_reference: string | null;
+  funnel_approved_at: string | null;
 }
 
 export interface Person {
@@ -141,6 +146,8 @@ export interface PathwayDraft {
 export interface ImportRun {
   id: string;
   system: SourceSystem;
+  /** "people" enriches pilot participants; "funnel" refreshes season counts. */
+  kind: "people" | "funnel";
   mode: "sample" | "live";
   started_at: string;
   finished_at: string | null;

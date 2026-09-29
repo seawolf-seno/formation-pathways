@@ -113,7 +113,9 @@ export default async function PilotPage() {
             <ul className="mt-3 space-y-1 text-xs text-[var(--color-ink-muted)]">
               {runs.map((r) => (
                 <li key={r.id}>
-                  {r.started_at.slice(0, 16).replace("T", " ")} · {r.system} ({r.mode}) · {r.matched} updated
+                  {r.started_at.slice(0, 16).replace("T", " ")} · {r.system}
+                  {r.kind === "funnel" ? " season counts" : ""} ({r.mode}) ·{" "}
+                  {r.kind === "funnel" ? `${r.matched} counts` : `${r.matched} updated`}
                   {r.skipped_no_consent ? ` · ${r.skipped_no_consent} skipped, no consent` : ""}
                   {r.error ? ` · ${r.error.split("\n")[0]}` : ""}
                 </li>
