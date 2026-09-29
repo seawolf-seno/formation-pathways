@@ -7,6 +7,10 @@ drafts. See `CLAUDE.md` for the full product principles this app enforces.
 
 **All student data is fictional**, invented for this demo.
 
+**Live:** https://formation-pathways.vercel.app (every page asks for a school sign-in except the
+public `/share/*`, `/from/*` and `/spark/*` pages). Merges to `main` deploy there
+automatically.
+
 ## Stack
 
 Next.js (App Router) + Tailwind CSS 4, SQLite via `better-sqlite3`, Anthropic
@@ -59,23 +63,38 @@ when you run the demo.)
 
 ---
 
+## Testing it on your own (admissions)
+
+Send [docs/admissions-tester-guide.md](docs/admissions-tester-guide.md). It walks
+through every feature on the live site with sample data, step by step, and
+starts with the four things to check before sending it (email code, approving
+the tester's account as *Admissions*, sample figures, sample students).
+
 ## October 5 demo
 
 Setup, test checklist and run of show: [docs/oct-5-demo.md](docs/oct-5-demo.md).
 
 ## October 5 family-pathway demonstration
 
-After `npm run dev`, open `http://localhost:3000/applicant/emma-r-8f3k2a`.
+Open **https://formation-pathways.vercel.app/applicant/emma-r-8f3k2a** (or `/applicant/emma-r-8f3k2a`
+on `npm run dev`).
 Explore the three fictional pathways, open **Share this possibility**, choose
 public details, confirm the preview, then create a link or download a card.
-The public page works without staff navigation. This is a local demonstration;
-production parent access is still unresolved. See [sharing notes](docs/pathway-sharing.md).
+The public page works without staff navigation or sign-in. On the live site,
+create the share link and open it in one go: demo data there can reset between
+server instances (see [the demo guide](docs/oct-5-demo.md#where-it-runs)).
+Production parent access is still unresolved. See [sharing notes](docs/pathway-sharing.md).
 
 ## 10-minute demo script
 
+Run it on the live site, signed in with your school account. Everything below
+also works locally on `npm run dev` at `http://localhost:3000`. For the full
+Oct 5 run of show, including `/season` and `/pilot`, use
+[docs/oct-5-demo.md](docs/oct-5-demo.md).
+
 ### 1. The roster (1 min)
 
-Open **http://localhost:3000**. This is the home page every teacher sees —
+Open **https://formation-pathways.vercel.app**. This is the home page every teacher sees —
 note what's *not* here: no scores, no ranks, no red flags. Just names, grades,
 and how long since someone noticed something about them.
 
@@ -139,6 +158,7 @@ permission."* — a real deployment would gate this on actual signed consent.
 
 - Every prompt Claude runs from lives in `/prompts` as plain `.txt` files —
   faculty own this vocabulary and can edit tone/wording without touching code.
-- Every AI call has an offline fallback — this demo works with no internet
-  and no API key, which matters when you're demoing on a school Wi-Fi.
+- Every AI call has an offline fallback. The live site has no API key yet, so
+  every AI step you see there is the canned fallback. Run locally with Wi-Fi
+  off and you get the same behavior, which is useful on shaky school Wi-Fi.
 - The word "record" never appears anywhere in this app. It's a Pathway.
