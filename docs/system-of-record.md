@@ -73,7 +73,8 @@ Then an admin records the sign-off on `/pilot`. That flip is logged too.
 
 1. **Apply the migrations** in `supabase/migrations/`, in order (`supabase db push`,
    or paste each into the SQL editor). Done for `cvppxixatcreyptpkymh` on
-   2026-09-23; file names match the versions recorded there. The RLS helper
+   2026-09-23 (admissions season counts: 2026-09-28); file names match the
+   versions recorded there. The RLS helper
    functions live in the `private` schema so the API never exposes them;
    add new ones there too, then re-run Supabase's security and performance advisors.
 2. **Auth.** In Supabase → Authentication → URL configuration, set the
