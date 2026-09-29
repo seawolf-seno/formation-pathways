@@ -61,11 +61,15 @@ These are for school leadership, not code:
 4. **Hosted security review** of the deployed app. Phone capture needs HTTPS,
    so this runs on a public URL, even though every page requires sign-in.
 
-5. **Restrict AI tooling access.** The Supabase MCP server (used for
-   development via Claude Code) connects as the database owner, which skips
-   RLS and the consent triggers. Before the first real student goes in, either
-   switch it to read-only (`&read_only=true` on the MCP URL in `.mcp.json`) or
-   point it at a separate dev project that holds only sample data.
+5. **Restrict AI tooling access.** Done 2026-09-28 for the repo's Supabase MCP
+   server: `.mcp.json` sets `&read_only=true`, so an agent can read but never
+   write, and can't bypass RLS or the consent triggers with a write. It still
+   reads as a privileged database user, so it *can* see real student rows:
+   agents must not query per-student tables once real students exist. Also
+   disconnect any account-level Supabase connector (claude.ai "Supabase" in
+   `/mcp`), which has full owner access and isn't governed by this file.
+   New migrations then go through the SQL editor or `supabase db push`, not
+   the agent.
 
 Then an admin records the sign-off on `/pilot`. That flip is logged too.
 
