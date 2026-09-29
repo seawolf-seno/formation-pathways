@@ -73,6 +73,36 @@ These are for school leadership, not code:
 
 Then an admin records the sign-off on `/pilot`. That flip is logged too.
 
+## Starting the real-student beta
+
+For a few of seno's own students whose parents have approved. Parent approval
+covers consent; the other rows above still apply. Status as of 2026-09-28:
+
+| Requirement | Status |
+|---|---|
+| Consent per student, per scope | Parents approved. Record only the scopes the signed form actually covers; if it doesn't mention AI, leave `ai_drafting` off (capture and imports still work, Draft refuses). |
+| Leadership sign-off on `/pilot` | Not yet. Must name a real approver (e.g. head of school) and where the approval lives. |
+| AI vendor terms | Not yet. Skippable: no `ai_drafting` consent and no Anthropic key means nothing goes to Claude. |
+| Voice capture privacy | Phone dictation sends audio to Apple/Google. Type, or have consent/leadership cover it. |
+| Hosting | Personal Vercel Hobby team, no inactivity sign-out, no security review. Leadership should accept this knowingly. |
+| Agent database access | Owner connector disabled; repo MCP server is read-only (see step 5 above). |
+
+Do it **after the Oct 5 demo**: real names would appear on the `/pilot`
+roster on stage. Then, by seno (real student details, so not an agent):
+
+1. `/pilot` → *Save sign-off*.
+2. Add each student: name, stage *Enrolled*, Finalsite Person ID, Canvas user id.
+3. On each student's page, record consent: guardian, date signed, where the form is kept.
+4. **Finalsite**: build a report with the `FINALSITE_COLUMNS` headers (`Person ID`,
+   `Entry Year`, `Entering Grade`, `Status`, `Current School`, `Interests`, `Activities`,
+   plus `Q: …` columns), export CSV, upload on `/pilot` → Import. Rows not on the pilot
+   are dropped; the file isn't stored. (The Finalsite *API* client only does season
+   counts, not per-student records.)
+5. **Canvas**: add `CANVAS_BASE_URL`, `CANVAS_API_TOKEN` (seno's own teacher token) and
+   `CANVAS_PILOT_COURSE_IDS` in Vercel env (Production), redeploy, run the Canvas import.
+   Scores are never imported.
+6. Capture on `/capture`; only consented students appear.
+
 ## Setup
 
 1. **Apply the migrations** in `supabase/migrations/`, in order (`supabase db push`,
@@ -131,8 +161,9 @@ Then an admin records the sign-off on `/pilot`. That flip is logged too.
 
 ## Deploying (Vercel)
 
-- Import the GitHub repo in Vercel. `main` deploys to production; every PR
-  gets a preview.
+- Live at https://formation-pathways.vercel.app (Vercel project
+  `formation-pathways`, GitHub connected). `main` deploys to production; every
+  PR gets a preview.
 - Env: `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`
   (publishable key). Optional: `ANTHROPIC_API_KEY` (fictional data only until
   vendor terms). **Never** set `SUPABASE_SERVICE_ROLE_KEY` there.

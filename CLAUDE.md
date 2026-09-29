@@ -25,8 +25,9 @@ adults behind the scenes; students stay present, in person, with people.
   `docs/system-of-record.md`, which is the source of truth for setup, guardrails and gaps.
   **Applied to the live Supabase project 2026-09-23** (both migrations; advisors clean), with
   seno as the only `staff` admin and the six fictional sample students loaded. End-to-end
-  tested in the browser on sample data only; the leadership gate is still LOCKED. Not yet
-  deployed over HTTPS. Leadership sign-off, consent form and AI-vendor terms are still pending.
+  tested in the browser on sample data only; the leadership gate is still LOCKED. Deployed
+  over HTTPS 2026-09-28 (see "Live deployment"). Leadership sign-off, consent form and
+  AI-vendor terms are still pending.
   Merged via PR #5.
 - **Built 2026-09-23 (branch `seno/staff-capture-access`)**: frictionless staff phone access.
   6-digit email-code sign-in, self-provisioned **pending** staff accounts (DB trigger on
@@ -51,16 +52,41 @@ adults behind the scenes; students stay present, in person, with people.
   Cloud/OAuth 2.0 developer console needed to generate a Drive token, waiting on Pacifica
   IT. Don't push on this until he says it's unblocked. Everything else (mock Canvas/Drive,
   the whole app) works with zero live credentials in the meantime.
-- **Next concrete actions, in order**: (1) once IT unblocks Drive, wire a real Canvas
-  sandbox (Free-for-Teacher account, not the real school Canvas) + the Drive doc, using
-  the Canvas-course-ID field on `/courses/[id]` and `.env.local` (`MOCK_INTEGRATIONS=false`
-  + `CANVAS_BASE_URL`/`CANVAS_API_TOKEN`/`GOOGLE_DRIVE_ACCESS_TOKEN`/`GOOGLE_DRIVE_FOLDER_ID`);
-  live Canvas fetches are auto-pseudonymized onto the local fictional roster — see
-  `lib/integrations/canvas.ts`'s doc comment before changing that. (2) Dry-run and
-  rehearse the 10-minute board demo (spec Part 3) — use the "🎲 Simulate Canvas activity"
-  button on `/courses/[id]` for a safe, zero-real-data live moment on stage. (3) Design an
-  alumni consent-reset + light-touch capture model (sketched on the Pacifica Systems Map,
-  not yet built here).
+- **Live deployment (2026-09-28)**: https://formation-pathways.vercel.app, Vercel project
+  `formation-pathways` on seno's personal **Hobby** team (`seno-2280s-projects`; move to a
+  school Pro/Education team before real use). The GitHub repo is connected: merges to `main`
+  auto-deploy to production, PRs get previews behind Vercel login. Env is
+  `NEXT_PUBLIC_SUPABASE_URL` + the publishable key only (Production + Preview): no Anthropic key
+  (every AI step runs its offline fallback), no service role, no Finalsite or Canvas credentials.
+  Supabase Auth Site URL and `/auth/callback` redirect are set to the production URL; code and
+  link sign-in both verified in the auth logs. On Vercel the fictional demo's SQLite lives in
+  per-instance `/tmp`: seed data always returns, but shares/approvals/captures made in the demo
+  can vanish or 404 (details in `docs/oct-5-demo.md`). Server-built links use
+  `requestOrigin()` (`lib/origin.ts`); never hard-code a host.
+- **Agent database access (2026-09-28)**: the account-level claude.ai Supabase connector (owner
+  access, bypasses RLS and consent triggers) was disabled. The repo's `.mcp.json` Supabase
+  server is `read_only=true` (PR #11) but was not yet authenticated. Agents: never write to the
+  live database, never query per-student tables once real students exist, and apply new
+  migrations only via the SQL editor or `supabase db push` run by seno.
+- **Decided, not built**: Anthropic auth on Vercel should be Workload Identity Federation
+  (Vercel OIDC token → federation rule; SDK 0.125 has `oidcFederationProvider` +
+  `TokenCache`), set up in the school's Anthropic org, not seno's personal one. Until then,
+  no key, or a throwaway spend-capped key for the demo only.
+- **Next concrete actions, in order**:
+  1. Authenticate the read-only `supabase` MCP server (`/mcp`, from this directory).
+  2. Supabase → Authentication → Emails: add `{{ .Token }}` to *Magic Link* and *Confirm
+     signup* (today's email has a link but no code); set up custom SMTP before other staff
+     sign in.
+  3. Sign in on the live site (laptop + phone), `/season` → *Load sample figures*, run the
+     `docs/oct-5-demo.md` checklist on the live URL, rehearse. Check `/admissions/inquiries`
+     drafts now read `https://formation-pathways.vercel.app/from/…` (PR #10, not yet eyeballed).
+  4. **Oct 5 board demo.**
+  5. After the demo: the real-student beta for a few of seno's own students (parents have
+     approved). Steps and what's still required: `docs/system-of-record.md`, "Starting the
+     real-student beta". Don't open the gate before the demo: real names would show on the
+     `/pilot` roster on stage.
+  6. Later: Google One Tap (waiting on IT), live Finalsite counts (waiting on approval +
+     credentials), alumni consent-reset design (sketched on the Systems Map).
 - Tracked live at https://claude.ai/artifact/3L9fUkHmf4q6d378289uP6 (Formation Pathways
   section) and narrated architecturally at
   https://claude.ai/artifact/GWGzrdfMSr8vfWsRycGM1T — keep both current alongside this file
