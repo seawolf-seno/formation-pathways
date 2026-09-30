@@ -74,9 +74,10 @@ adults behind the scenes; students stay present, in person, with people.
   `TokenCache`), set up in the school's Anthropic org, not seno's personal one. Until then,
   no key, or a throwaway spend-capped key for the demo only.
 - **Next concrete actions, in order**:
-  1. Supabase → Authentication → Emails: add `{{ .Token }}` to *Magic Link* and *Confirm
-     signup* (today's email has a link but no code); set up custom SMTP before other staff
-     sign in.
+  1. Custom SMTP (required: built-in Supabase email only reaches Supabase team members, so no
+     other staff can sign in without it; Gmail SMTP + app password, see
+     `docs/system-of-record.md` Setup step 2), then add `{{ .Token }}` to *Magic Link* and
+     *Confirm signup*.
   2. Sign in on the live site (laptop + phone), `/season` → *Load sample figures*, run the
      `docs/oct-5-demo.md` checklist on the live URL, rehearse. Check `/admissions/inquiries`
      drafts now read `https://formation-pathways.vercel.app/from/…` (PR #10, not yet eyeballed).
