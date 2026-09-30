@@ -11,8 +11,11 @@ import type { FunnelEvent } from "../funnel";
  * most 100 objects with `meta.next_cursor`, passed back as `?cursor=`;
  * 15 requests per 10 s, else 429 with Retry-After. Endpoint paths and field
  * names are NOT public — they're in the school's own Swagger page (EMS
- * Settings → Fields & Data → External API Documentation). Set
- * FINALSITE_FUNNEL_PATH and adjust FINALSITE_FUNNEL_FIELDS to match it.
+ * Settings → Fields & Data → External API Documentation). Pacifica's, checked
+ * 2026-09-30: base https://pacificachristian.fsenrollment.com, contacts at
+ * /api/external/contacts, Bearer JWT. Any other path lands on the web app's
+ * login ("You need to sign in or sign up before continuing"). Adjust
+ * FINALSITE_FUNNEL_FIELDS to match the contact schema.
  *
  * Privacy: the API returns one object per contact, not totals. Each object
  * is mapped straight to a FunnelEvent — an entry year and four dates, nothing
@@ -42,7 +45,7 @@ const env = () => ({
   credentialId: clean(process.env.FINALSITE_API_CREDENTIAL_ID),
   secret: clean(process.env.FINALSITE_API_SECRET),
   version: clean(process.env.FINALSITE_API_VERSION),
-  path: clean(process.env.FINALSITE_FUNNEL_PATH) || "/contacts",
+  path: clean(process.env.FINALSITE_FUNNEL_PATH) || "/api/external/contacts",
   query: clean(process.env.FINALSITE_FUNNEL_QUERY) || "",
 });
 
