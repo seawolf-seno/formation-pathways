@@ -84,6 +84,7 @@ test("the Finalsite JWT is HS256 with sub, name and a short exp", () => {
   assert.deepEqual(JSON.parse(Buffer.from(h, "base64url")), { alg: "HS256", typ: "JWT" });
   const body = JSON.parse(Buffer.from(b, "base64url"));
   assert.equal(body.sub, "cred-1");
+  assert.equal(body.iat, 1_800_000_000);
   assert.ok(body.exp - 1_800_000_000 <= 3600);
   assert.equal(sig, createHmac("sha256", "s3cret").update(`${h}.${b}`).digest("base64url"));
 });

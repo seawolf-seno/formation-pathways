@@ -33,13 +33,17 @@ export const FINALSITE_FUNNEL_FIELDS: Record<keyof FunnelEvent, string[]> = {
   enrolledOn: ["enrolled_date", "contract_signed_date", "enrollment.contract_signed_at"],
 };
 
+// Values pasted into a dashboard often pick up a trailing newline, a space or
+// quotes, which silently breaks the JWT signature. Strip them.
+const clean = (v: string | undefined) => v?.trim().replace(/^(["'])(.*)\1$/, "$2").trim() || undefined;
+
 const env = () => ({
-  baseUrl: process.env.FINALSITE_API_BASE_URL?.replace(/\/+$/, ""),
-  credentialId: process.env.FINALSITE_API_CREDENTIAL_ID,
-  secret: process.env.FINALSITE_API_SECRET,
-  version: process.env.FINALSITE_API_VERSION,
-  path: process.env.FINALSITE_FUNNEL_PATH || "/contacts",
-  query: process.env.FINALSITE_FUNNEL_QUERY || "",
+  baseUrl: clean(process.env.FINALSITE_API_BASE_URL)?.replace(/\/+$/, ""),
+  credentialId: clean(process.env.FINALSITE_API_CREDENTIAL_ID),
+  secret: clean(process.env.FINALSITE_API_SECRET),
+  version: clean(process.env.FINALSITE_API_VERSION),
+  path: clean(process.env.FINALSITE_FUNNEL_PATH) || "/contacts",
+  query: clean(process.env.FINALSITE_FUNNEL_QUERY) || "",
 });
 
 export function isLiveFinalsiteApiConfigured(): boolean {
@@ -52,7 +56,9 @@ const b64url = (s: string | Buffer) => Buffer.from(s).toString("base64url");
 /** HS256 JWT for one run; 10 minutes is plenty and well under the 60 max. */
 export function signFinalsiteJwt(credentialId: string, secret: string, nowSeconds = Math.floor(Date.now() / 1000)): string {
   const head = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const body = b64url(JSON.stringify({ sub: credentialId, name: "Formation Pathways admissions counts", exp: nowSeconds + 600 }));
+  const body = b64url(
+    JSON.stringify({ sub: credentialId, name: "Formation Pathways admissions counts", iat: nowSeconds, exp: nowSeconds + 600 })
+  );
   const sig = createHmac("sha256", secret).update(`${head}.${body}`).digest("base64url");
   return `${head}.${body}.${sig}`;
 }
@@ -109,6 +115,24 @@ function keyPaths(o: Raw, prefix = "", depth = 0): string[] {
   );
 }
 
+/** Finalsite's own reason for refusing the token (e.g. "invalid signature").
+ *  Only read for 401/403, which carry no contact data, and capped in length. */
+async function authFailureReason(res: Response): Promise<string> {
+  const header = res.headers.get("www-authenticate") ?? "";
+  let message = "";
+  try {
+    const text = await res.text();
+    try {
+      const j = JSON.parse(text) as Raw;
+      const pick = [j.message, j.error_description, j.error, j.detail, j.title].find((v) => typeof v === "string");
+      message = (pick as string | undefined) ?? "";
+    } catch {
+      message = text.startsWith("<") ? "" : text; // skip HTML error pages
+    }
+  } catch {}
+  return [message, header].filter(Boolean).join(" · ").replace(/\s+/g, " ").slice(0, 200);
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function* pages(maxPages: number): AsyncGenerator<Raw[]> {
@@ -133,11 +157,13 @@ async function* pages(maxPages: number): AsyncGenerator<Raw[]> {
       continue;
     }
     if (!res.ok) {
-      throw new Error(
-        res.status === 401 || res.status === 403
-          ? `Finalsite API ${res.status}: check the credential id/secret and that it's enabled.`
-          : `Finalsite API ${res.status} on ${e.path}. Check FINALSITE_FUNNEL_PATH against the Swagger page.`
-      );
+      if (res.status === 401 || res.status === 403) {
+        const why = await authFailureReason(res);
+        throw new Error(
+          `Finalsite API ${res.status}: check the credential id/secret and that it's enabled.${why ? ` Finalsite says: ${why}` : ""}`
+        );
+      }
+      throw new Error(`Finalsite API ${res.status} on ${e.path}. Check FINALSITE_FUNNEL_PATH against the Swagger page.`);
     }
     const json = (await res.json()) as Raw | Raw[];
     const items = Array.isArray(json) ? json : ((json.data ?? json.results ?? json.items ?? []) as Raw[]);
