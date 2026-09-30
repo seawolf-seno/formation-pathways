@@ -45,7 +45,10 @@ adults behind the scenes; students stay present, in person, with people.
   External API client (`lib/sor/importers/finalsite-api.ts`) is built but OFF: needs
   `FINALSITE_API_*` env **and** a separate recorded approval (`pilot_settings.funnel_*`,
   DB-enforced). Its field map is unverified guesswork until checked against the school's
-  Swagger page. Merged via PR #8; migration `20260929022903_admissions_funnel.sql` **applied
+  Swagger page. **2026-09-29: the admissions officer approved live Finalsite data**; not yet
+  recorded on `/season` (admin records name/title + where the approval lives), and no
+  credentials yet. Once live rows exist `/season` shows them instead of sample figures,
+  so decide live vs. sample for the Oct 5 demo before importing. Merged via PR #8; migration `20260929022903_admissions_funnel.sql` **applied
   to live Supabase 2026-09-28** (advisors: nothing new; funnel approval off; table empty until
   an admin clicks *Load sample figures* on `/season`). See `docs/admissions-season.md`.
 - **Blocked 2026-09-21**: live Google Drive setup — seno has no access to the Google
@@ -83,13 +86,17 @@ adults behind the scenes; students stay present, in person, with people.
      drafts now read `https://formation-pathways.vercel.app/from/…` (PR #10, not yet eyeballed).
      Admissions officer self-test: `docs/admissions-tester-guide.md` (approve her as
      *Admissions* on `/pilot` after her first sign-in).
-  3. **Oct 5 board demo.**
-  4. After the demo: the real-student beta for a few of seno's own students (parents have
+  3. Live Finalsite counts (`docs/admissions-season.md`, "Switching on"): record the
+     approval on `/season`; get External API credentials (Finalsite System Admin with Data
+     permissions; Finalsite may need to enable the feature); send the Swagger page's contact
+     endpoint + field names so `FINALSITE_FUNNEL_FIELDS` can be fixed; env in Vercel;
+     *Check connection*; import.
+  4. **Oct 5 board demo.**
+  5. After the demo: the real-student beta for a few of seno's own students (parents have
      approved). Steps and what's still required: `docs/system-of-record.md`, "Starting the
      real-student beta". Don't open the gate before the demo: real names would show on the
      `/pilot` roster on stage.
-  5. Later: Google One Tap (waiting on IT), live Finalsite counts (waiting on approval +
-     credentials), alumni consent-reset design (sketched on the Systems Map).
+  6. Later: Google One Tap (waiting on IT), alumni consent-reset design (sketched on the Systems Map).
 - Tracked live at https://claude.ai/artifact/3L9fUkHmf4q6d378289uP6 (Formation Pathways
   section) and narrated architecturally at
   https://claude.ai/artifact/GWGzrdfMSr8vfWsRycGM1T — keep both current alongside this file
