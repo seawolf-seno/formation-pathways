@@ -12,10 +12,13 @@ Allow about 45 minutes. Use a laptop for most of it and your phone for step 7.
 
 ## Before you start (for seno, before sending this)
 
-1. **Email code.** In Supabase → Authentication → Emails, check that the
-   *Magic Link* and *Confirm signup* templates include `{{ .Token }}`. If they
-   don't, the sign-in email has a link but no 6-digit code (the link still works
-   on a laptop, but not reliably on a phone).
+1. **Custom SMTP, then the email code.** Supabase's built-in email only delivers
+   to members of the Supabase organization's team, so without custom SMTP her
+   sign-in email never arrives. (Don't add her to the Supabase team instead: that
+   gives her the database dashboard.) Set up SMTP under Project settings →
+   Authentication → SMTP (see `docs/system-of-record.md`, Setup step 2), then in
+   Authentication → Emails add `{{ .Token }}` to the *Magic Link* and *Confirm
+   signup* templates so the email carries a 6-digit code as well as the link.
 2. **Approve her.** After her first sign-in, open `/pilot` → Staff, approve her
    account and set the role to **Admissions**. Until you do, she can open the
    fictional demo but `/season`, `/pilot` and `/capture` send her back to the

@@ -118,9 +118,19 @@ roster on stage. Then, by seno (real student details, so not an agent):
    Codes matter on phones: a link often opens in another browser or inside the
    mail app, and an iPhone home-screen app never shares Safari's cookies. In
    Authentication → Emails, put `{{ .Token }}` in **both** the *Magic Link* and
-   *Confirm signup* templates (first-time staff get the second one). Supabase's
-   built-in email is rate-limited to a few messages an hour; set up custom SMTP
-   before more than a couple of staff use it. Google sign-in replaces all of
+   *Confirm signup* templates (first-time staff get the second one). **Custom
+   SMTP is required before anyone but seno signs in**: Supabase's built-in email
+   only delivers to members of the Supabase organization's team (and a few an
+   hour), and editing templates needs custom SMTP too. The school is on Google
+   Workspace, so the simplest route is Gmail SMTP from a school account:
+   host `smtp.gmail.com`, port `587`, username the full address, password a
+   Google **app password** (needs 2-Step Verification, and IT may have to allow
+   app passwords), sender the same address. A dedicated account such as a
+   `pathways@` mailbox is better than a personal one. The domain has no SPF
+   record, which is fine for Gmail SMTP (Google signs its own mail) but would
+   push a third-party sender like Resend into spam until IT adds DNS records.
+   Then raise Authentication → Rate limits → emails per hour from its low
+   default. Google sign-in replaces all of
    this once IT creates the OAuth client (see "Google sign-in" below).
 3. **Env.** Copy `NEXT_PUBLIC_SUPABASE_URL` and the publishable key
    (`sb_publishable_…`, Project settings → API keys) into `.env.local` as
