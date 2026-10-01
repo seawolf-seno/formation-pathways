@@ -45,10 +45,17 @@ adults behind the scenes; students stay present, in person, with people.
   External API client (`lib/sor/importers/finalsite-api.ts`) is built but OFF: needs
   `FINALSITE_API_*` env **and** a separate recorded approval (`pilot_settings.funnel_*`,
   DB-enforced). Its field map is unverified guesswork until checked against the school's
-  Swagger page. **2026-09-29: the admissions officer approved live Finalsite data**; not yet
-  recorded on `/season` (admin records name/title + where the approval lives), and no
-  credentials yet. Once live rows exist `/season` shows them instead of sample figures,
-  so decide live vs. sample for the Oct 5 demo before importing. Merged via PR #8; migration `20260929022903_admissions_funnel.sql` **applied
+  Swagger page. **Live connection working 2026-09-30 (PRs #16–22)**: base
+  `https://pacificachristian.fsenrollment.com`, `/api/external/contacts`, Bearer JWT,
+  `X-Api-Version: 1`; each season pulled separately (`school_year_id` + `enrollment_type=new`);
+  fields mapped. Finalsite has no admission decision date, so "admitted" = that season's status
+  in `FINALSITE_ADMITTED_STATUSES`, dated by `FINALSITE_DECISION_DATES`. The admissions officer
+  approved live data 2026-09-29 (record it on `/season`). **Waiting on her** for the statuses
+  that mean "offered a place" and the March 2024/25/26 release dates; the import refuses to run
+  without them. Once live rows exist `/season` shows them instead of sample figures, so decide
+  live vs. sample for the Oct 5 demo before importing. The credential returns far more than
+  needed (income, net worth, race, religion, essays); the app keeps year + 4 dates only. Ask
+  Finalsite to narrow it. Merged via PR #8; migration `20260929022903_admissions_funnel.sql` **applied
   to live Supabase 2026-09-28** (advisors: nothing new; funnel approval off; table empty until
   an admin clicks *Load sample figures* on `/season`). See `docs/admissions-season.md`.
 - **Blocked 2026-09-21**: live Google Drive setup — seno has no access to the Google
@@ -76,27 +83,32 @@ adults behind the scenes; students stay present, in person, with people.
   (Vercel OIDC token → federation rule; SDK 0.125 has `oidcFederationProvider` +
   `TokenCache`), set up in the school's Anthropic org, not seno's personal one. Until then,
   no key, or a throwaway spend-capped key for the demo only.
-- **Next concrete actions, in order**:
-  1. Custom SMTP (required: built-in Supabase email only reaches Supabase team members, so no
-     other staff can sign in without it; Gmail SMTP + app password, see
-     `docs/system-of-record.md` Setup step 2), then add `{{ .Token }}` to *Magic Link* and
-     *Confirm signup*.
-  2. Sign in on the live site (laptop + phone), `/season` → *Load sample figures*, run the
-     `docs/oct-5-demo.md` checklist on the live URL, rehearse. Check `/admissions/inquiries`
-     drafts now read `https://formation-pathways.vercel.app/from/…` (PR #10, not yet eyeballed).
-     Admissions officer self-test: `docs/admissions-tester-guide.md` (approve her as
-     *Admissions* on `/pilot` after her first sign-in).
-  3. Live Finalsite counts (`docs/admissions-season.md`, "Switching on"): record the
-     approval on `/season`; get External API credentials (Finalsite System Admin with Data
-     permissions; Finalsite may need to enable the feature); send the Swagger page's contact
-     endpoint + field names so `FINALSITE_FUNNEL_FIELDS` can be fixed; env in Vercel;
-     *Check connection*; import.
-  4. **Oct 5 board demo.**
-  5. After the demo: the real-student beta for a few of seno's own students (parents have
-     approved). Steps and what's still required: `docs/system-of-record.md`, "Starting the
-     real-student beta". Don't open the gate before the demo: real names would show on the
-     `/pilot` roster on stage.
-  6. Later: Google One Tap (waiting on IT), alumni consent-reset design (sketched on the Systems Map).
+- **Blackbaud (2026-10-01, PR #23)**: *Connect Blackbaud* on `/pilot` (SKY auth code + PKCE;
+  60-minute token in the admin's httpOnly cookie only) and a names-only *Check connection* on
+  seno's own staff record. Env set (subscription key, client id/secret, redirect URI registered).
+  **Waiting on the Blackbaud environment admin** to connect the app ("This application has not
+  been connected to your Blackbaud environment"). Field map (`mapBlackbaudUser`) unverified until
+  the check runs.
+- **Google sign-in (PR #24)**: *Continue with Google* built, hidden until `GOOGLE_SIGNIN=on`.
+  **Waiting on IT** for an Internal OAuth client (request text in `docs/system-of-record.md`,
+  "Google sign-in"). Staff phone guide: `docs/staff-capture-guide.md`.
+- **Next concrete actions** (waiting on three people; see the checklist on the Pacifica OS
+  dashboard):
+  - Now, no one else needed: custom SMTP (Gmail SMTP + app password, `docs/system-of-record.md`
+    Setup step 2) so staff can sign in before Google is live; record the admissions approval on
+    `/season`; rehearse the `docs/oct-5-demo.md` checklist on the live URL; ask leadership for a
+    named beta sign-off; check the parents' consent forms cover each scope (and any admissions
+    use); collect each beta student's Blackbaud/Canvas/Finalsite ids.
+  - When admissions answers: set `FINALSITE_ADMITTED_STATUSES` + `FINALSITE_DECISION_DATES`,
+    redeploy, *Check connection*, decide live vs. sample for Oct 5, import.
+  - When the Blackbaud admin connects the app: *Connect Blackbaud* → *Check connection* with
+    seno's staff id → fix `mapBlackbaudUser` from the field names.
+  - When IT sends the Google client: enable the Google provider in Supabase, `GOOGLE_SIGNIN=on`,
+    redeploy, test on a phone.
+  - **Oct 5 board demo.** Then the real-student beta (`docs/system-of-record.md`, "Starting the
+    real-student beta"). Don't open the gate before the demo: real names would show on the
+    `/pilot` roster on stage.
+  - Later: alumni consent-reset design (sketched on the Systems Map).
 - Tracked live at https://claude.ai/artifact/3L9fUkHmf4q6d378289uP6 (Formation Pathways
   section) and narrated architecturally at
   https://claude.ai/artifact/GWGzrdfMSr8vfWsRycGM1T — keep both current alongside this file
