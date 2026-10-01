@@ -25,15 +25,17 @@ import type { FunnelEvent } from "../funnel";
  */
 
 /** Where each FunnelEvent field lives in a Finalsite contact object. Each
- *  entry lists candidate keys (dotted paths allowed), first match wins. These
- *  are best guesses: confirm them against the school's Swagger page with
- *  "Check connection" on the Admissions season page before the first import. */
+ *  entry lists candidate keys (dotted paths allowed), first match wins. The
+ *  first key of each is what Pacifica's /api/external/contacts returns
+ *  (seen via "Check connection", 2026-09-30); the rest are fallbacks.
+ *  admittedOn has no matching field there yet: no decision date appears at
+ *  the top level of a contact (review_decision has no date). */
 export const FINALSITE_FUNNEL_FIELDS: Record<keyof FunnelEvent, string[]> = {
-  entryYear: ["entry_year", "entering_year", "school_year", "enrollment_year"],
-  inquiredOn: ["inquiry_date", "inquiry_submitted_at", "created_at"],
-  appliedOn: ["application_submitted_date", "application_submitted_at", "application.submitted_at"],
-  admittedOn: ["accepted_date", "decision_date", "admission_decision.accepted_at"],
-  enrolledOn: ["enrolled_date", "contract_signed_date", "enrollment.contract_signed_at"],
+  entryYear: ["prospect_entry_year", "entry_year", "entering_year"],
+  inquiredOn: ["inquiry_submit_date", "inquiry_date"],
+  appliedOn: ["application_submit_date", "application_submitted_date"],
+  admittedOn: ["accepted_date", "decision_date", "review_decision_date"],
+  enrolledOn: ["contract_submit_date", "enrolled_date"],
 };
 
 // Values pasted into a dashboard often pick up a trailing newline, a space or
@@ -79,12 +81,28 @@ const toDate = (v: unknown): string | null => {
 };
 
 const toYear = (v: unknown): number | null => {
-  // "2027", 2027, or a school-year label like "2026-2027" / "2026-27" → 2027.
-  const s = String(v ?? "");
+  // "2027" / 2027 is the fall the class enters. A school-year label is the
+  // year they enter, so "2027-2028" / "2027-28" is the class entering fall
+  // 2027 too: entry year 2027, recruited in the 2026–27 season.
+  const s = String(v ?? "").trim();
   const range = /^(\d{4})\s*[-–/]\s*(\d{2,4})$/.exec(s);
-  if (range) return range[2].length === 4 ? Number(range[2]) : Number(range[1].slice(0, 2) + range[2]);
+  if (range) return Number(range[1]);
   return /^\d{4}$/.test(s) ? Number(s) : null;
 };
+
+/** The shape of a value, never the value: "YYYY", "YYYY-YYYY", "date", … */
+function formatOf(v: unknown): string {
+  if (v == null || v === "") return "empty";
+  if (typeof v === "number") return Number.isInteger(v) && v >= 1900 && v <= 2200 ? "YYYY (number)" : "number";
+  if (typeof v !== "string") return Array.isArray(v) ? "list" : typeof v === "object" ? "object" : typeof v;
+  const s = v.trim();
+  if (/^\d{4}$/.test(s)) return "YYYY";
+  if (/^\d{4}\s*[-–/]\s*\d{4}$/.test(s)) return "YYYY-YYYY";
+  if (/^\d{4}\s*[-–/]\s*\d{2}$/.test(s)) return "YYYY-YY";
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return "date-time";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return "date";
+  return "other text";
+}
 
 /** Contact object → FunnelEvent, plus which fields weren't found. */
 export function mapFinalsiteContact(raw: Raw): { event: FunnelEvent | null; missing: (keyof FunnelEvent)[] } {
@@ -215,6 +233,14 @@ export async function fetchLiveFunnelEvents(entryYears: number[]): Promise<{ eve
       else if (wanted.has(event.entryYear)) events.push(event);
     }
   }
+  // Stages imply the ones before them, so with no admission date anywhere,
+  // "admitted" would silently equal "enrolled" and every season would show
+  // 100% yield. Refuse rather than mislead.
+  if (seen > 0 && missingCount.get("admittedOn") === seen) {
+    throw new Error(
+      `No contact had an admission decision date, so admitted counts (and yield) would be wrong. Map FINALSITE_FUNNEL_FIELDS.admittedOn before importing.`
+    );
+  }
   const warnings: string[] = [];
   if (noYear) warnings.push(`${noYear} of ${seen} contacts had no entry year and were not counted.`);
   for (const [field, n] of missingCount) {
@@ -232,6 +258,8 @@ export async function checkFinalsiteConnection(): Promise<{
   responseKeys: string[];
   keysSeen: string[];
   fieldsFound: Record<keyof FunnelEvent, string | null>;
+  /** Per matched field, how many contacts had each value format. No values. */
+  formats: Partial<Record<keyof FunnelEvent, Record<string, number>>>;
 }> {
   let responseKeys: string[] = [];
   const first: Raw[] = (await pages(1, (k) => (responseKeys = k)).next()).value ?? [];
@@ -242,5 +270,15 @@ export async function checkFinalsiteConnection(): Promise<{
       FINALSITE_FUNNEL_FIELDS[f].find((k) => keys.has(k)) ?? null,
     ])
   ) as Record<keyof FunnelEvent, string | null>;
-  return { objectsOnFirstPage: first.length, responseKeys, keysSeen: [...keys].sort(), fieldsFound };
+  const formats: Partial<Record<keyof FunnelEvent, Record<string, number>>> = {};
+  for (const [field, key] of Object.entries(fieldsFound) as [keyof FunnelEvent, string | null][]) {
+    if (!key) continue;
+    const tally: Record<string, number> = {};
+    for (const o of first) {
+      const f = formatOf(at(o, key));
+      tally[f] = (tally[f] ?? 0) + 1;
+    }
+    formats[field] = tally;
+  }
+  return { objectsOnFirstPage: first.length, responseKeys, keysSeen: [...keys].sort(), fieldsFound, formats };
 }
