@@ -49,7 +49,7 @@ const env = () => ({
   baseUrl: clean(process.env.FINALSITE_API_BASE_URL)?.replace(/\/+$/, ""),
   credentialId: clean(process.env.FINALSITE_API_CREDENTIAL_ID),
   secret: clean(process.env.FINALSITE_API_SECRET),
-  version: clean(process.env.FINALSITE_API_VERSION),
+  version: clean(process.env.FINALSITE_API_VERSION) || "1", // required header; Pacifica's Swagger: 1
   path: clean(process.env.FINALSITE_FUNNEL_PATH) || "/api/external/contacts",
   query: clean(process.env.FINALSITE_FUNNEL_QUERY) || "",
 });
@@ -107,8 +107,9 @@ function formatOf(v: unknown): string {
   return "other text";
 }
 
-/** Contact object → FunnelEvent, plus which fields weren't found. */
-export function mapFinalsiteContact(raw: Raw): { event: FunnelEvent | null; missing: (keyof FunnelEvent)[] } {
+/** Contact object → FunnelEvent, plus which fields weren't found. Pass
+ *  `entryYear` when the query already fixed the season (school_year_id). */
+export function mapFinalsiteContact(raw: Raw, knownEntryYear?: number): { event: FunnelEvent | null; missing: (keyof FunnelEvent)[] } {
   const find = (field: keyof FunnelEvent) => {
     for (const k of FINALSITE_FUNNEL_FIELDS[field]) {
       const v = at(raw, k);
@@ -116,7 +117,7 @@ export function mapFinalsiteContact(raw: Raw): { event: FunnelEvent | null; miss
     }
     return null;
   };
-  const entryYear = toYear(find("entryYear"));
+  const entryYear = knownEntryYear ?? toYear(find("entryYear"));
   const event: FunnelEvent = {
     entryYear: entryYear ?? 0,
     inquiredOn: toDate(find("inquiredOn")),
@@ -180,20 +181,20 @@ export function envelopeKeys(json: unknown): string[] {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function* pages(maxPages: number, onEnvelope?: (keys: string[]) => void): AsyncGenerator<Raw[]> {
+type Query = Record<string, string>;
+
+async function* pages(maxPages: number, extra: Query = {}, onEnvelope?: (keys: string[]) => void): AsyncGenerator<Raw[]> {
   const e = env();
   if (!isLiveFinalsiteApiConfigured()) throw new Error("Finalsite API isn't configured (see .env.local.example).");
   const token = signFinalsiteJwt(e.credentialId!, e.secret!);
   let cursor: string | null = null;
   for (let page = 0; page < maxPages; page++) {
     const url = new URL(`${e.baseUrl}${e.path}${e.query ? `?${e.query.replace(/^\?/, "")}` : ""}`);
+    url.searchParams.set("count", "25"); // the API's maximum
+    for (const [k, v] of Object.entries(extra)) url.searchParams.set(k, v);
     if (cursor) url.searchParams.set("cursor", cursor);
     const res = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: "application/json",
-        ...(e.version ? { "X-Api-Version": e.version } : {}),
-      },
+      headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "X-Api-Version": e.version },
       cache: "no-store",
     });
     if (res.status === 429) {
@@ -217,24 +218,93 @@ async function* pages(maxPages: number, onEnvelope?: (keys: string[]) => void): 
     if (!cursor) return;
     await sleep(700); // stays under 15 requests / 10 s
   }
-  throw new Error(`Stopped after ${maxPages} pages. Narrow FINALSITE_FUNNEL_QUERY (e.g. to recent entry years).`);
+  throw new Error(`Stopped after ${maxPages} pages. Narrow FINALSITE_FUNNEL_QUERY.`);
 }
 
-/** Every contact in the listed seasons, as FunnelEvents. */
+/** Up to `max` pages, stopping early without error. */
+async function sample(max: number, extra: Query = {}, onEnvelope?: (keys: string[]) => void): Promise<Raw[]> {
+  const out: Raw[] = [];
+  let n = 0;
+  for await (const items of pages(max + 1, extra, onEnvelope)) {
+    out.push(...items);
+    if (++n >= max) break;
+  }
+  return out;
+}
+
+// ---------------------------------------------------------- school years
+//
+// The API is per school year: with `school_year_id`, a contact's status,
+// enrollment_type and dates reflect THAT year. So each season is pulled on its
+// own, filtered to new families, which keeps past seasons right (a student who
+// entered in 2024 is "returning" today) and keeps each pull small. School year
+// ids are school setup, not family data; they're read off the school-year
+// objects contacts carry, or set in FINALSITE_SCHOOL_YEAR_IDS
+// ("2027=<uuid>,2026=<uuid>") to skip discovery.
+
+type SchoolYear = { id: string; startYear: number; name: string };
+
+/** School-year objects on a contact: its own, its prospect entry year, and any
+ *  on track fields. */
+export function schoolYearsOn(o: Raw): SchoolYear[] {
+  const objs = [o.school_year, o.prospect_entry_year, ...(Array.isArray(o.track_attributes) ? o.track_attributes.map((t: Raw) => t?.school_year) : [])];
+  return objs.flatMap((y) => {
+    if (!y || typeof y !== "object") return [];
+    const { id, start_year, name } = y as Raw;
+    const startYear = typeof start_year === "number" ? start_year : toYear(name);
+    return typeof id === "string" && startYear ? [{ id, startYear, name: typeof name === "string" ? name : String(startYear) }] : [];
+  });
+}
+
+const DISCOVERY_PAGES = 12;
+
+async function resolveSchoolYears(entryYears: number[], seed: Raw[] = []): Promise<Map<number, SchoolYear>> {
+  const found = new Map<number, SchoolYear>();
+  for (const pair of (clean(process.env.FINALSITE_SCHOOL_YEAR_IDS) ?? "").split(",")) {
+    const [y, id] = pair.split("=").map((x) => x?.trim());
+    if (/^\d{4}$/.test(y ?? "") && id) found.set(Number(y), { id, startYear: Number(y), name: `${y}-${Number(y) + 1}` });
+  }
+  const add = (list: Raw[]) => {
+    for (const o of list) for (const y of schoolYearsOn(o)) if (!found.has(y.startYear)) found.set(y.startYear, y);
+  };
+  add(seed);
+  if (entryYears.every((y) => found.has(y))) return found;
+  for await (const items of pages(DISCOVERY_PAGES + 1)) {
+    add(items);
+    if (entryYears.every((y) => found.has(y))) break;
+  }
+  return found;
+}
+
+/** New families only, for one school year's own status and dates. */
+const seasonQuery = (sy: SchoolYear): Query => ({ school_year_id: sy.id, enrollment_type: "new" });
+
+/** Every new family in the listed seasons, as FunnelEvents, one season at a time. */
 export async function fetchLiveFunnelEvents(entryYears: number[]): Promise<{ events: FunnelEvent[]; warnings: string[] }> {
-  const wanted = new Set(entryYears);
+  const years = await resolveSchoolYears(entryYears);
   const events: FunnelEvent[] = [];
+  const warnings: string[] = [];
   const missingCount = new Map<string, number>();
   let seen = 0;
-  let noYear = 0;
-  for await (const items of pages(1000)) {
-    for (const raw of items) {
-      seen++;
-      const { event, missing } = mapFinalsiteContact(raw);
-      for (const m of missing) missingCount.set(m, (missingCount.get(m) ?? 0) + 1);
-      if (!event) noYear++;
-      else if (wanted.has(event.entryYear)) events.push(event);
+  for (const year of entryYears) {
+    const sy = years.get(year);
+    if (!sy) {
+      warnings.push(`No Finalsite school year found for ${year}-${year + 1} (the class entering fall ${year}); that season was skipped. Set FINALSITE_SCHOOL_YEAR_IDS.`);
+      continue;
     }
+    let n = 0;
+    for await (const items of pages(400, seasonQuery(sy))) {
+      for (const raw of items) {
+        n++;
+        // The query fixes the year, so the season is known even when the
+        // contact's own year fields are blank.
+        const { event, missing } = mapFinalsiteContact(raw, year);
+        for (const m of missing) missingCount.set(m, (missingCount.get(m) ?? 0) + 1);
+        if (event) events.push(event);
+      }
+    }
+    seen += n;
+    if (n === 0) warnings.push(`Finalsite returned no new families for ${sy.name}. Check enrollment_type values in Check connection.`);
   }
   // Stages imply the ones before them, so with no admission date anywhere,
   // "admitted" would silently equal "enrolled" and every season would show
@@ -244,15 +314,13 @@ export async function fetchLiveFunnelEvents(entryYears: number[]): Promise<{ eve
       `No contact had an admission decision date, so admitted counts (and yield) would be wrong. Map FINALSITE_FUNNEL_FIELDS.admittedOn before importing.`
     );
   }
-  const warnings: string[] = [];
-  if (noYear) warnings.push(`${noYear} of ${seen} contacts had no entry year and were not counted.`);
   for (const [field, n] of missingCount) {
-    if (field !== "entryYear" && n === seen && seen > 0) {
-      warnings.push(`No contact had ${field}. Check FINALSITE_FUNNEL_FIELDS.${field} against the Swagger page.`);
-    }
+    if (n === seen && seen > 0) warnings.push(`No contact had ${field}. Check FINALSITE_FUNNEL_FIELDS.${field} against the Swagger page.`);
   }
   return { events, warnings };
 }
+
+// ---------------------------------------------------------- check connection
 
 /** Labels the SCHOOL configures, the same for every family: checklist item and
  *  custom field names, and the allowed values of a few status fields. These
@@ -267,11 +335,13 @@ const SETUP_LISTS: Record<string, (o: Raw) => unknown[]> = {
 };
 
 const CHECK_PAGES = 8; // ~200 contacts: enough to see the setup, a few seconds
+const CHECK_SEASON_PAGES = 4; // ~100 new families in the current season
 
-/** A sample of pages, reported as field names, value formats and school setup
- *  labels — never a family's values — so the field map can be checked before
- *  the first import. */
-export async function checkFinalsiteConnection(): Promise<{
+/** A sample — the first pages unfiltered, then new families in the current
+ *  season — reported as field names, value formats and school setup labels,
+ *  never a family's values, so the field map can be checked before the first
+ *  import. */
+export async function checkFinalsiteConnection(currentEntryYear: number): Promise<{
   objectsOnFirstPage: number;
   responseKeys: string[];
   keysSeen: string[];
@@ -279,14 +349,16 @@ export async function checkFinalsiteConnection(): Promise<{
   /** Per matched field, how many contacts had each value format. No values. */
   formats: Partial<Record<keyof FunnelEvent, Record<string, number>>>;
   setup: Record<string, string[]>;
+  /** Current season: which school year was used and how many new families came back. */
+  season: { schoolYear: string | null; newFamilies: number };
 }> {
   let responseKeys: string[] = [];
-  const first: Raw[] = [];
-  let n = 0;
-  for await (const items of pages(CHECK_PAGES + 1, (k) => (responseKeys = k))) {
-    first.push(...items);
-    if (++n >= CHECK_PAGES) break;
-  }
+  const unfiltered = await sample(CHECK_PAGES, {}, (k) => (responseKeys = k));
+  const current = currentEntryYear;
+  const sy = (await resolveSchoolYears([current], unfiltered)).get(current) ?? null;
+  const seasonal = sy ? await sample(CHECK_SEASON_PAGES, seasonQuery(sy)) : [];
+  const first = [...unfiltered, ...seasonal];
+
   const keys = new Set<string>(first.flatMap((o) => keyPaths(o)));
   const fieldsFound = Object.fromEntries(
     (Object.keys(FINALSITE_FUNNEL_FIELDS) as (keyof FunnelEvent)[]).map((f) => [
@@ -294,17 +366,20 @@ export async function checkFinalsiteConnection(): Promise<{
       FINALSITE_FUNNEL_FIELDS[f].find((k) => keys.has(k)) ?? null,
     ])
   ) as Record<keyof FunnelEvent, string | null>;
+  // Formats from the season's new families when there are any: they're the
+  // contacts the import actually counts.
+  const basis = seasonal.length ? seasonal : unfiltered;
   const formats: Partial<Record<keyof FunnelEvent, Record<string, number>>> = {};
   for (const [field, key] of Object.entries(fieldsFound) as [keyof FunnelEvent, string | null][]) {
     if (!key) continue;
     const tally: Record<string, number> = {};
-    for (const o of first) {
+    for (const o of basis) {
       const f = formatOf(at(o, key));
       tally[f] = (tally[f] ?? 0) + 1;
     }
     formats[field] = tally;
   }
-  const setup = Object.fromEntries(
+  const setup: Record<string, string[]> = Object.fromEntries(
     Object.entries(SETUP_LISTS).map(([label, pick]) => {
       const names = new Set<string>();
       for (const o of first)
@@ -312,5 +387,14 @@ export async function checkFinalsiteConnection(): Promise<{
       return [label, [...names].sort()];
     })
   );
-  return { objectsOnFirstPage: first.length, responseKeys, keysSeen: [...keys].sort(), fieldsFound, formats, setup };
+  setup["school years"] = [...new Set(first.flatMap((o) => schoolYearsOn(o).map((y) => y.name)))].sort();
+  return {
+    objectsOnFirstPage: first.length,
+    responseKeys,
+    keysSeen: [...keys].sort(),
+    fieldsFound,
+    formats,
+    setup,
+    season: { schoolYear: sy?.name ?? null, newFamilies: seasonal.length },
+  };
 }

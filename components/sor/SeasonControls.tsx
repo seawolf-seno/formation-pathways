@@ -45,11 +45,13 @@ export function SeasonSourcePanel({ settings, apiConfigured }: { settings: Pilot
     start(async () => {
       const res = await checkFinalsiteConnectionAction();
       if (!res.ok) return setCheck({ tone: "error", text: res.error });
-      const { objectsOnFirstPage, fieldsFound, keysSeen, responseKeys, formats, setup } = res.check;
+      const { objectsOnFirstPage, fieldsFound, keysSeen, responseKeys, formats, setup, season } = res.check;
       const missing = Object.entries(fieldsFound).filter(([, v]) => !v).map(([k]) => k);
       setCheck({
         tone: missing.length ? "error" : "ok",
-        text: `Connected: ${objectsOnFirstPage} contacts sampled. ${
+        text: `Connected: ${objectsOnFirstPage} contacts sampled; ${
+          season.schoolYear ? `${season.newFamilies} new families in ${season.schoolYear}` : "no school year found for this season"
+        }. ${
           missing.length ? `Not found yet: ${missing.join(", ")}.` : "Every field the counts need was found."
         }`,
         detail: [
