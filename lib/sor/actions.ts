@@ -77,6 +77,27 @@ export async function verifySignInCodeAction(formData: FormData): Promise<Result
   redirect(safeNext(formData.get("next")));
 }
 
+/** "Continue with Google": Supabase's Google provider, school accounts only.
+ *  Off until GOOGLE_SIGNIN=on (IT's Internal OAuth client + the provider
+ *  enabled in Supabase). `hd` only pre-selects the school domain in Google's
+ *  chooser; the Internal consent screen and the staff trigger are what keep
+ *  other accounts out. */
+export async function signInWithGoogleAction(formData: FormData): Promise<Result> {
+  if (process.env.GOOGLE_SIGNIN?.trim() !== "on") return { ok: false, error: "Google sign-in isn't switched on yet." };
+  const next = safeNext(formData.get("next"));
+  const origin = await requestOrigin();
+  const supabase = await getSorClient();
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+      queryParams: { hd: "pacificachristian.org", prompt: "select_account" },
+    },
+  });
+  if (error || !data.url) return fail(error ?? new Error("Google sign-in didn't start."));
+  redirect(data.url);
+}
+
 export async function signOutAction() {
   const supabase = await getSorClient();
   await supabase.auth.signOut();

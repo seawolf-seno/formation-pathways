@@ -28,7 +28,7 @@ export default async function LoginPage({
         </p>
       )}
       {isSorConfigured() ? (
-        <LoginForm next={next} />
+        <LoginForm next={next} google={process.env.GOOGLE_SIGNIN?.trim() === "on"} />
       ) : (
         <p className="text-sm text-[var(--color-ink-muted)]">
           Not configured yet: set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY (see
