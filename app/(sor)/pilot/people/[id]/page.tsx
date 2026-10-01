@@ -4,7 +4,7 @@ import { getPersonProfile, logAccess, requireStaff } from "@/lib/sor/queries";
 import { displayName } from "@/lib/sor/types";
 import { PathwaysDisplay } from "@/components/PathwaysDisplay";
 import { TagChip } from "@/components/TagChips";
-import { ApproveButton, ConsentPanel, DraftButton, WithdrawButton } from "@/components/sor/PersonControls";
+import { ApproveButton, ConsentPanel, DraftButton, ExternalIdsPanel, WithdrawButton } from "@/components/sor/PersonControls";
 
 function Section({ title, source, children }: { title: string; source?: string; children: React.ReactNode }) {
   return (
@@ -172,13 +172,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               <ConsentPanel personId={person.id} consents={consents} isAdmin={isAdmin} />
             </Section>
           )}
-          {profile.externalIds.length > 0 && (
+          {(profile.externalIds.length > 0 || (isAdmin && !person.is_sample)) && (
             <Section title="Linked systems">
-              <ul className="space-y-1 text-xs text-[var(--color-ink-muted)]">
-                {profile.externalIds.map((x) => (
-                  <li key={x.system}><span className="capitalize">{x.system}</span>: <span className="font-mono">{x.external_id}</span></li>
-                ))}
-              </ul>
+              <ExternalIdsPanel personId={person.id} ids={profile.externalIds} editable={isAdmin && !person.is_sample} />
             </Section>
           )}
           {isAdmin && <WithdrawButton personId={person.id} name={name} />}

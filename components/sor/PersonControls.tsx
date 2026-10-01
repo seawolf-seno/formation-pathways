@@ -6,6 +6,7 @@ import {
   draftPathwaysAction,
   recordConsentAction,
   revokeConsentAction,
+  setExternalIdsAction,
   withdrawParticipantAction,
 } from "@/lib/sor/actions";
 import { CONSENT_SCOPES, type Consent } from "@/lib/sor/types";
@@ -128,5 +129,67 @@ export function WithdrawButton({ personId, name }: { personId: string; name: str
         <button className={quiet} onClick={() => setConfirming(false)}>Cancel</button>
       </div>
     </div>
+  );
+}
+
+const ID_FIELDS = [
+  { system: "finalsite", label: "Finalsite Person ID" },
+  { system: "blackbaud", label: "Blackbaud user id" },
+  { system: "canvas", label: "Canvas user id" },
+] as const;
+
+/** The ids importers match on. Admins edit them on real participants;
+ *  everyone else (and sample students) sees them read-only. */
+export function ExternalIdsPanel({
+  personId,
+  ids,
+  editable,
+}: {
+  personId: string;
+  ids: { system: string; external_id: string }[];
+  editable: boolean;
+}) {
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [pending, start] = useTransition();
+  const value = (system: string) => ids.find((x) => x.system === system)?.external_id ?? "";
+
+  if (!editable) {
+    return ids.length ? (
+      <ul className="space-y-1 text-xs text-[var(--color-ink-muted)]">
+        {ids.map((x) => (
+          <li key={x.system}>
+            <span className="capitalize">{x.system}</span>: <span className="font-mono">{x.external_id}</span>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="text-xs text-[var(--color-ink-muted)]">No linked systems.</p>
+    );
+  }
+
+  const save = (fd: FormData) =>
+    start(async () => {
+      const res = await setExternalIdsAction(fd);
+      setMsg(res.ok ? { ok: true, text: "Saved." } : { ok: false, text: res.error });
+    });
+
+  return (
+    <form action={save} className="space-y-2">
+      <input type="hidden" name="person_id" value={personId} />
+      {ID_FIELDS.map(({ system, label }) => (
+        <label key={system} className="block text-xs text-[var(--color-ink-muted)]">
+          {label}
+          <input
+            name={`${system}_id`}
+            defaultValue={value(system)}
+            inputMode={system === "finalsite" ? "text" : "numeric"}
+            className={`${input} mt-1 font-mono`}
+          />
+        </label>
+      ))}
+      <p className="text-xs text-[var(--color-ink-muted)]">Leave a field empty to unlink that system. Imports only fetch students who also have consent to import.</p>
+      <button disabled={pending} className={button}>{pending ? "Saving…" : "Save ids"}</button>
+      {msg && <p className={`text-xs ${msg.ok ? "text-[var(--color-ink-muted)]" : "text-red-700"}`}>{msg.text}</p>}
+    </form>
   );
 }

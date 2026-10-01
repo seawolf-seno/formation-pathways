@@ -261,6 +261,64 @@ export async function addParticipantAction(formData: FormData): Promise<Result<{
   }
 }
 
+const ID_RULES: Record<"finalsite" | "blackbaud" | "canvas", { label: string; pattern: RegExp }> = {
+  finalsite: { label: "Finalsite Person ID", pattern: /^[A-Za-z0-9-]{1,64}$/ },
+  blackbaud: { label: "Blackbaud user id", pattern: /^\d{1,12}$/ },
+  canvas: { label: "Canvas user id", pattern: /^\d{1,12}$/ },
+};
+
+/** Set, change or clear a participant's Finalsite / Blackbaud / Canvas ids
+ *  after they were added. Admin only (RLS too). Importers match on these, so
+ *  an id can belong to one person per system. */
+export async function setExternalIdsAction(formData: FormData): Promise<Result> {
+  try {
+    const staff = await requireRole("admin");
+    const personId = String(formData.get("person_id") ?? "");
+    const supabase = await getSorClient();
+    const { data: person } = await supabase.from("people").select("id, is_sample").eq("id", personId).maybeSingle();
+    if (!person) throw new Error("That person isn't on the pilot.");
+    if (person.is_sample) throw new Error("Sample students keep their fictional ids.");
+
+    const changed: string[] = [];
+    for (const system of ["finalsite", "blackbaud", "canvas"] as const) {
+      const value = String(formData.get(`${system}_id`) ?? "").trim();
+      const { label, pattern } = ID_RULES[system];
+      if (!value) {
+        const { error, count } = await supabase
+          .from("external_ids")
+          .delete({ count: "exact" })
+          .eq("person_id", personId)
+          .eq("system", system);
+        if (error) return fail(error);
+        if (count) changed.push(`${system} cleared`);
+        continue;
+      }
+      if (!pattern.test(value)) throw new Error(`${label} doesn't look right (${system === "finalsite" ? "letters, digits and dashes" : "digits only"}).`);
+      const { data: existing } = await supabase
+        .from("external_ids")
+        .select("external_id")
+        .eq("person_id", personId)
+        .eq("system", system)
+        .maybeSingle();
+      if (existing?.external_id === value) continue;
+      const { error } = existing
+        ? await supabase.from("external_ids").update({ external_id: value }).eq("person_id", personId).eq("system", system)
+        : await supabase.from("external_ids").insert({ person_id: personId, system, external_id: value });
+      if (error) {
+        if ((error as { code?: string }).code === "23505") throw new Error(`That ${label} already belongs to another person on the pilot.`);
+        return fail(error);
+      }
+      changed.push(system);
+    }
+    if (changed.length) await logAccess(staff, "update_external_ids", personId, { changed });
+    revalidatePath(`/pilot/people/${personId}`);
+    revalidatePath("/pilot");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function recordConsentAction(formData: FormData): Promise<Result> {
   try {
     const staff = await requireRole("admin");
