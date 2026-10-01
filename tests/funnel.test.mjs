@@ -71,7 +71,7 @@ test("sample events keep stages in order", () => {
 test("a Finalsite contact maps to dates and a year only", () => {
   const { event, missing } = mapFinalsiteContact({
     id: 991, first_name: "Should", last_name: "Vanish", email: "p@example.com",
-    entry_year: "2026-2027", inquiry_date: "2026-09-02T14:00:00Z", application: { submitted_at: "2026-12-01" },
+    prospect_entry_year: "2027-2028", inquiry_submit_date: "2026-09-02T14:00:00Z", application_submit_date: "2026-12-01",
   });
   assert.deepEqual(event, { entryYear: 2027, inquiredOn: "2026-09-02", appliedOn: "2026-12-01", admittedOn: null, enrolledOn: null });
   assert.deepEqual(missing, ["admittedOn", "enrolledOn"]);

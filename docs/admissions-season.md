@@ -64,6 +64,12 @@ A season is named by the fall the class enters: entry year 2027 is the
    continuing". Edit `FINALSITE_FUNNEL_FIELDS` in
    `lib/sor/importers/finalsite-api.ts` to match the contact fields; the
    current names are guesses, and *Check connection* lists the real ones.
+   Mapped 2026-09-30 from Pacifica's contacts: entry year `prospect_entry_year`
+   (a school-year label like "2027-2028" means the class entering fall 2027),
+   inquired `inquiry_submit_date`, applied `application_submit_date`, enrolled
+   `contract_submit_date`. **Admitted has no date field yet** (`review_decision`
+   carries no date), so a live import refuses to run until one is mapped:
+   otherwise admitted would equal enrolled and yield would read 100%.
 4. **Check connection** on `/season`. It fetches one page and reports the
    field names it saw and which mapped fields it found, never values.
 5. **Import live counts.** Warnings name missing fields, never values.
