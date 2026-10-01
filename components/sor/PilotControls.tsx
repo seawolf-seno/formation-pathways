@@ -3,6 +3,8 @@
 import { useState, useTransition } from "react";
 import {
   addParticipantAction,
+  checkBlackbaudAction,
+  disconnectBlackbaudAction,
   loadSamplePilotAction,
   runImportAction,
   setAutoApproveStaffAction,
@@ -72,9 +74,73 @@ export function GatePanel({ settings, isAdmin }: { settings: PilotSettings; isAd
 
 const SOURCES: { system: SourceSystem; label: string; liveHint: string }[] = [
   { system: "finalsite", label: "Finalsite", liveHint: "Upload a report export (CSV) for a live import" },
-  { system: "blackbaud", label: "Blackbaud", liveHint: "Live when SKY API key + token are set" },
+  { system: "blackbaud", label: "Blackbaud", liveHint: "Live while Blackbaud is connected (above)" },
   { system: "canvas", label: "Canvas", liveHint: "Live when Canvas token + pilot course ids are set" },
 ];
+
+/** Connect Blackbaud (60-minute token in this browser only) and check the
+ *  connection against one user (your own staff record): field names only. */
+export function BlackbaudConnectPanel({ appConfigured, expiresAt }: { appConfigured: boolean; expiresAt: string | null }) {
+  const [msg, setMsg] = useState<{ tone: "ok" | "error"; text: string; detail?: string } | null>(null);
+  const [pending, start] = useTransition();
+  const check = (fd: FormData) =>
+    start(async () => {
+      const res = await checkBlackbaudAction(fd);
+      if (!res.ok) return setMsg({ tone: "error", text: res.error });
+      const { found, keys, mapped } = res.check;
+      setMsg(
+        found
+          ? {
+              tone: "ok",
+              text: `Connected. Mapped fields found: ${mapped.join(", ") || "none"}. (A staff record has no grade or class year; those show up on students.)`,
+              detail: `Field names seen (no values): ${keys.join(", ") || "none"}`,
+            }
+          : { tone: "error", text: "Connected, but Blackbaud has no user with that id." }
+      );
+    });
+  if (!appConfigured) {
+    return (
+      <p className="mb-3 rounded-xl border border-dashed border-[var(--color-border)] bg-white p-4 text-sm text-[var(--color-ink-muted)]">
+        Blackbaud: not set up. Add BLACKBAUD_SUBSCRIPTION_KEY, BLACKBAUD_CLIENT_ID and BLACKBAUD_CLIENT_SECRET (Production) and redeploy.
+      </p>
+    );
+  }
+  return (
+    <div className="mb-3 rounded-xl border border-[var(--color-border)] bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-[var(--color-navy-ink)]">
+          <span className="font-medium">Blackbaud:</span>{" "}
+          {expiresAt
+            ? `connected until ${new Date(expiresAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })} (this browser only)`
+            : "not connected"}
+        </p>
+        <div className="flex gap-2">
+          {/* A plain link: the route redirects to Blackbaud's sign-in. */}
+          <a href="/auth/blackbaud/start" className={button}>
+            {expiresAt ? "Reconnect" : "Connect Blackbaud"}
+          </a>
+          {expiresAt && (
+            <button disabled={pending} className={quiet} onClick={() => start(async () => void (await disconnectBlackbaudAction()))}>
+              Disconnect
+            </button>
+          )}
+        </div>
+      </div>
+      {expiresAt && (
+        <form action={check} className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+          <input name="blackbaud_id" inputMode="numeric" placeholder="Your own Blackbaud user id (staff record)" className={input} />
+          <button disabled={pending} className={quiet}>{pending ? "Checking…" : "Check connection"}</button>
+        </form>
+      )}
+      {msg && (
+        <p className={`mt-2 text-xs ${msg.tone === "error" ? "text-red-700" : "text-[var(--color-ink-muted)]"}`}>
+          {msg.text}
+          {msg.detail && <span className="block text-[var(--color-ink-muted)]">⚠ {msg.detail}</span>}
+        </p>
+      )}
+    </div>
+  );
+}
 
 export function ImportPanel({ live }: { live: Record<SourceSystem, boolean> }) {
   const [results, setResults] = useState<Partial<Record<SourceSystem, ImportOutcome | string>>>({});

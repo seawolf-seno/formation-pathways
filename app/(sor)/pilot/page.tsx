@@ -2,9 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getImportRuns, getPilotSettings, getRoster, getStaffList, requireStaff } from "@/lib/sor/queries";
 import { isLiveBlackbaudConfigured } from "@/lib/sor/importers/blackbaud";
+import { blackbaudConnection, isBlackbaudAppConfigured } from "@/lib/sor/blackbaud-auth";
 import { isLiveCanvasPilotConfigured } from "@/lib/sor/importers/canvas";
 import {
   AddParticipantForm,
+  BlackbaudConnectPanel,
   GatePanel,
   ImportPanel,
   SamplePilotButton,
@@ -20,7 +22,17 @@ const STAGE: Record<string, string> = {
   withdrawn: "Withdrawn",
 };
 
-export default async function PilotPage() {
+const BLACKBAUD_NOTICE: Record<string, string> = {
+  connected: "Blackbaud connected for the next hour.",
+  "not-configured": "Blackbaud isn't set up: add BLACKBAUD_SUBSCRIPTION_KEY, BLACKBAUD_CLIENT_ID and BLACKBAUD_CLIENT_SECRET.",
+  "admin-only": "Only an admin can connect Blackbaud.",
+  declined: "Blackbaud sign-in was cancelled.",
+  expired: "That Blackbaud sign-in expired. Try Connect again.",
+  error: "Blackbaud didn't accept the sign-in. Check the client id/secret and that the redirect URI is registered on the SKY app.",
+};
+
+export default async function PilotPage({ searchParams }: { searchParams: Promise<{ blackbaud?: string }> }) {
+  const { blackbaud: bbNotice } = await searchParams;
   const staff = await requireStaff();
   if (staff.role !== "admin" && staff.role !== "admissions") redirect("/capture");
   const isAdmin = staff.role === "admin";
@@ -30,6 +42,7 @@ export default async function PilotPage() {
     getImportRuns(),
     isAdmin ? getStaffList() : Promise.resolve([]),
   ]);
+  const bb = isAdmin ? await blackbaudConnection() : { token: null, expiresAt: null };
 
   return (
     <div className="mx-auto max-w-5xl space-y-8 px-4 py-8 sm:px-6">
@@ -105,9 +118,15 @@ export default async function PilotPage() {
 
       {isAdmin && (
         <section>
-          <h2 className="mb-3 font-display text-lg text-[var(--color-navy-ink)]">Import</h2>
+          <h2 id="import" className="mb-3 font-display text-lg text-[var(--color-navy-ink)]">Import</h2>
+          {bbNotice && BLACKBAUD_NOTICE[bbNotice] && (
+            <p className="mb-3 rounded-xl bg-[var(--color-pacific-light)] p-3 text-sm text-[var(--color-navy-ink)]">
+              {BLACKBAUD_NOTICE[bbNotice]}
+            </p>
+          )}
+          <BlackbaudConnectPanel appConfigured={isBlackbaudAppConfigured()} expiresAt={bb.expiresAt} />
           <ImportPanel
-            live={{ finalsite: false, blackbaud: isLiveBlackbaudConfigured(), canvas: isLiveCanvasPilotConfigured() }}
+            live={{ finalsite: false, blackbaud: isLiveBlackbaudConfigured(bb.token ?? process.env.BLACKBAUD_ACCESS_TOKEN ?? null), canvas: isLiveCanvasPilotConfigured() }}
           />
           {runs.length > 0 && (
             <ul className="mt-3 space-y-1 text-xs text-[var(--color-ink-muted)]">

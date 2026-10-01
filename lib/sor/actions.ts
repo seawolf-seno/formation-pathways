@@ -14,6 +14,9 @@ import { runImport, type ImportOutcome } from "./importers/run";
 import { runFunnelImport, type FunnelImportOutcome } from "./importers/run-funnel";
 import { seasonOf } from "./funnel";
 import { checkFinalsiteConnection } from "./importers/finalsite-api";
+import { checkBlackbaudUser } from "./importers/blackbaud";
+import { blackbaudConnection, TOKEN_COOKIE } from "./blackbaud-auth";
+import { cookies } from "next/headers";
 import {
   displayName,
   type ConsentScope,
@@ -309,10 +312,42 @@ export async function runImportAction(system: SourceSystem, formData?: FormData)
     const file = formData?.get("file");
     const finalsiteCsv = file instanceof File && file.size > 0 ? await file.text() : undefined;
     const supabase = await getSorClient();
-    const outcome = await runImport(supabase, staff, system, { finalsiteCsv });
+    const blackbaudToken = system === "blackbaud" ? (await blackbaudConnection()).token : null;
+    const outcome = await runImport(supabase, staff, system, { finalsiteCsv, blackbaudToken });
     await logAccess(staff, "import", null, { system, mode: outcome.mode, matched: outcome.matched });
     revalidatePath("/pilot");
     return { ok: true, outcome };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Field names from ONE Blackbaud user (meant for the admin's own staff
+ *  record), never values: proves the connection and checks the field map
+ *  before any student is pulled. */
+export async function checkBlackbaudAction(
+  formData: FormData
+): Promise<Result<{ check: Awaited<ReturnType<typeof checkBlackbaudUser>> }>> {
+  try {
+    const staff = await requireRole("admin");
+    const id = String(formData.get("blackbaud_id") ?? "").trim();
+    if (!/^\d{1,12}$/.test(id)) throw new Error("Enter a Blackbaud user id (digits only), ideally your own.");
+    const { token } = await blackbaudConnection();
+    if (!token) throw new Error("Connect Blackbaud first (the connection lasts an hour).");
+    const check = await checkBlackbaudUser(id, token);
+    await logAccess(staff, "blackbaud_check", null, { found: check.found });
+    return { ok: true, check };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function disconnectBlackbaudAction(): Promise<Result<object>> {
+  try {
+    await requireRole("admin");
+    (await cookies()).delete(TOKEN_COOKIE);
+    revalidatePath("/pilot");
+    return { ok: true };
   } catch (e) {
     return fail(e);
   }

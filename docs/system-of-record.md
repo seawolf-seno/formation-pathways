@@ -203,7 +203,7 @@ sign-ins (they arrive confirmed, with the person's full name).
 | Source | How | Notes |
 |---|---|---|
 | Finalsite | Upload a report export CSV on `/pilot` | Columns in `FINALSITE_COLUMNS` (`lib/sor/importers/finalsite.ts`); `Person ID` is required; any `Q: …` column is an application answer. Build the report to match, or edit the map. |
-| Blackbaud | `BLACKBAUD_SUBSCRIPTION_KEY` + `BLACKBAUD_ACCESS_TOKEN` | SKY API subscription key from developer.blackbaud.com; token from the SKY OAuth flow (expires in 60 min). The field mapping in `mapBlackbaudUser` is a best guess, so the first live run reports any missing fields by **key name only**. Verify it and adjust. |
+| Blackbaud | `BLACKBAUD_SUBSCRIPTION_KEY` + `BLACKBAUD_CLIENT_ID` + `BLACKBAUD_CLIENT_SECRET`, then **Connect Blackbaud** on `/pilot` | Subscription key from developer.blackbaud.com; client id/secret are the SKY app's Application ID and secret. Register `https://formation-pathways.vercel.app/auth/blackbaud/callback` as the app's redirect URI, and have a Blackbaud environment admin connect the app to the school. Connecting gives a 60-minute token kept only in that admin's browser (httpOnly cookie, never stored or logged). **Check connection** there takes your own staff user id and lists field names only, so the map can be verified before any student is pulled. The mapping in `mapBlackbaudUser` is a best guess until then. |
 | Canvas | `CANVAS_BASE_URL` + `CANVAS_API_TOKEN` + `CANVAS_PILOT_COURSE_IDS` | A personal teacher token sees only that teacher's courses, which is the right scope for a pilot. |
 
 Each source stays on `fixtures/sample/*` until it's configured **and** the
