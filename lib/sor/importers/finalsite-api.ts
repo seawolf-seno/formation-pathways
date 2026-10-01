@@ -276,11 +276,67 @@ async function resolveSchoolYears(entryYears: number[], seed: Raw[] = []): Promi
   return found;
 }
 
+// ---------------------------------------------------------- admitted
+//
+// Pacifica's Finalsite has no admission decision date on a contact and no
+// "accepted" status: accepted families move straight on to contract and
+// enrollment statuses. So "admitted" comes from that year's status, dated by
+// the day decisions were released that season (they go out together in
+// March). A family that signed a contract earlier counts from that date.
+// Both lists are the admissions office's to confirm:
+//   FINALSITE_ADMITTED_STATUSES  statuses that mean "was offered a place"
+//   FINALSITE_DECISION_DATES     2027=2027-03-06,2026=2026-03-07,… (entry year = release date)
+
+const DEFAULT_ADMITTED_STATUSES = ["accepted", "admitted", "enrollment_in_progress", "enrolled"];
+
+export function admittedStatuses(): Set<string> {
+  const v = clean(process.env.FINALSITE_ADMITTED_STATUSES);
+  return new Set((v ? v.split(",") : DEFAULT_ADMITTED_STATUSES).map((s) => s.trim().toLowerCase()).filter(Boolean));
+}
+
+export function decisionDates(): Map<number, string> {
+  const out = new Map<number, string>();
+  for (const pair of (clean(process.env.FINALSITE_DECISION_DATES) ?? "").split(",")) {
+    const [y, d] = pair.split("=").map((x) => x?.trim());
+    if (/^\d{4}$/.test(y ?? "") && /^\d{4}-\d{2}-\d{2}$/.test(d ?? "")) out.set(Number(y), d);
+  }
+  return out;
+}
+
+/** The admitted date for one contact in one season: the earlier of the
+ *  season's decision release date and the contract date, for a status that
+ *  means "offered a place"; otherwise null. A mapped admittedOn field, if one
+ *  ever appears, wins. */
+export function deriveAdmitted(
+  status: unknown,
+  event: FunnelEvent,
+  releaseDate: string | undefined,
+  offered: Set<string>
+): string | null {
+  if (event.admittedOn) return event.admittedOn;
+  if (typeof status !== "string" || !offered.has(status.toLowerCase())) return null;
+  const dates = [releaseDate, event.enrolledOn].filter((d): d is string => Boolean(d));
+  return dates.length ? dates.sort()[0] : null;
+}
+
 /** New families only, for one school year's own status and dates. */
 const seasonQuery = (sy: SchoolYear): Query => ({ school_year_id: sy.id, enrollment_type: "new" });
 
 /** Every new family in the listed seasons, as FunnelEvents, one season at a time. */
-export async function fetchLiveFunnelEvents(entryYears: number[]): Promise<{ events: FunnelEvent[]; warnings: string[] }> {
+export async function fetchLiveFunnelEvents(
+  entryYears: number[],
+  currentEntryYear: number
+): Promise<{ events: FunnelEvent[]; warnings: string[] }> {
+  // Decision dates are needed for every finished season (otherwise admitted
+  // and yield would be wrong); the current one can wait until March.
+  const releases = decisionDates();
+  const noDate = entryYears.filter((y) => y < currentEntryYear && !releases.has(y));
+  if (noDate.length) {
+    throw new Error(
+      `Set FINALSITE_DECISION_DATES for ${noDate.map((y) => `${y - 1}–${String(y).slice(2)}`).join(", ")} (the day admission decisions were released, e.g. ${noDate[0]}=${noDate[0]}-03-07). Without it, admitted counts and yield would be wrong.`
+    );
+  }
+  const offered = admittedStatuses();
   const years = await resolveSchoolYears(entryYears);
   const events: FunnelEvent[] = [];
   const warnings: string[] = [];
@@ -299,20 +355,15 @@ export async function fetchLiveFunnelEvents(entryYears: number[]): Promise<{ eve
         // The query fixes the year, so the season is known even when the
         // contact's own year fields are blank.
         const { event, missing } = mapFinalsiteContact(raw, year);
-        for (const m of missing) missingCount.set(m, (missingCount.get(m) ?? 0) + 1);
-        if (event) events.push(event);
+        for (const m of missing) if (m !== "admittedOn") missingCount.set(m, (missingCount.get(m) ?? 0) + 1);
+        if (event) events.push({ ...event, admittedOn: deriveAdmitted(raw.status, event, releases.get(year), offered) });
       }
     }
     seen += n;
     if (n === 0) warnings.push(`Finalsite returned no new families for ${sy.name}. Check enrollment_type values in Check connection.`);
   }
-  // Stages imply the ones before them, so with no admission date anywhere,
-  // "admitted" would silently equal "enrolled" and every season would show
-  // 100% yield. Refuse rather than mislead.
-  if (seen > 0 && missingCount.get("admittedOn") === seen) {
-    throw new Error(
-      `No contact had an admission decision date, so admitted counts (and yield) would be wrong. Map FINALSITE_FUNNEL_FIELDS.admittedOn before importing.`
-    );
+  if (!releases.has(currentEntryYear)) {
+    warnings.push(`No decision release date set for the current season yet: admitted counts only families already under contract. Add it to FINALSITE_DECISION_DATES when decisions go out.`);
   }
   for (const [field, n] of missingCount) {
     if (n === seen && seen > 0) warnings.push(`No contact had ${field}. Check FINALSITE_FUNNEL_FIELDS.${field} against the Swagger page.`);
@@ -388,6 +439,8 @@ export async function checkFinalsiteConnection(currentEntryYear: number): Promis
     })
   );
   setup["school years"] = [...new Set(first.flatMap((o) => schoolYearsOn(o).map((y) => y.name)))].sort();
+  setup["counted as admitted (setting)"] = [...admittedStatuses()].sort();
+  setup["decision release dates (setting)"] = [...decisionDates()].sort(([a], [b]) => a - b).map(([y, d]) => `${y - 1}–${String(y).slice(2)}: ${d}`);
   return {
     objectsOnFirstPage: first.length,
     responseKeys,

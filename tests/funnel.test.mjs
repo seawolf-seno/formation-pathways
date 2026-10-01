@@ -10,7 +10,7 @@ import {
   suppress,
 } from "../lib/sor/funnel.ts";
 import { sampleFunnelEvents } from "../lib/sor/importers/finalsite-funnel.ts";
-import { envelopeKeys, extractItems, mapFinalsiteContact, schoolYearsOn, signFinalsiteJwt } from "../lib/sor/importers/finalsite-api.ts";
+import { deriveAdmitted, envelopeKeys, extractItems, mapFinalsiteContact, schoolYearsOn, signFinalsiteJwt } from "../lib/sor/importers/finalsite-api.ts";
 import { createHmac } from "node:crypto";
 
 // Admissions season counts: the only thing that leaves Finalsite is a
@@ -115,4 +115,16 @@ test("school years are read off the year objects a contact carries", () => {
   });
   assert.deepEqual(ys.map((y) => [y.id, y.startYear]), [["a", 2026], ["b", 2027], ["c", 2025]]);
   assert.deepEqual(schoolYearsOn({ school_year: null }), []);
+});
+
+test("admitted comes from status, dated by the decision release (or an earlier contract)", () => {
+  const offered = new Set(["enrollment_in_progress", "enrolled", "parent_declined"]);
+  const base = { entryYear: 2026, inquiredOn: "2025-10-01", appliedOn: "2025-12-01", admittedOn: null, enrolledOn: null };
+  assert.equal(deriveAdmitted("Enrolled", { ...base, enrolledOn: "2026-03-20" }, "2026-03-07", offered), "2026-03-07");
+  assert.equal(deriveAdmitted("enrolled", { ...base, enrolledOn: "2026-02-01" }, "2026-03-07", offered), "2026-02-01"); // early contract
+  assert.equal(deriveAdmitted("parent_declined", base, "2026-03-07", offered), "2026-03-07"); // offered, declined: counts for yield
+  assert.equal(deriveAdmitted("applicant", base, "2026-03-07", offered), null);
+  assert.equal(deriveAdmitted("interview_not_granted", base, "2026-03-07", offered), null);
+  assert.equal(deriveAdmitted("enrollment_in_progress", base, undefined, offered), null); // no date yet → not dated
+  assert.equal(deriveAdmitted("applicant", { ...base, admittedOn: "2026-03-01" }, "2026-03-07", offered), "2026-03-01"); // a real field wins
 });

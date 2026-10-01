@@ -50,7 +50,7 @@ export async function runFunnelImport(
       if (!settings?.funnel_live_enabled) {
         throw new Error("Live Finalsite counts are locked until approval is saved below.");
       }
-      const res = await fetchLiveFunnelEvents(entryYears);
+      const res = await fetchLiveFunnelEvents(entryYears, current);
       events = res.events;
       outcome.warnings.push(...res.warnings);
     } else {
