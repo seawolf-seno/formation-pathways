@@ -46,7 +46,9 @@ export function SeasonSourcePanel({ settings, apiConfigured }: { settings: Pilot
       const res = await checkFinalsiteConnectionAction();
       if (!res.ok) return setCheck({ tone: "error", text: res.error });
       const { objectsOnFirstPage, fieldsFound, keysSeen, responseKeys, formats, setup, season } = res.check;
-      const missing = Object.entries(fieldsFound).filter(([, v]) => !v).map(([k]) => k);
+      // Admitted has no Finalsite field: it comes from status + the decision
+      // release dates (see the School setup line), so it's never "missing".
+      const missing = Object.entries(fieldsFound).filter(([k, v]) => !v && k !== "admittedOn").map(([k]) => k);
       setCheck({
         tone: missing.length ? "error" : "ok",
         text: `Connected: ${objectsOnFirstPage} contacts sampled; ${
