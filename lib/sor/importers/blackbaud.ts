@@ -59,12 +59,30 @@ const skyHeaders = (token: string) => ({
   Accept: "application/json",
 });
 
-async function skyError(res: Response): Promise<Error> {
-  let why = "";
+/** Blackbaud's own reason for an error: a JSON message in any of the shapes
+ *  SKY uses, else short plain text, plus the WWW-Authenticate header (where a
+ *  rejected token's reason lives). Error responses carry no student data. */
+async function skyReason(res: Response): Promise<string> {
+  const header = res.headers.get("www-authenticate") ?? "";
+  let message = "";
   try {
-    const j = (await res.json()) as Raw;
-    why = String(j.message ?? j.title ?? j.error ?? "").slice(0, 200);
+    const text = await res.text();
+    try {
+      const j = JSON.parse(text) as Raw;
+      const first = Array.isArray(j.errors) ? (j.errors[0] as Raw | undefined) : undefined;
+      const pick = [j.message, j.Message, j.title, j.error_description, j.error, first?.message, first?.title].find(
+        (v) => typeof v === "string" && v
+      );
+      message = (pick as string | undefined) ?? "";
+    } catch {
+      message = text.trim().startsWith("<") ? "" : text;
+    }
   } catch {}
+  return [message, header && `(${header})`].filter(Boolean).join(" ").replace(/\s+/g, " ").slice(0, 300);
+}
+
+async function skyError(res: Response): Promise<Error> {
+  const why = await skyReason(res);
   const hint =
     res.status === 401 ? "the connection expired (connect Blackbaud again) or the subscription key is wrong"
     : res.status === 403 ? "the SKY app isn't connected to the school's environment, or your Blackbaud role can't read users"
