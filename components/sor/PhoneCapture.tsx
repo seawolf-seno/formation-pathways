@@ -1,28 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useState } from "react";
+import { useDictation } from "@/components/useDictation";
 import { draftCaptureAction, matchCaptureAction, saveCaptureAction } from "@/lib/sor/actions";
 import { FORMATION_TAGS, type FormationTag } from "@/lib/types";
-
-// Minimal ambient types for the Web Speech API (same shape as CaptureModal).
-interface SpeechResult { isFinal: boolean; 0: { transcript: string } }
-interface SpeechEvent extends Event { resultIndex: number; results: SpeechResult[] & { length: number } }
-interface Recognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start: () => void;
-  stop: () => void;
-  onresult: ((e: SpeechEvent) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-}
-
-const noopSubscribe = () => () => {};
-function speechImpl() {
-  const w = window as unknown as { SpeechRecognition?: new () => Recognition; webkitSpeechRecognition?: new () => Recognition };
-  return w.SpeechRecognition ?? w.webkitSpeechRecognition;
-}
 
 type Step = "speak" | "who" | "review" | "saved";
 interface Candidate { id: string; name: string }
@@ -30,11 +11,9 @@ interface Candidate { id: string; name: string }
 export function PhoneCapture({ roster, staffName }: { roster: Candidate[]; staffName: string }) {
   const [step, setStep] = useState<Step>("speak");
   const [text, setText] = useState("");
-  const [interim, setInterim] = useState("");
-  const [listening, setListening] = useState(false);
   const [usedVoice, setUsedVoice] = useState(false);
-  // false during SSR, real answer after hydration — no mismatch.
-  const supported = useSyncExternalStore(noopSubscribe, () => Boolean(speechImpl()), () => false);
+  const dictation = useDictation(setText);
+  const { supported, listening, interim } = dictation;
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [person, setPerson] = useState<Candidate | null>(null);
   const [body, setBody] = useState("");
@@ -43,49 +22,20 @@ export function PhoneCapture({ roster, staffName }: { roster: Candidate[]; staff
   const [note, setNote] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const rec = useRef<Recognition | null>(null);
-
-  useEffect(() => {
-    const Impl = speechImpl();
-    if (!Impl) return;
-    const r = new Impl();
-    r.continuous = true;
-    r.interimResults = true;
-    r.lang = "en-US";
-    r.onresult = (e) => {
-      let final = "";
-      let temp = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) final += e.results[i][0].transcript + " ";
-        else temp += e.results[i][0].transcript;
-      }
-      if (final) setText((t) => (t ? `${t} ${final.trim()}` : final.trim()));
-      setInterim(temp);
-    };
-    r.onerror = () => setListening(false);
-    r.onend = () => setListening(false);
-    rec.current = r;
-    return () => r.stop();
-  }, []);
-
   function toggleMic() {
-    if (!rec.current) return;
+    if (!supported) return;
     if (listening) {
       // "Done" moves straight on; no separate Next tap.
-      setListening(false);
       findWho();
     } else {
       setUsedVoice(true);
-      rec.current.start();
-      setListening(true);
+      dictation.start(text);
     }
   }
 
   async function findWho() {
-    rec.current?.stop();
-    const full = `${text} ${interim}`.trim();
+    const full = listening ? dictation.stop() : text.trim();
     setText(full);
-    setInterim("");
     if (!full) return;
     setBusy(true);
     setError(null);
@@ -130,8 +80,8 @@ export function PhoneCapture({ roster, staffName }: { roster: Candidate[]; staff
 
   function reset() {
     setStep("speak");
+    if (listening) dictation.stop();
     setText("");
-    setInterim("");
     setUsedVoice(false);
     setPerson(null);
     setCandidates([]);
