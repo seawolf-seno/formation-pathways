@@ -83,8 +83,10 @@ async function skyReason(res: Response): Promise<string> {
 
 async function skyError(res: Response): Promise<Error> {
   const why = await skyReason(res);
+  const noRole = /access to this route/i.test(why);
   const hint =
-    res.status === 401 ? "the connection expired (connect Blackbaud again) or the subscription key is wrong"
+    noRole ? "your Blackbaud account's roles don't allow this endpoint (ask your Blackbaud admin for a role the endpoint lists)"
+    : res.status === 401 ? "the connection expired (connect Blackbaud again) or the subscription key is wrong"
     : res.status === 403 ? "the SKY app isn't connected to the school's environment, or your Blackbaud role can't read users"
     : "unexpected response";
   return new Error(`Blackbaud SKY ${res.status}: ${hint}.${why ? ` Blackbaud says: ${why}` : ""}`);
