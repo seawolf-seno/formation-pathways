@@ -2,27 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { draftObservationAction, saveObservationAction } from "@/lib/actions";
+import { useDictation } from "@/components/useDictation";
 import { FORMATION_TAGS, type FormationTag, type SuggestedTag } from "@/lib/types";
-
-// Minimal ambient types for the Web Speech API (not in default DOM lib types).
-interface SpeechRecognitionResultLike {
-  isFinal: boolean;
-  0: { transcript: string };
-}
-interface SpeechRecognitionEventLike extends Event {
-  resultIndex: number;
-  results: SpeechRecognitionResultLike[] & { length: number };
-}
-interface SpeechRecognitionLike extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start: () => void;
-  stop: () => void;
-  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
-  onerror: (() => void) | null;
-  onend: (() => void) | null;
-}
 
 type Step = "capture" | "review" | "saved";
 
@@ -39,16 +20,8 @@ export function CaptureModal({
 }) {
   const [step, setStep] = useState<Step>("capture");
   const [rawText, setRawText] = useState("");
-  const [interim, setInterim] = useState("");
-  const [listening, setListening] = useState(false);
-  const [speechSupported] = useState(() => {
-    if (typeof window === "undefined") return false;
-    const w = window as unknown as {
-      SpeechRecognition?: new () => SpeechRecognitionLike;
-      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-    };
-    return Boolean(w.SpeechRecognition ?? w.webkitSpeechRecognition);
-  });
+  const dictation = useDictation(setRawText);
+  const { supported: speechSupported, listening, interim } = dictation;
   const [loadingDraft, setLoadingDraft] = useState(false);
   const [saving, setSaving] = useState(false);
   const [author, setAuthor] = useState(defaultAuthor);
@@ -60,60 +33,18 @@ export function CaptureModal({
   const [elapsedSeconds, setElapsedSeconds] = useState<number | null>(null);
 
   const startedAt = useRef<number>(0);
-  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   useEffect(() => {
     startedAt.current = Date.now();
   }, []);
 
-  useEffect(() => {
-    if (!speechSupported) return;
-    const w = window as unknown as {
-      SpeechRecognition?: new () => SpeechRecognitionLike;
-      webkitSpeechRecognition?: new () => SpeechRecognitionLike;
-    };
-    const Impl = w.SpeechRecognition ?? w.webkitSpeechRecognition;
-    if (!Impl) return;
-    const recognition = new Impl();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-    recognition.onresult = (event) => {
-      let finalChunk = "";
-      let interimChunk = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) finalChunk += result[0].transcript + " ";
-        else interimChunk += result[0].transcript;
-      }
-      if (finalChunk) {
-        setRawText((prev) => (prev ? prev + " " + finalChunk.trim() : finalChunk.trim()));
-      }
-      setInterim(interimChunk);
-    };
-    recognition.onerror = () => setListening(false);
-    recognition.onend = () => setListening(false);
-    recognitionRef.current = recognition;
-
-    return () => {
-      recognition.stop();
-    };
-  }, [speechSupported]);
-
   function toggleListening() {
-    const recognition = recognitionRef.current;
-    if (!recognition) return;
-    if (listening) {
-      recognition.stop();
-      setListening(false);
-    } else {
-      recognition.start();
-      setListening(true);
-    }
+    if (listening) dictation.stop();
+    else dictation.start(rawText);
   }
 
   async function handleDraft() {
-    const text = (rawText + " " + interim).trim();
+    const text = (listening ? dictation.stop() : rawText).trim();
     if (!text) return;
     setLoadingDraft(true);
     try {
