@@ -74,9 +74,14 @@ A season is named by the fall the class enters: entry year 2027 is the
    Mapped 2026-09-30 from Pacifica's contacts: entry year `prospect_entry_year.start_year`,
    then `school_year.start_year` (a school-year label like "2027-2028" means the class entering fall 2027),
    inquired `inquiry_submit_date`, applied `application_submit_date`, enrolled
-   `contract_submit_date`. **Admitted has no date field yet** (`review_decision`
-   carries no date), so a live import refuses to run until one is mapped:
-   otherwise admitted would equal enrolled and yield would read 100%.
+   `contract_submit_date`. **Admitted** has no field at all: no decision date,
+   no checklist, `review_decision` empty, and no "accepted" status (accepted
+   families move straight to `enrollment_in_progress` / `enrolled` /
+   `not_enrolling` / `parent_declined`). So admitted = that season's status is
+   in `FINALSITE_ADMITTED_STATUSES`, dated by the season's decision release day
+   in `FINALSITE_DECISION_DATES` (or an earlier contract date). Both are the
+   admissions office's call. A live import refuses to run until every finished
+   season has a release date; the current season can wait until March.
 4. **Check connection** on `/season`. It fetches one page and reports the
    field names it saw and which mapped fields it found, never values.
 5. **Import live counts.** Warnings name missing fields, never values.
