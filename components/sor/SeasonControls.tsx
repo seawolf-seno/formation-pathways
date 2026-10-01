@@ -45,14 +45,17 @@ export function SeasonSourcePanel({ settings, apiConfigured }: { settings: Pilot
     start(async () => {
       const res = await checkFinalsiteConnectionAction();
       if (!res.ok) return setCheck({ tone: "error", text: res.error });
-      const { objectsOnFirstPage, fieldsFound, keysSeen } = res.check;
+      const { objectsOnFirstPage, fieldsFound, keysSeen, responseKeys } = res.check;
       const missing = Object.entries(fieldsFound).filter(([, v]) => !v).map(([k]) => k);
       setCheck({
         tone: missing.length ? "error" : "ok",
         text: `Connected: ${objectsOnFirstPage} objects on the first page. ${
           missing.length ? `Not found yet: ${missing.join(", ")}.` : "Every field the counts need was found."
         }`,
-        detail: [`Field names seen (no values): ${keysSeen.join(", ") || "none"}`],
+        detail: [
+          `Field names seen (no values): ${keysSeen.join(", ") || "none"}`,
+          `Response shape (names only): ${responseKeys.join(", ") || "empty"}`,
+        ],
       });
     });
 
