@@ -4,12 +4,14 @@ import { getApplicant } from "@/lib/queries";
 import { PathwaysDisplay } from "@/components/PathwaysDisplay";
 import { ApplicantAdminActions } from "@/components/ApplicantAdminActions";
 import { SparkPanel } from "@/components/SparkPanel";
+import { syncDemoDb } from "@/lib/demo-persist";
 
 export default async function ApplicantAdminPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await syncDemoDb();
   const { id } = await params;
   const applicantId = Number(id);
   const applicant = Number.isFinite(applicantId)

@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { getClasses } from "@/lib/queries";
 import { NewClassForm } from "@/components/NewClassForm";
+import { syncDemoDb } from "@/lib/demo-persist";
 
-export default function ClassesPage() {
+export default async function ClassesPage() {
+  await syncDemoDb();
   const classes = getClasses();
 
   return (

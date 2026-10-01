@@ -3,6 +3,7 @@ import { getConsentedAlumniStories } from "@/lib/queries";
 import { pickStories } from "@/lib/inquiry";
 import { admissionsUrl } from "@/lib/share-card";
 import { CopyButton } from "@/components/CopyButton";
+import { syncDemoDb } from "@/lib/demo-persist";
 
 // Public, no personal data: only consent-confirmed Pacifica stories, chosen by
 // the prior-school slug in the URL. Safe to forward to a friend.
@@ -18,6 +19,7 @@ function schoolLabel(slug: string): string {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await syncDemoDb();
   const { school } = await params;
   const { sameSchool } = pickStories(getConsentedAlumniStories(), school);
   const title = sameSchool && school !== "all"
@@ -27,6 +29,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function FromSchoolPage({ params }: Props) {
+  await syncDemoDb();
   const { school } = await params;
   const { stories, sameSchool } = pickStories(getConsentedAlumniStories(), school);
   const own = sameSchool && school !== "all";

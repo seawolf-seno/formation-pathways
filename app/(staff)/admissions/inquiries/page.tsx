@@ -4,8 +4,10 @@ import { buildNurtureDrafts, pickStories, schoolKey } from "@/lib/inquiry";
 import { admissionsUrl } from "@/lib/share-card";
 import { CopyButton } from "@/components/CopyButton";
 import { requestOrigin } from "@/lib/origin";
+import { syncDemoDb } from "@/lib/demo-persist";
 
 export default async function InquiriesPage() {
+  await syncDemoDb();
   const origin = await requestOrigin();
   const inquiries = getInquiries();
   const stories = getConsentedAlumniStories();
