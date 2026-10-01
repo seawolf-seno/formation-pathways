@@ -189,14 +189,35 @@ roster on stage. Then, by seno (real student details, so not an agent):
 
 ## Google sign-in (when IT creates the OAuth client)
 
-Staff already signed into their school Google account on their phone get in
-with one tap. Needs from IT: one OAuth client ID in the school's Google Cloud,
-consent screen **Internal** (school accounts only), scopes `openid`, `email`,
-`profile` only (no Drive/Gmail, so no Google verification), and the
-redirect URI Supabase shows under Authentication → Providers → Google.
-Optionally, mark the app trusted in the Workspace Admin console. Then enable
-the Google provider in Supabase; the staff trigger already handles Google
-sign-ins (they arrive confirmed, with the person's full name).
+Staff already signed in to their school Google account tap **Continue with
+Google** and they're in. There's no email code, and it doesn't depend on SMTP.
+The button is built and hidden until `GOOGLE_SIGNIN=on`.
+
+**What IT creates** (Google Cloud console, in the school's Workspace org):
+
+1. A project (e.g. "Formation Pathways"). No APIs need enabling.
+2. **OAuth consent screen**: User type **Internal** (school accounts only, no
+   Google verification), app name "Formation Pathways", support and developer
+   contact email, authorized domains `vercel.app` and `supabase.co`. Scopes:
+   `openid`, `.../auth/userinfo.email` and `.../auth/userinfo.profile` only. No
+   Drive, Gmail or Calendar.
+3. **Credentials → Create OAuth client ID → Web application**:
+   - Authorized JavaScript origins: `https://formation-pathways.vercel.app`
+   - Authorized redirect URIs:
+     `https://cvppxixatcreyptpkymh.supabase.co/auth/v1/callback`
+4. Send seno the **Client ID** and **Client secret** through a secure channel
+   (not plain email).
+5. Optional: Admin console → Security → API controls → App access control →
+   mark the client **Trusted**, so staff never see a consent prompt.
+
+**Then seno:**
+
+1. Supabase → Authentication → Providers → **Google**: enable it and paste the
+   client ID and secret.
+2. Vercel env (Production): `GOOGLE_SIGNIN=on`, then redeploy.
+3. Sign in once with Google. The staff trigger already handles Google sign-ins:
+   they arrive confirmed, with the person's full name, and start as *pending*
+   until approved on `/pilot`, unless auto-approve is on.
 
 ## Going live per source
 

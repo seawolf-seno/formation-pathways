@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { sendSignInLinkAction, verifySignInCodeAction } from "@/lib/sor/actions";
+import { sendSignInLinkAction, signInWithGoogleAction, verifySignInCodeAction } from "@/lib/sor/actions";
 
 const field = "w-full rounded-xl border border-[var(--color-border)] bg-white px-4 py-3 text-base";
 const primary =
@@ -10,7 +10,7 @@ const primary =
 // Two steps: email, then the 6-digit code from that email. The code works in
 // whatever browser or home-screen app asked for it; the emailed link is a
 // convenience for laptops.
-export function LoginForm({ next }: { next: string }) {
+export function LoginForm({ next, google = false }: { next: string; google?: boolean }) {
   const [email, setEmail] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,7 +70,26 @@ export function LoginForm({ next }: { next: string }) {
     );
   }
 
+  async function withGoogle(formData: FormData) {
+    setBusy(true);
+    setError(null);
+    // Redirects to Google on success, so only a failure comes back.
+    const res = await signInWithGoogleAction(formData);
+    setBusy(false);
+    if (!res.ok) setError(res.error);
+  }
+
   return (
+    <div className="space-y-5">
+      {google && (
+        <form action={withGoogle} className="space-y-3">
+          <input type="hidden" name="next" value={next} />
+          <button disabled={busy} className={primary}>
+            Continue with Google (school account)
+          </button>
+          <p className="text-center text-xs text-[var(--color-ink-muted)]">or get a code by email</p>
+        </form>
+      )}
     <form action={sendCode} className="space-y-3">
       <input type="hidden" name="next" value={next} />
       <input
@@ -87,5 +106,6 @@ export function LoginForm({ next }: { next: string }) {
       </button>
       {error && <p className="text-sm text-red-700">{error}</p>}
     </form>
+    </div>
   );
 }
