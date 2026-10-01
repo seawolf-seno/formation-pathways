@@ -57,10 +57,13 @@ A season is named by the fall the class enters: entry year 2027 is the
    `.env.local` (and Vercel env, when deployed) as `FINALSITE_API_*`. See
    `.env.local.example`. Never commit them or paste them into chat.
 3. **Map the fields.** The Swagger page on that same screen lists the
-   endpoint and field names. Set `FINALSITE_FUNNEL_PATH` if the list isn't
-   `/contacts`, and edit `FINALSITE_FUNNEL_FIELDS` in
-   `lib/sor/importers/finalsite-api.ts` to match. The current names are
-   guesses.
+   endpoint and field names. Pacifica's (checked 2026-09-30): base URL
+   `https://pacificachristian.fsenrollment.com`, contacts at
+   `/api/external/contacts` (the default), Bearer JWT. A wrong path reaches the
+   web app instead and returns 401 "You need to sign in or sign up before
+   continuing". Edit `FINALSITE_FUNNEL_FIELDS` in
+   `lib/sor/importers/finalsite-api.ts` to match the contact fields; the
+   current names are guesses, and *Check connection* lists the real ones.
 4. **Check connection** on `/season`. It fetches one page and reports the
    field names it saw and which mapped fields it found, never values.
 5. **Import live counts.** Warnings name missing fields, never values.
