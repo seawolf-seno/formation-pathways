@@ -10,7 +10,7 @@ import {
   suppress,
 } from "../lib/sor/funnel.ts";
 import { sampleFunnelEvents } from "../lib/sor/importers/finalsite-funnel.ts";
-import { envelopeKeys, extractItems, mapFinalsiteContact, signFinalsiteJwt } from "../lib/sor/importers/finalsite-api.ts";
+import { envelopeKeys, extractItems, mapFinalsiteContact, schoolYearsOn, signFinalsiteJwt } from "../lib/sor/importers/finalsite-api.ts";
 import { createHmac } from "node:crypto";
 
 // Admissions season counts: the only thing that leaves Finalsite is a
@@ -99,4 +99,20 @@ test("Finalsite pages are read from a bare array or any envelope key, and the sh
   assert.deepEqual(extractItems({ meta: { next_cursor: "x" }, records: [c] }), [c]);
   assert.deepEqual(extractItems({ meta: {} }), []);
   assert.deepEqual(envelopeKeys({ records: [c], total: 0, meta: { next_cursor: "x" } }), ["records[]", "total", "meta", "meta.next_cursor"]);
+});
+
+test("a season pulled by school_year_id keeps its year even when the contact's year fields are blank", () => {
+  const { event, missing } = mapFinalsiteContact({ prospect_entry_year: null, inquiry_submit_date: "2026-10-01" }, 2027);
+  assert.deepEqual(event, { entryYear: 2027, inquiredOn: "2026-10-01", appliedOn: null, admittedOn: null, enrolledOn: null });
+  assert.ok(!missing.includes("entryYear"));
+});
+
+test("school years are read off the year objects a contact carries", () => {
+  const ys = schoolYearsOn({
+    school_year: { id: "a", name: "2026-2027", start_year: 2026 },
+    prospect_entry_year: { id: "b", name: "2027-2028" },
+    track_attributes: [{ school_year: { id: "c", start_year: 2025, name: "2025-2026" } }, { school_year: null }],
+  });
+  assert.deepEqual(ys.map((y) => [y.id, y.startYear]), [["a", 2026], ["b", 2027], ["c", 2025]]);
+  assert.deepEqual(schoolYearsOn({ school_year: null }), []);
 });

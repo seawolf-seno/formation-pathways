@@ -12,6 +12,7 @@ import { getCaptureRoster, getPersonProfile, logAccess, requireStaff } from "./q
 import { matchPeople } from "./match";
 import { runImport, type ImportOutcome } from "./importers/run";
 import { runFunnelImport, type FunnelImportOutcome } from "./importers/run-funnel";
+import { seasonOf } from "./funnel";
 import { checkFinalsiteConnection } from "./importers/finalsite-api";
 import {
   displayName,
@@ -373,7 +374,7 @@ export async function checkFinalsiteConnectionAction(): Promise<
 > {
   try {
     const staff = await requireRole("admin");
-    const check = await checkFinalsiteConnection();
+    const check = await checkFinalsiteConnection(seasonOf(new Date().toISOString().slice(0, 10)));
     await logAccess(staff, "finalsite_check", null, { objects: check.objectsOnFirstPage });
     return { ok: true, check };
   } catch (e) {

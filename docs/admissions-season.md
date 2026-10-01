@@ -64,8 +64,15 @@ A season is named by the fall the class enters: entry year 2027 is the
    continuing". Edit `FINALSITE_FUNNEL_FIELDS` in
    `lib/sor/importers/finalsite-api.ts` to match the contact fields; the
    current names are guesses, and *Check connection* lists the real ones.
-   Mapped 2026-09-30 from Pacifica's contacts: entry year `prospect_entry_year`
-   (a school-year label like "2027-2028" means the class entering fall 2027),
+   **Live pulls go one season at a time**: `school_year_id=<that year>` plus
+   `enrollment_type=new`, 25 per page, header `X-Api-Version: 1` (required).
+   With `school_year_id`, a contact's status, enrollment type and dates are
+   that year's, so past seasons stay right (a 2024 entrant is "returning"
+   today) and each pull stays well inside Vercel's 5-minute limit. School year
+   ids are read off the year objects contacts carry; set
+   `FINALSITE_SCHOOL_YEAR_IDS=2027=<uuid>,2026=<uuid>,…` to skip that.
+   Mapped 2026-09-30 from Pacifica's contacts: entry year `prospect_entry_year.start_year`,
+   then `school_year.start_year` (a school-year label like "2027-2028" means the class entering fall 2027),
    inquired `inquiry_submit_date`, applied `application_submit_date`, enrolled
    `contract_submit_date`. **Admitted has no date field yet** (`review_decision`
    carries no date), so a live import refuses to run until one is mapped:
