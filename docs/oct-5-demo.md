@@ -8,12 +8,16 @@ Everything shown is fictional or sample data. The student pilot stays LOCKED.
 |---|---|---|
 | Sign-in | Only for `/season`, `/pilot`, `/capture` | **Every page** except `/share/*`, `/from/*`, `/spark/*` (school account) |
 | `/season`, `/pilot`, `/capture` (Supabase) | Persists | Persists |
-| Fictional demo (`/`, `/admissions`, `/applicant/*`, shares, inquiries) | Persists in `data/formation.db` | Kept in `/tmp` on each server instance: **resets when an instance restarts, and isn't shared between instances**. Seed families (Emma, Marcus) always come back. |
+| Fictional demo (`/`, `/admissions`, `/applicant/*`, shares, inquiries) | Persists in `data/formation.db` | Persists for anyone **signed in**: every write saves a copy of the demo database to Supabase (`demo_snapshots`), and every instance loads the newest copy. A visitor who isn't signed in sees only that server's copy. Needs migration `20261001180000_demo_snapshots.sql` applied. |
 | Phone capture | No (phone can't reach localhost; the mic needs HTTPS) | Yes |
 
-On Vercel, anything you *create* in the fictional demo (a share link, an approval,
-a captured moment on `/`) can vanish or 404 later. Create it and use it in one
-go. Don't hand the audience a share link to open on their own phones.
+On Vercel, what you create in the fictional demo (a share link, an approval, a
+captured moment on `/`) now persists for any signed-in browser (see
+`lib/demo-persist.ts`). Someone who isn't signed in, such as an audience member
+on their own phone, can still hit a server that hasn't caught up and get a 404.
+So keep presenting from your signed-in laptop or phone, and don't hand the
+audience a share link. To reset the demo, delete the row in the Supabase SQL
+editor (`delete from demo_snapshots;`), and the next visit re-seeds.
 
 ## A. Setup (the day before)
 
@@ -32,7 +36,7 @@ go. Don't hand the audience a share link to open on their own phones.
 ## B. Automated checks
 
 ```
-npm run test:db     # 58 passed
+npm run test:db     # 66 passed
 npm run test:share  # all pass
 npm run lint        # 0 errors
 npm run build       # clean

@@ -8,12 +8,14 @@ import {
 } from "@/lib/queries";
 import { isLiveCanvasConfigured } from "@/lib/integrations/canvas";
 import { SkillMatrix } from "@/components/SkillMatrix";
+import { syncDemoDb } from "@/lib/demo-persist";
 
 export default async function CoursePage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await syncDemoDb();
   const { id } = await params;
   const courseId = Number(id);
   const course = Number.isFinite(courseId) ? getCourse(courseId) : undefined;

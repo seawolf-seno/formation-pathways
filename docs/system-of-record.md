@@ -182,8 +182,12 @@ roster on stage. Then, by seno (real student details, so not an agent):
 - In production **every** page needs a signed-in `@pacificachristian.org`
   account (`proxy.ts`), including the fictional exec demo, which has no auth
   of its own and makes paid Claude calls. The demo stays open in `npm run dev`.
-- The demo's SQLite lives in `/tmp` on Vercel: it works but resets on cold
-  start. The system of record is unaffected (Supabase).
+- The demo's SQLite lives in `/tmp` on Vercel, so `lib/demo-persist.ts` keeps it
+  in step across instances. Each demo write saves the serialized database to
+  `demo_snapshots`, a single row that active staff can read and write as
+  themselves (RLS) and that holds fictional data only. Each demo page loads a
+  newer copy if there is one. `DEMO_PERSIST=off` disables it, and `=on` enables
+  it locally. The system of record is unaffected.
 - `next.config.ts` ships `prompts/` and `fixtures/sample/` with every route,
   because they're read with `fs` at runtime.
 

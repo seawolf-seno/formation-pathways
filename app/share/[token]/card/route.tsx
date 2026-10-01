@@ -1,6 +1,7 @@
 import { getPublicShare } from "@/lib/queries";
 import { isCardFormat } from "@/lib/share";
 import { renderShareCard } from "@/lib/share-card";
+import { syncDemoDb } from "@/lib/demo-persist";
 
 // Public. Renders the whitelisted snapshot as a PNG: ?format=feed (default),
 // story, or og (link-preview size). ?download=1 sets a filename.
@@ -8,6 +9,7 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ token: string }> },
 ) {
+  await syncDemoDb();
   const { token } = await params;
   const content = getPublicShare(token);
   if (!content) return new Response("Not found", { status: 404 });

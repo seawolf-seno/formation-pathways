@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { getApplicantBySparkToken } from "@/lib/queries";
 import { parseChoiceLines, parseVocabLines } from "@/lib/spark";
 import { SparkSurvey } from "@/components/SparkSurvey";
+import { syncDemoDb } from "@/lib/demo-persist";
 
 // Public. The one write surface a family reaches with no school sign-in: see
 // submitSparkResponseAction (lib/actions.ts) and docs/interest-survey.md for
@@ -12,6 +13,7 @@ import { SparkSurvey } from "@/components/SparkSurvey";
 type Props = { params: Promise<{ token: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await syncDemoDb();
   const { token } = await params;
   const applicant = getApplicantBySparkToken(token);
   return {
@@ -32,6 +34,7 @@ function loadChoices() {
 }
 
 export default async function SparkPage({ params }: Props) {
+  await syncDemoDb();
   const { token } = await params;
   const applicant = getApplicantBySparkToken(token);
   if (!applicant) notFound();

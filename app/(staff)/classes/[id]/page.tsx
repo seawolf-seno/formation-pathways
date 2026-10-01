@@ -3,12 +3,14 @@ import Link from "next/link";
 import { getClass, getClassRoster, getStudentsWithStats } from "@/lib/queries";
 import { StudentList } from "@/components/StudentList";
 import { EnrollmentManager } from "@/components/EnrollmentManager";
+import { syncDemoDb } from "@/lib/demo-persist";
 
 export default async function ClassPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await syncDemoDb();
   const { id } = await params;
   const classId = Number(id);
   const schoolClass = Number.isFinite(classId) ? getClass(classId) : undefined;

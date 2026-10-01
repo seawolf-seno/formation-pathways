@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getApplicants } from "@/lib/queries";
+import { syncDemoDb } from "@/lib/demo-persist";
 
 const STATUS_LABEL: Record<string, string> = {
   in_progress: "In progress",
@@ -15,7 +16,8 @@ const STATUS_CLASS: Record<string, string> = {
   enrolled: "bg-[var(--color-navy)] text-white",
 };
 
-export default function AdmissionsPage() {
+export default async function AdmissionsPage() {
+  await syncDemoDb();
   const applicants = getApplicants();
 
   return (

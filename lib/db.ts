@@ -22,9 +22,22 @@ declare global {
   var __formationDb: Database.Database | undefined;
 }
 
-function createDb(): Database.Database {
-  const db = new Database(DB_PATH);
-  db.pragma("journal_mode = WAL");
+/** A database serialized from a WAL-mode file says "WAL" in its header
+ *  (bytes 18–19 = 2), and an in-memory copy can't open a WAL file. Mark the
+ *  copy as a rollback-journal database (1) instead; the data is unchanged. */
+function asRollbackJournal(snapshot: Buffer): Buffer {
+  const copy = Buffer.from(snapshot);
+  if (copy.length > 19 && copy[18] === 2) copy[18] = copy[19] = 1;
+  return copy;
+}
+
+/** Opens the demo database: the local file, or (when `snapshot` is given) an
+ *  in-memory copy of a serialized database restored from Supabase
+ *  (lib/demo-persist.ts). Schema, column additions and seeding below are
+ *  idempotent, so an older snapshot is brought up to date on load. */
+function createDb(snapshot?: Buffer): Database.Database {
+  const db = snapshot ? new Database(asRollbackJournal(snapshot)) : new Database(DB_PATH);
+  if (!snapshot) db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
 
   db.exec(`
@@ -216,8 +229,29 @@ function createDb(): Database.Database {
   return db;
 }
 
-// Reuse a single connection across hot reloads in dev.
-export const db = global.__formationDb ?? createDb();
-if (process.env.NODE_ENV !== "production") {
-  global.__formationDb = db;
+function current(): Database.Database {
+  // One connection per server instance, cached on globalThis so it also
+  // survives hot reloads in dev.
+  return (global.__formationDb ??= createDb());
 }
+
+/** Replace this instance's demo database with a restored snapshot. The old
+ *  connection isn't closed: a request still using it finishes normally. */
+export function replaceDemoDb(snapshot: Buffer): void {
+  global.__formationDb = createDb(snapshot);
+}
+
+/** The whole demo database as one buffer, for lib/demo-persist.ts. */
+export function serializeDemoDb(): Buffer {
+  return current().serialize();
+}
+
+// `db` always points at this instance's current connection, so code that
+// imported it keeps working after replaceDemoDb().
+export const db = new Proxy({} as Database.Database, {
+  get(_target, prop) {
+    const d = current();
+    const v = Reflect.get(d, prop, d);
+    return typeof v === "function" ? v.bind(d) : v;
+  },
+});

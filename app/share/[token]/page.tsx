@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getPublicShare } from "@/lib/queries";
 import { admissionsUrl } from "@/lib/share-card";
 import "@/components/family-pathways.css";
+import { syncDemoDb } from "@/lib/demo-persist";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ token: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  await syncDemoDb();
   const { token } = await params;
   const content = getPublicShare(token);
   if (!content)
@@ -41,6 +43,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function SharePage({ params }: Props) {
+  await syncDemoDb();
   const { token } = await params;
   const content = getPublicShare(token);
   if (!content) notFound();

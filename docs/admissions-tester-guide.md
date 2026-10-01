@@ -125,10 +125,9 @@ Open **https://formation-pathways.vercel.app** (the teacher roster).
 - **The AI writing is canned.** No AI key is connected yet, so every draft is
   pre-written sample text and can look the same across students. The flow is
   real; the wording will improve once the AI is switched on.
-- **Things you create in steps 3, 4 and 6 can disappear.** Share links,
-  approvals and captures in the fictional demo can reset or show "not found"
-  later. Create a link and open it straight away rather than coming back to it
-  tomorrow. (`/season`, `/pilot` and `/capture` keep what you save.)
+- **What you create in steps 3, 4 and 6 is kept while you're signed in.** A
+  share link opened by someone who *isn't* signed in can occasionally show "not
+  found", so test share links from your own signed-in browser.
 - **Phone layout** of `/season` and the share window hasn't been checked yet.
   Tell us if it looks wrong.
 - The first click on a page after a quiet spell can take a few seconds.

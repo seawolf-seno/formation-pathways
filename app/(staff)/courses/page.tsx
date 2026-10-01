@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { getCourses, getStudentsWithStats } from "@/lib/queries";
 import { NewCourseForm } from "@/components/NewCourseForm";
+import { syncDemoDb } from "@/lib/demo-persist";
 
-export default function CoursesPage() {
+export default async function CoursesPage() {
+  await syncDemoDb();
   const courses = getCourses();
   const students = getStudentsWithStats();
 

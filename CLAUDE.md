@@ -70,8 +70,11 @@ adults behind the scenes; students stay present, in person, with people.
   (every AI step runs its offline fallback), no service role, no Finalsite or Canvas credentials.
   Supabase Auth Site URL and `/auth/callback` redirect are set to the production URL; code and
   link sign-in both verified in the auth logs. On Vercel the fictional demo's SQLite lives in
-  per-instance `/tmp`: seed data always returns, but shares/approvals/captures made in the demo
-  can vanish or 404 (details in `docs/oct-5-demo.md`). Server-built links use
+  per-instance `/tmp`. `lib/demo-persist.ts` (2026-10-01) snapshots it to Supabase
+  `demo_snapshots` after each demo write and reloads newer copies per page, so signed-in users
+  see one consistent demo; anonymous visitors still see the instance's own copy. **Needs
+  migration `20261001180000_demo_snapshots.sql` applied by seno**; until then it silently stays
+  per-instance (details in `docs/oct-5-demo.md`). Server-built links use
   `requestOrigin()` (`lib/origin.ts`); never hard-code a host.
 - **Agent database access (2026-09-28)**: the account-level claude.ai Supabase connector (owner
   access, bypasses RLS and consent triggers) was disabled. The repo's `.mcp.json` Supabase

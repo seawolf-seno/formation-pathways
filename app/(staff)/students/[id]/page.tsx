@@ -18,12 +18,14 @@ import { PortraitPanel } from "@/components/PortraitPanel";
 import { StudentPageCapture } from "@/components/StudentPageCapture";
 import { StudentSkills } from "@/components/StudentSkills";
 import type { CourseSkill } from "@/lib/types";
+import { syncDemoDb } from "@/lib/demo-persist";
 
 export default async function StudentPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await syncDemoDb();
   const { id } = await params;
   const studentId = Number(id);
   const student = Number.isFinite(studentId) ? getStudent(studentId) : undefined;
