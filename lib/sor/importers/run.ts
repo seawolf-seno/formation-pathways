@@ -38,12 +38,13 @@ export async function runImport(
   supabase: SupabaseClient,
   staff: StaffMember,
   system: SourceSystem,
-  opts: { finalsiteCsv?: string } = {}
+  opts: { finalsiteCsv?: string; blackbaudToken?: string | null } = {}
 ): Promise<ImportOutcome> {
+  const bbToken = opts.blackbaudToken ?? process.env.BLACKBAUD_ACCESS_TOKEN ?? null;
   const { data: settings } = await supabase.from("pilot_settings").select("real_data_enabled").single();
   const live =
     system === "finalsite" ? Boolean(opts.finalsiteCsv)
-    : system === "blackbaud" ? isLiveBlackbaudConfigured()
+    : system === "blackbaud" ? isLiveBlackbaudConfigured(bbToken)
     : isLiveCanvasPilotConfigured();
   const mode = live ? "live" : "sample";
 
@@ -93,7 +94,7 @@ export async function runImport(
     } else if (system === "blackbaud") {
       let records: BlackbaudRecord[];
       if (live) {
-        const res = await fetchLiveBlackbaud(allowlist);
+        const res = await fetchLiveBlackbaud(allowlist, bbToken!);
         records = res.records;
         outcome.warnings.push(...res.warnings);
       } else records = readSampleBlackbaud(allowlist);

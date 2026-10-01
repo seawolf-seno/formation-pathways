@@ -6,9 +6,10 @@ import path from "path";
  *
  * Live mode fetches ONE user at a time by id (GET /school/v1/users/{id}) for
  * allowlisted pilot participants only — it never lists the school.
- * Needs BLACKBAUD_SUBSCRIPTION_KEY (developer.blackbaud.com) and a
- * BLACKBAUD_ACCESS_TOKEN from the SKY OAuth flow. SKY access tokens expire
- * after 60 minutes; paste a fresh one before a live run.
+ * Needs BLACKBAUD_SUBSCRIPTION_KEY (developer.blackbaud.com) and a SKY access
+ * token from "Connect Blackbaud" on /pilot (lib/sor/blackbaud-auth.ts), which
+ * lasts 60 minutes. BLACKBAUD_ACCESS_TOKEN in env still works as a fallback
+ * for local runs.
  *
  * Field mapping is in `mapBlackbaudUser`. SKY's response shape varies by
  * endpoint and school configuration — if a field comes back empty, the run
@@ -47,24 +48,60 @@ export function mapBlackbaudUser(raw: Raw): { record: BlackbaudRecord; missing: 
   return { record, missing };
 }
 
-export function isLiveBlackbaudConfigured(): boolean {
-  return Boolean(process.env.BLACKBAUD_SUBSCRIPTION_KEY && process.env.BLACKBAUD_ACCESS_TOKEN);
+/** Live when there's a subscription key and a token (connected, or env). */
+export function isLiveBlackbaudConfigured(token: string | null = process.env.BLACKBAUD_ACCESS_TOKEN ?? null): boolean {
+  return Boolean(process.env.BLACKBAUD_SUBSCRIPTION_KEY?.trim() && token);
+}
+
+const skyHeaders = (token: string) => ({
+  "Bb-Api-Subscription-Key": process.env.BLACKBAUD_SUBSCRIPTION_KEY!.trim(),
+  Authorization: `Bearer ${token}`,
+  Accept: "application/json",
+});
+
+async function skyError(res: Response): Promise<Error> {
+  let why = "";
+  try {
+    const j = (await res.json()) as Raw;
+    why = String(j.message ?? j.title ?? j.error ?? "").slice(0, 200);
+  } catch {}
+  const hint =
+    res.status === 401 ? "the connection expired (connect Blackbaud again) or the subscription key is wrong"
+    : res.status === 403 ? "the SKY app isn't connected to the school's environment, or your Blackbaud role can't read users"
+    : "unexpected response";
+  return new Error(`Blackbaud SKY ${res.status}: ${hint}.${why ? ` Blackbaud says: ${why}` : ""}`);
+}
+
+/** Every key path in an object, e.g. "student_info.grad_year". Names only. */
+function keyPaths(o: Raw, prefix = "", depth = 0): string[] {
+  return Object.entries(o).flatMap(([k, v]) =>
+    v && typeof v === "object" && !Array.isArray(v) && depth < 2 ? keyPaths(v as Raw, `${prefix}${k}.`, depth + 1) : [`${prefix}${k}`]
+  );
+}
+
+/** One user's record, reported as field names and which mapped fields were
+ *  found, never values. Meant for an admin's OWN staff record, to prove the
+ *  connection and check the field map before any student is pulled. */
+export async function checkBlackbaudUser(id: string, token: string): Promise<{ found: boolean; keys: string[]; mapped: string[] }> {
+  const res = await fetch(`${SKY_BASE}/users/${encodeURIComponent(id)}`, { headers: skyHeaders(token), cache: "no-store" });
+  if (res.status === 404) return { found: false, keys: [], mapped: [] };
+  if (!res.ok) throw await skyError(res);
+  const raw = (await res.json()) as Raw;
+  const { record } = mapBlackbaudUser(raw);
+  const mapped = (Object.keys(record) as (keyof BlackbaudRecord)[]).filter((k) => k !== "externalId" && record[k] != null);
+  return { found: true, keys: keyPaths(raw).sort(), mapped };
 }
 
 export async function fetchLiveBlackbaud(
-  allowlist: Set<string>
+  allowlist: Set<string>,
+  token: string
 ): Promise<{ records: BlackbaudRecord[]; warnings: string[] }> {
   const records: BlackbaudRecord[] = [];
   const warnings: string[] = [];
   for (const id of allowlist) {
-    const res = await fetch(`${SKY_BASE}/users/${encodeURIComponent(id)}`, {
-      headers: {
-        "Bb-Api-Subscription-Key": process.env.BLACKBAUD_SUBSCRIPTION_KEY!,
-        Authorization: `Bearer ${process.env.BLACKBAUD_ACCESS_TOKEN}`,
-      },
-    });
+    const res = await fetch(`${SKY_BASE}/users/${encodeURIComponent(id)}`, { headers: skyHeaders(token), cache: "no-store" });
     if (res.status === 404) continue;
-    if (!res.ok) throw new Error(`Blackbaud SKY ${res.status} — token expired or missing scope?`);
+    if (!res.ok) throw await skyError(res);
     const raw = (await res.json()) as Raw;
     const { record, missing } = mapBlackbaudUser(raw);
     if (missing.length) {
