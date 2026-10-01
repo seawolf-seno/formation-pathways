@@ -136,9 +136,30 @@ async function authFailureReason(res: Response): Promise<string> {
   return [message, header].filter(Boolean).join(" · ").replace(/\s+/g, " ").slice(0, 200);
 }
 
+/** The list of contacts inside one response page, wherever Finalsite puts it:
+ *  a bare array, a known envelope key, or else the first array-valued key
+ *  (e.g. `contacts`). */
+export function extractItems(json: unknown): Raw[] {
+  if (Array.isArray(json)) return json as Raw[];
+  if (!json || typeof json !== "object") return [];
+  const o = json as Raw;
+  for (const k of ["data", "results", "items", "contacts"]) if (Array.isArray(o[k])) return o[k] as Raw[];
+  const firstArray = Object.values(o).find(Array.isArray);
+  return (firstArray as Raw[] | undefined) ?? [];
+}
+
+/** Top-level key names of a response page, plus `meta.*` names: the shape of
+ *  the envelope, never values, and never the contact objects' own keys. */
+export function envelopeKeys(json: unknown): string[] {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return Array.isArray(json) ? ["(array)"] : [];
+  const o = json as Raw;
+  const meta = o.meta && typeof o.meta === "object" && !Array.isArray(o.meta) ? Object.keys(o.meta as Raw).map((k) => `meta.${k}`) : [];
+  return [...Object.keys(o).map((k) => (Array.isArray(o[k]) ? `${k}[]` : k)), ...meta];
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-async function* pages(maxPages: number): AsyncGenerator<Raw[]> {
+async function* pages(maxPages: number, onEnvelope?: (keys: string[]) => void): AsyncGenerator<Raw[]> {
   const e = env();
   if (!isLiveFinalsiteApiConfigured()) throw new Error("Finalsite API isn't configured (see .env.local.example).");
   const token = signFinalsiteJwt(e.credentialId!, e.secret!);
@@ -169,8 +190,8 @@ async function* pages(maxPages: number): AsyncGenerator<Raw[]> {
       throw new Error(`Finalsite API ${res.status} on ${e.path}. Check FINALSITE_FUNNEL_PATH against the Swagger page.`);
     }
     const json = (await res.json()) as Raw | Raw[];
-    const items = Array.isArray(json) ? json : ((json.data ?? json.results ?? json.items ?? []) as Raw[]);
-    yield items;
+    onEnvelope?.(envelopeKeys(json));
+    yield extractItems(json);
     cursor = Array.isArray(json) ? null : ((json.meta as Raw | undefined)?.next_cursor as string | null) ?? null;
     if (!cursor) return;
     await sleep(700); // stays under 15 requests / 10 s
@@ -208,10 +229,12 @@ export async function fetchLiveFunnelEvents(entryYears: number[]): Promise<{ eve
  *  never values — so the field map can be checked before the first import. */
 export async function checkFinalsiteConnection(): Promise<{
   objectsOnFirstPage: number;
+  responseKeys: string[];
   keysSeen: string[];
   fieldsFound: Record<keyof FunnelEvent, string | null>;
 }> {
-  const first: Raw[] = (await pages(1).next()).value ?? [];
+  let responseKeys: string[] = [];
+  const first: Raw[] = (await pages(1, (k) => (responseKeys = k)).next()).value ?? [];
   const keys = new Set<string>(first.flatMap((o) => keyPaths(o)));
   const fieldsFound = Object.fromEntries(
     (Object.keys(FINALSITE_FUNNEL_FIELDS) as (keyof FunnelEvent)[]).map((f) => [
@@ -219,5 +242,5 @@ export async function checkFinalsiteConnection(): Promise<{
       FINALSITE_FUNNEL_FIELDS[f].find((k) => keys.has(k)) ?? null,
     ])
   ) as Record<keyof FunnelEvent, string | null>;
-  return { objectsOnFirstPage: first.length, keysSeen: [...keys].sort(), fieldsFound };
+  return { objectsOnFirstPage: first.length, responseKeys, keysSeen: [...keys].sort(), fieldsFound };
 }

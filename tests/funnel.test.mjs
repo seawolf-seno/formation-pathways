@@ -10,7 +10,7 @@ import {
   suppress,
 } from "../lib/sor/funnel.ts";
 import { sampleFunnelEvents } from "../lib/sor/importers/finalsite-funnel.ts";
-import { mapFinalsiteContact, signFinalsiteJwt } from "../lib/sor/importers/finalsite-api.ts";
+import { envelopeKeys, extractItems, mapFinalsiteContact, signFinalsiteJwt } from "../lib/sor/importers/finalsite-api.ts";
 import { createHmac } from "node:crypto";
 
 // Admissions season counts: the only thing that leaves Finalsite is a
@@ -87,4 +87,13 @@ test("the Finalsite JWT is HS256 with sub, name and a short exp", () => {
   assert.equal(body.iat, 1_800_000_000);
   assert.ok(body.exp - 1_800_000_000 <= 3600);
   assert.equal(sig, createHmac("sha256", "s3cret").update(`${h}.${b}`).digest("base64url"));
+});
+
+test("Finalsite pages are read from a bare array or any envelope key, and the shape reports names only", () => {
+  const c = { id: 1 };
+  assert.deepEqual(extractItems([c]), [c]);
+  assert.deepEqual(extractItems({ data: [c], meta: {} }), [c]);
+  assert.deepEqual(extractItems({ meta: { next_cursor: "x" }, records: [c] }), [c]);
+  assert.deepEqual(extractItems({ meta: {} }), []);
+  assert.deepEqual(envelopeKeys({ records: [c], total: 0, meta: { next_cursor: "x" } }), ["records[]", "total", "meta", "meta.next_cursor"]);
 });
