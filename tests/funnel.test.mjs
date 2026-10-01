@@ -71,11 +71,14 @@ test("sample events keep stages in order", () => {
 test("a Finalsite contact maps to dates and a year only", () => {
   const { event, missing } = mapFinalsiteContact({
     id: 991, first_name: "Should", last_name: "Vanish", email: "p@example.com",
-    prospect_entry_year: "2027-2028", inquiry_submit_date: "2026-09-02T14:00:00Z", application_submit_date: "2026-12-01",
+    prospect_entry_year: { name: "2027-2028", start_year: 2027 }, school_year: { start_year: 2026 }, inquiry_submit_date: "2026-09-02T14:00:00Z", application_submit_date: "2026-12-01",
   });
   assert.deepEqual(event, { entryYear: 2027, inquiredOn: "2026-09-02", appliedOn: "2026-12-01", admittedOn: null, enrolledOn: null });
   assert.deepEqual(missing, ["admittedOn", "enrolledOn"]);
   assert.equal(mapFinalsiteContact({ inquiry_date: "2026-09-02" }).event, null); // no year → not counted
+  // prospect_entry_year blank → the contact's school_year; a label alone works too
+  assert.equal(mapFinalsiteContact({ prospect_entry_year: null, school_year: { start_year: 2027 } }).event.entryYear, 2027);
+  assert.equal(mapFinalsiteContact({ school_year: { name: "2027-2028" } }).event.entryYear, 2027);
 });
 
 test("the Finalsite JWT is HS256 with sub, name and a short exp", () => {

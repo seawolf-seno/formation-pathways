@@ -45,11 +45,11 @@ export function SeasonSourcePanel({ settings, apiConfigured }: { settings: Pilot
     start(async () => {
       const res = await checkFinalsiteConnectionAction();
       if (!res.ok) return setCheck({ tone: "error", text: res.error });
-      const { objectsOnFirstPage, fieldsFound, keysSeen, responseKeys, formats } = res.check;
+      const { objectsOnFirstPage, fieldsFound, keysSeen, responseKeys, formats, setup } = res.check;
       const missing = Object.entries(fieldsFound).filter(([, v]) => !v).map(([k]) => k);
       setCheck({
         tone: missing.length ? "error" : "ok",
-        text: `Connected: ${objectsOnFirstPage} objects on the first page. ${
+        text: `Connected: ${objectsOnFirstPage} contacts sampled. ${
           missing.length ? `Not found yet: ${missing.join(", ")}.` : "Every field the counts need was found."
         }`,
         detail: [
@@ -59,6 +59,11 @@ export function SeasonSourcePanel({ settings, apiConfigured }: { settings: Pilot
             Object.entries(formats)
               .map(([f, t]) => `${f} (${fieldsFound[f as keyof typeof fieldsFound]}): ${Object.entries(t ?? {}).map(([k, n]) => `${k} ×${n}`).join(", ")}`)
               .join("; ") || "none"
+          }`,
+          `School setup (labels, no family data): ${
+            Object.entries(setup)
+              .map(([label, names]) => `${label}: ${names.join(" | ") || "none"}`)
+              .join("; ")
           }`,
         ],
       });

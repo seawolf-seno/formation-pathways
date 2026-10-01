@@ -31,7 +31,10 @@ import type { FunnelEvent } from "../funnel";
  *  admittedOn has no matching field there yet: no decision date appears at
  *  the top level of a contact (review_decision has no date). */
 export const FINALSITE_FUNNEL_FIELDS: Record<keyof FunnelEvent, string[]> = {
-  entryYear: ["prospect_entry_year", "entry_year", "entering_year"],
+  // Both are school-year objects ({ name: "2027-2028", start_year: 2027 });
+  // start_year is the fall the class enters. prospect_entry_year is blank on
+  // many contacts, so fall back to the contact's school_year.
+  entryYear: ["prospect_entry_year.start_year", "school_year.start_year", "prospect_entry_year.name", "school_year.name"],
   inquiredOn: ["inquiry_submit_date", "inquiry_date"],
   appliedOn: ["application_submit_date", "application_submitted_date"],
   admittedOn: ["accepted_date", "decision_date", "review_decision_date"],
@@ -251,8 +254,23 @@ export async function fetchLiveFunnelEvents(entryYears: number[]): Promise<{ eve
   return { events, warnings };
 }
 
-/** One page, reported as field names and how many objects came back —
- *  never values — so the field map can be checked before the first import. */
+/** Labels the SCHOOL configures, the same for every family: checklist item and
+ *  custom field names, and the allowed values of a few status fields. These
+ *  tell us where an admission decision is recorded. No family's data. */
+const SETUP_LISTS: Record<string, (o: Raw) => unknown[]> = {
+  "checklist items": (o) => (Array.isArray(o.checklist_answers) ? o.checklist_answers.map((c: Raw) => c?.name) : []),
+  "custom fields": (o) => (Array.isArray(o.custom_attributes) ? o.custom_attributes.map((c: Raw) => c?.field_name) : []),
+  "track fields": (o) => (Array.isArray(o.track_attributes) ? o.track_attributes.map((c: Raw) => c?.field_name) : []),
+  status: (o) => [o.status],
+  enrollment_type: (o) => [o.enrollment_type],
+  review_decision: (o) => [o.review_decision],
+};
+
+const CHECK_PAGES = 8; // ~200 contacts: enough to see the setup, a few seconds
+
+/** A sample of pages, reported as field names, value formats and school setup
+ *  labels — never a family's values — so the field map can be checked before
+ *  the first import. */
 export async function checkFinalsiteConnection(): Promise<{
   objectsOnFirstPage: number;
   responseKeys: string[];
@@ -260,9 +278,15 @@ export async function checkFinalsiteConnection(): Promise<{
   fieldsFound: Record<keyof FunnelEvent, string | null>;
   /** Per matched field, how many contacts had each value format. No values. */
   formats: Partial<Record<keyof FunnelEvent, Record<string, number>>>;
+  setup: Record<string, string[]>;
 }> {
   let responseKeys: string[] = [];
-  const first: Raw[] = (await pages(1, (k) => (responseKeys = k)).next()).value ?? [];
+  const first: Raw[] = [];
+  let n = 0;
+  for await (const items of pages(CHECK_PAGES + 1, (k) => (responseKeys = k))) {
+    first.push(...items);
+    if (++n >= CHECK_PAGES) break;
+  }
   const keys = new Set<string>(first.flatMap((o) => keyPaths(o)));
   const fieldsFound = Object.fromEntries(
     (Object.keys(FINALSITE_FUNNEL_FIELDS) as (keyof FunnelEvent)[]).map((f) => [
@@ -280,5 +304,13 @@ export async function checkFinalsiteConnection(): Promise<{
     }
     formats[field] = tally;
   }
-  return { objectsOnFirstPage: first.length, responseKeys, keysSeen: [...keys].sort(), fieldsFound, formats };
+  const setup = Object.fromEntries(
+    Object.entries(SETUP_LISTS).map(([label, pick]) => {
+      const names = new Set<string>();
+      for (const o of first)
+        for (const v of pick(o)) if (typeof v === "string" && v && v.length <= 60) names.add(v);
+      return [label, [...names].sort()];
+    })
+  );
+  return { objectsOnFirstPage: first.length, responseKeys, keysSeen: [...keys].sort(), fieldsFound, formats, setup };
 }
