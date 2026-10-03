@@ -4,6 +4,7 @@ import { getImportRuns, getPilotSettings, getRoster, getStaffList, requireStaff 
 import { isLiveBlackbaudConfigured } from "@/lib/sor/importers/blackbaud";
 import { blackbaudConnection, isBlackbaudAppConfigured } from "@/lib/sor/blackbaud-auth";
 import { isLiveCanvasPilotConfigured } from "@/lib/sor/importers/canvas";
+import { isLiveFinalsiteApiConfigured } from "@/lib/sor/importers/finalsite-api";
 import {
   AddParticipantForm,
   BlackbaudConnectPanel,
@@ -126,7 +127,7 @@ export default async function PilotPage({ searchParams }: { searchParams: Promis
           )}
           <BlackbaudConnectPanel appConfigured={isBlackbaudAppConfigured()} expiresAt={bb.expiresAt} />
           <ImportPanel
-            live={{ finalsite: false, blackbaud: isLiveBlackbaudConfigured(bb.token ?? process.env.BLACKBAUD_ACCESS_TOKEN ?? null), canvas: isLiveCanvasPilotConfigured() }}
+            live={{ finalsite: isLiveFinalsiteApiConfigured(), blackbaud: isLiveBlackbaudConfigured(bb.token ?? process.env.BLACKBAUD_ACCESS_TOKEN ?? null), canvas: isLiveCanvasPilotConfigured() }}
           />
           {runs.length > 0 && (
             <ul className="mt-3 space-y-1 text-xs text-[var(--color-ink-muted)]">

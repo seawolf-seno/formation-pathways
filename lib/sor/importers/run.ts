@@ -4,6 +4,7 @@ import type { SourceSystem, StaffMember } from "../types";
 import { readFinalsiteCsv, readSampleFinalsite, stageFromFinalsiteStatus, type FinalsiteRecord } from "./finalsite";
 import { fetchLiveBlackbaud, isLiveBlackbaudConfigured, readSampleBlackbaud, type BlackbaudRecord } from "./blackbaud";
 import { fetchLiveCanvas, isLiveCanvasPilotConfigured, readSampleCanvas, type CanvasCourseRecord } from "./canvas";
+import { fetchLiveFinalsiteStudents, isLiveFinalsiteApiConfigured } from "./finalsite-api";
 
 /**
  * Runs one source import. The pipeline is identical in both modes:
@@ -42,8 +43,9 @@ export async function runImport(
 ): Promise<ImportOutcome> {
   const bbToken = opts.blackbaudToken ?? process.env.BLACKBAUD_ACCESS_TOKEN ?? null;
   const { data: settings } = await supabase.from("pilot_settings").select("real_data_enabled").single();
+  const finalsiteApi = system === "finalsite" && !opts.finalsiteCsv && isLiveFinalsiteApiConfigured();
   const live =
-    system === "finalsite" ? Boolean(opts.finalsiteCsv)
+    system === "finalsite" ? Boolean(opts.finalsiteCsv) || finalsiteApi
     : system === "blackbaud" ? isLiveBlackbaudConfigured(bbToken)
     : isLiveCanvasPilotConfigured();
   const mode = live ? "live" : "sample";
@@ -87,7 +89,25 @@ export async function runImport(
     const allowlist = new Set(targets.keys());
 
     let found = new Set<string>();
-    if (system === "finalsite") {
+    if (system === "finalsite" && finalsiteApi) {
+      // Pilot students who have no Finalsite id yet can be matched by their
+      // Blackbaud id, when Finalsite stores it (FINALSITE_SIS_ID_FIELD).
+      const byBlackbaud = await blackbaudTargetsWithoutFinalsite(supabase, new Set([...targets.values()].map((t) => t.personId)));
+      outcome.skippedNoConsent += byBlackbaud.skippedNoConsent;
+      const res = await fetchLiveFinalsiteStudents({ contactIds: allowlist, blackbaudIds: new Set(byBlackbaud.targets.keys()) });
+      outcome.warnings.push(...res.warnings);
+      for (const m of res.matches) {
+        const t = m.by === "contact" ? targets.get(m.key)! : byBlackbaud.targets.get(m.key)!;
+        await writeFinalsite(supabase, t, { ...m.record, externalId: m.record.contactId, activities: [] });
+        if (m.by === "blackbaud") {
+          // Remember the Finalsite id, so later imports match directly.
+          await must(supabase.from("external_ids").insert({ person_id: t.personId, system: "finalsite", external_id: m.record.contactId }));
+        }
+      }
+      found = new Set(res.matches.map((m) => `${m.by}:${m.key}`));
+      outcome.matched = found.size;
+      outcome.unmatched = allowlist.size + byBlackbaud.targets.size - found.size;
+    } else if (system === "finalsite") {
       const records = live ? readFinalsiteCsv(opts.finalsiteCsv!, allowlist) : readSampleFinalsite(allowlist);
       for (const r of records) await writeFinalsite(supabase, targets.get(r.externalId)!, r);
       found = new Set(records.map((r) => r.externalId));
@@ -106,8 +126,10 @@ export async function runImport(
       found = new Set(courses.flatMap((c) => c.students.map((s) => s.externalId)));
     }
 
-    outcome.matched = found.size;
-    outcome.unmatched = allowlist.size - found.size;
+    if (!finalsiteApi) {
+      outcome.matched = found.size;
+      outcome.unmatched = allowlist.size - found.size;
+    }
   } catch (e) {
     outcome.error = e instanceof Error ? e.message : String(e);
   }
@@ -153,6 +175,37 @@ async function writeFinalsite(supabase: SupabaseClient, t: Target, r: FinalsiteR
   if (next === "admitted" && t.stage === "applicant") {
     await must(supabase.from("people").update({ stage: next }).eq("id", t.personId));
   }
+}
+
+/** Consented real pilot students with a Blackbaud id but no Finalsite id,
+ *  keyed by Blackbaud id (for matching through Finalsite's id fields). */
+async function blackbaudTargetsWithoutFinalsite(
+  supabase: SupabaseClient,
+  alreadyTargeted: Set<string>
+): Promise<{ targets: Map<string, Target>; skippedNoConsent: number }> {
+  const { data, error } = await supabase
+    .from("external_ids")
+    .select("external_id, person_id, people!inner(stage, is_sample, consents(scope, revoked_at), external_ids(system))")
+    .eq("system", "blackbaud");
+  if (error) throw error;
+  const targets = new Map<string, Target>();
+  let skippedNoConsent = 0;
+  for (const row of data ?? []) {
+    const p = row.people as unknown as {
+      stage: string;
+      is_sample: boolean;
+      consents: { scope: string; revoked_at: string | null }[];
+      external_ids: { system: string }[];
+    };
+    if (p.is_sample || alreadyTargeted.has(row.person_id)) continue;
+    if (p.external_ids.some((x) => x.system === "finalsite")) continue;
+    if (!p.consents.some((c) => c.scope === "import_records" && !c.revoked_at)) {
+      skippedNoConsent++;
+      continue;
+    }
+    targets.set(row.external_id, { personId: row.person_id, externalId: row.external_id, stage: p.stage });
+  }
+  return { targets, skippedNoConsent };
 }
 
 async function writeBlackbaud(supabase: SupabaseClient, t: Target, r: BlackbaudRecord) {
