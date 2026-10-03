@@ -603,6 +603,8 @@ export interface RuakhInput {
   courses: { name: string; teacher: string | null }[];
   teacherComments: { course: string; assignment: string; comment: string }[];
   observations: { author: string; text: string; tags: string[]; date: string }[];
+  /** The student's own sparks from a Spark conversation, as plain text. */
+  studentSparks: string | null;
 }
 
 export interface RuakhDraft {

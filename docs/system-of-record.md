@@ -90,6 +90,34 @@ Then an admin records the sign-off on `/pilot`. That flip is logged too.
    tagged *Sense of Calling* and consent-checked by the database, so it
    feeds the next draft.
 
+### Spark: what lights them up
+
+Applications show the formal version of a student. On their page, **Start a
+Spark conversation ✦** opens `/pathway/[personId]/spark` on the adult's own
+signed-in device, a full-screen night sky that fills with stars:
+
+- **Questions**, answered by voice or typing, each one becoming a star. They
+  live in `prompts/student-spark-questions.txt`, which faculty can edit.
+- **Interests** that float on screen: tap once if you love it, twice if
+  you're obsessed (from `prompts/spark-interests.txt`, plus their own).
+- **This or that** (`prompts/spark-choices.txt`).
+- **Optional: their YouTube history.** The student drops in Google Takeout's
+  `watch-history.json`. It is read **in the browser only, never uploaded**;
+  they tap the channels that are really them, and only those names are saved.
+- **The reveal:** the stars join into their constellation.
+
+There are no scores, points or badges. Saving needs the new **`student_voice`**
+consent scope (database trigger) and is done as the signed-in adult
+(`student_sparks`, migration `20261004090000_student_sparks.sql`). Admin,
+admissions and teachers can read sparks. The next draft treats sparks as the
+strongest signal: every pathway grows from at least one, and milestones can
+show "grew from your spark: …" on the journey. Sending sparks to Claude
+follows the same AI rules as everything else (`ai_drafting` +
+`AI_REAL_STUDENTS`).
+
+An at-home, write-only link for families is a planned follow-up. It needs an
+anonymous write path designed on its own.
+
 **AI for real students is a separate switch.** `ANTHROPIC_API_KEY` alone runs
 AI for the fictional demo and the six sample students only. A real student's
 details reach Claude only when the family consented (`ai_drafting`) **and**

@@ -47,7 +47,8 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   if (!profile) notFound();
   await logAccess(staff, "view_person", id);
 
-  const { person, admissions, enrollment, courses, classHistory, evidence, observations, drafts, consents } = profile;
+  const { person, admissions, enrollment, courses, classHistory, evidence, observations, drafts, consents, sparks } = profile;
+  const voiceConsent = person.is_sample || consents.some((c) => c.scope === "student_voice" && !c.revoked_at);
   const name = displayName(person);
   const isAdmin = staff.role === "admin";
   const canDraft = staff.role === "admin" || staff.role === "admissions";
@@ -104,6 +105,50 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                   </blockquote>
                 ))}
               </div>
+            )}
+          </Section>
+
+          <Section title="What lights them up" source="Spark conversation">
+            {sparks ? (
+              <div className="space-y-3 text-sm">
+                <ul className="flex flex-wrap gap-1.5">
+                  {sparks.sparks.picks.map((p) => (
+                    <li
+                      key={p.label}
+                      className={`rounded-full px-2.5 py-1 text-xs ${p.obsessed ? "bg-[var(--color-gold)] font-semibold text-[var(--color-navy-ink)]" : "bg-[var(--color-gold-light)] text-[var(--color-navy-ink)]"}`}
+                    >
+                      {p.obsessed ? "✦ " : ""}{p.label}
+                    </li>
+                  ))}
+                  {sparks.sparks.channels.map((c) => (
+                    <li key={c} className="rounded-full border border-[var(--color-border)] bg-white px-2.5 py-1 text-xs text-[var(--color-ink-muted)]">▶ {c}</li>
+                  ))}
+                </ul>
+                {sparks.sparks.answers.map((a) => (
+                  <blockquote key={a.prompt} className="rounded-xl border-l-4 border-[var(--color-gold)] bg-[var(--color-gold-light)] p-3">
+                    <p className="text-xs text-[var(--color-ink-muted)]">{a.prompt}</p>
+                    <p className="mt-1 text-[var(--color-ink)]">&ldquo;{a.text}&rdquo;</p>
+                  </blockquote>
+                ))}
+                {sparks.sparks.leanings.length > 0 && (
+                  <p className="text-xs text-[var(--color-ink-muted)]">Leans toward: {sparks.sparks.leanings.map((l) => l.choice).join(" · ")}</p>
+                )}
+                <p className="text-xs text-[var(--color-ink-muted)]">
+                  From a Spark conversation on {sparks.created_at.slice(0, 10)}. New drafts grow from these first.{" "}
+                  {voiceConsent && <Link href={`/pathway/${person.id}/spark`} className="font-semibold underline">Start another →</Link>}
+                </p>
+              </div>
+            ) : voiceConsent ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm text-[var(--color-ink-muted)]">
+                  Applications show the formal version of a student. Sit with {person.preferred_name || person.first_name} and let them light up what they really love.
+                </p>
+                <Link href={`/pathway/${person.id}/spark`} className="rounded-lg bg-[var(--color-navy)] px-3 py-2 text-sm font-medium text-white">
+                  Start a Spark conversation ✦
+                </Link>
+              </div>
+            ) : (
+              <Empty>Needs student-voice consent (Consent box) before a Spark conversation.</Empty>
             )}
           </Section>
 

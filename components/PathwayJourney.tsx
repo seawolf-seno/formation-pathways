@@ -92,6 +92,11 @@ export function PathwayJourney({
             <p className="journey-when">{m.when}</p>
             <h3 className="journey-title">{m.title}</h3>
             <p className="journey-detail">{m.detail}</p>
+            {m.spark && (
+              <p className="journey-spark">
+                <span aria-hidden="true">✦ </span>grew from your spark: <em>{m.spark}</em>
+              </p>
+            )}
           </li>
         ))}
       </ol>

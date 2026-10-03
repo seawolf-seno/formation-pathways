@@ -51,3 +51,15 @@ test("generator output keeps only known fields, and empty glimpses vanish", () =
   assert.equal(sanitizeGlimpse("  Picture a Thursday.  "), "Picture a Thursday.");
   assert.equal(sanitizeGlimpse("x".repeat(900)).length, 600);
 });
+
+test("a milestone keeps the student's spark thread, trimmed and optional", async () => {
+  const { sanitizeMilestones } = await import("../lib/pathway-journey.ts");
+  const steps = sanitizeMilestones([
+    { when: "This spring", title: "Join the build team", detail: "Start in the Makers Space.", spark: "  restoring old tools  " },
+    { when: "Next fall", title: "Lead a fix-it night", detail: "Host one for the neighborhood.", spark: "" },
+    { when: "Senior year", title: "Restore something big", detail: "A capstone you choose." },
+  ]);
+  assert.equal(steps[0].spark, "restoring old tools");
+  assert.ok(!("spark" in steps[1]));
+  assert.ok(!("spark" in steps[2]));
+});

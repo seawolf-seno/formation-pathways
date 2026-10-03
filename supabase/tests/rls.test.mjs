@@ -65,6 +65,15 @@ await expect("access log cannot be deleted by admin", "admin", `delete from acce
 await expect("teacher cannot read access log", "teach", `select * from access_log`, true, r => r.rows.length === 0);
 await expect("revoked consent blocks new observation", "admin", `update consents set revoked_at=now() where scope='staff_observations'`, true);
 await expect("...observation now blocked", "teach", `insert into observations (person_id, author_id, author_name, raw_text, body) values ('11111111-1111-1111-1111-111111111111','${ids.teach}','T','x','x')`, false);
+// Student voice (sparks): needs the student_voice consent, written as yourself.
+const spk = (who) => `insert into student_sparks (person_id, sparks, created_by) values ('11111111-1111-1111-1111-111111111111', '{"answers":[]}', '${ids[who]}')`;
+await expect("admin revokes student_voice", "admin", `update consents set revoked_at = now() where scope = 'student_voice' and revoked_at is null returning *`, true, r => r.rows.length === 1);
+await expect("sparks refused without student_voice consent", "teach", spk("teach"), false);
+await expect("admin records student_voice consent", "admin", `insert into consents (person_id, scope, granted_by, granted_on, evidence, recorded_by) values ('11111111-1111-1111-1111-111111111111','student_voice','Parent Kid','2026-10-04','Signed form','${ids.admin}')`, true);
+await expect("teacher saves a student's sparks as themselves", "teach", spk("teach"), true);
+await expect("nobody saves sparks as someone else", "teach", `insert into student_sparks (person_id, sparks, created_by) values ('11111111-1111-1111-1111-111111111111', '{}', '${ids.admin}')`, false);
+await expect("admissions reads sparks", "adm", `select * from student_sparks`, true, r => r.rows.length === 1);
+await expect("non-staff cannot read sparks", "stranger", `select * from student_sparks`, true, r => r.rows.length === 0);
 await expect("withdraw (delete) cascades, log survives", "admin", `delete from people where id='11111111-1111-1111-1111-111111111111' returning id`, true, r => r.rows.length === 1);
 const left = await db.query("select (select count(*) from enrollments)::int e, (select count(*) from observations)::int o, (select count(*) from access_log)::int l");
 const ok = left.rows[0].e === 0 && left.rows[0].o === 0 && left.rows[0].l === 1; if (ok) pass++; else fail++;
