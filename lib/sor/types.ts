@@ -106,6 +106,16 @@ export interface CourseEnrollment {
   teacher_name: string | null;
 }
 
+export interface ClassHistoryRow {
+  person_id: string;
+  source: string;
+  section_id: string;
+  school_year: string;
+  course_title: string;
+  course_code: string | null;
+  offering_type: string | null;
+}
+
 export interface AcademicEvidence {
   id: string;
   person_id: string;
@@ -166,6 +176,7 @@ export interface PersonProfile {
   admissions: AdmissionsRecord | null;
   enrollment: Enrollment | null;
   courses: CourseEnrollment[];
+  classHistory: ClassHistoryRow[];
   evidence: AcademicEvidence[];
   observations: SorObservation[];
   drafts: PathwayDraft[];

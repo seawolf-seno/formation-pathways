@@ -606,7 +606,7 @@ export async function saveCaptureAction(input: {
 // ---------------------------------------------------------------- who they are today (#2)
 
 function toRuakhInput(profile: PersonProfile): RuakhInput {
-  const { person, admissions, enrollment, courses, evidence, observations } = profile;
+  const { person, admissions, enrollment, courses, classHistory, evidence, observations } = profile;
   const courseName = new Map(courses.map((c) => [c.canvas_course_id, c.course_name]));
   return {
     firstName: person.preferred_name || person.first_name,
@@ -616,7 +616,15 @@ function toRuakhInput(profile: PersonProfile): RuakhInput {
     interests: admissions?.interests ?? [],
     activities: admissions?.activities ?? [],
     applicationResponses: admissions?.responses ?? [],
-    courses: courses.map((c) => ({ name: c.course_name, teacher: c.teacher_name })),
+    // Canvas courses (with teacher), then Blackbaud class history: titles and
+    // school year only, no grades.
+    courses: [
+      ...courses.map((c) => ({ name: c.course_name, teacher: c.teacher_name })),
+      ...classHistory
+        .filter((h) => !courses.some((c) => c.course_name === h.course_title))
+        .slice(0, 40)
+        .map((h) => ({ name: `${h.course_title} (${h.school_year}${h.offering_type ? `, ${h.offering_type}` : ""})`, teacher: null })),
+    ],
     teacherComments: evidence
       .filter((e) => e.teacher_comment)
       .map((e) => ({

@@ -102,7 +102,7 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
   const supabase = await getSorClient();
   const { data: person } = await supabase.from("people").select("*").eq("id", id).maybeSingle();
   if (!person) return null;
-  const [externalIds, consents, admissions, enrollment, courses, evidence, observations, drafts] =
+  const [externalIds, consents, admissions, enrollment, courses, evidence, observations, drafts, classHistory] =
     await Promise.all([
       supabase.from("external_ids").select("*").eq("person_id", id),
       supabase.from("consents").select("*").eq("person_id", id).order("created_at"),
@@ -124,6 +124,13 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
         .select("*")
         .eq("person_id", id)
         .order("created_at", { ascending: false }),
+      // Empty (not an error page) until the course_history migration is applied.
+      supabase
+        .from("course_history")
+        .select("*")
+        .eq("person_id", id)
+        .order("school_year", { ascending: false })
+        .order("course_title"),
     ]);
   return {
     person: person as Person,
@@ -135,6 +142,7 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
     evidence: evidence.data ?? [],
     observations: observations.data ?? [],
     drafts: drafts.data ?? [],
+    classHistory: classHistory.data ?? [],
   } as PersonProfile;
 }
 

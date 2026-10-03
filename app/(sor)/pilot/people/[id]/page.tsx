@@ -6,6 +6,24 @@ import { PathwaysDisplay } from "@/components/PathwaysDisplay";
 import { TagChip } from "@/components/TagChips";
 import { ApproveButton, ConsentPanel, DraftButton, EditPathwaysPanel, ExternalIdsPanel, WithdrawButton } from "@/components/sor/PersonControls";
 
+/** A small labeled fact chip: grade, class year, advisor. */
+function Fact({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="rounded-lg border border-[var(--color-border)] bg-white px-3 py-1.5">
+      <span className="block text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">{label}</span>
+      <span className="font-display text-base text-[var(--color-navy-ink)]">{value}</span>
+    </span>
+  );
+}
+
+/** Course chip color by Blackbaud offering type. Color is never the only cue: the title says it. */
+function offeringStyle(type: string | null): string {
+  const t = (type ?? "").toLowerCase();
+  if (t.includes("art")) return "bg-[var(--color-gold-light)] text-[var(--color-navy-ink)]";
+  if (t.includes("athlet") || t.includes("activit") || t.includes("sport")) return "bg-[var(--color-navy)] text-white";
+  return "bg-[var(--color-pacific-light)] text-[var(--color-navy-ink)]";
+}
+
 function Section({ title, source, children }: { title: string; source?: string; children: React.ReactNode }) {
   return (
     <section className="rounded-xl border border-[var(--color-border)] bg-white p-5">
@@ -29,7 +47,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   if (!profile) notFound();
   await logAccess(staff, "view_person", id);
 
-  const { person, admissions, enrollment, courses, evidence, observations, drafts, consents } = profile;
+  const { person, admissions, enrollment, courses, classHistory, evidence, observations, drafts, consents } = profile;
   const name = displayName(person);
   const isAdmin = staff.role === "admin";
   const canDraft = staff.role === "admin" || staff.role === "admissions";
@@ -37,6 +55,8 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   const latest = drafts[0];
   const courseName = new Map(courses.map((c) => [c.canvas_course_id, c.course_name]));
   const comments = evidence.filter((e) => e.teacher_comment);
+  const historyYears = [...new Set(classHistory.map((h) => h.school_year))];
+  const canvasOnly = courses.filter((c) => !classHistory.some((h) => h.course_title === c.course_name));
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
@@ -88,21 +108,67 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
           </Section>
 
           <Section title="Where they are now" source="Blackbaud · Canvas">
-            {courses.length === 0 && !enrollment ? (
+            {courses.length === 0 && classHistory.length === 0 && !enrollment ? (
               <Empty>Not enrolled yet, or no enrollment data imported.</Empty>
             ) : (
-              <div className="space-y-3 text-sm">
-                {courses.length > 0 && (
-                  <p className="text-[var(--color-ink-muted)]">
-                    {courses.map((c) => `${c.course_name}${c.teacher_name ? ` (${c.teacher_name})` : ""}`).join(" · ")}
+              <div className="space-y-5 text-sm">
+                {enrollment && (
+                  <div className="flex flex-wrap gap-2">
+                    {enrollment.grade != null && <Fact label="Grade" value={String(enrollment.grade)} />}
+                    {enrollment.grad_year != null && <Fact label="Class of" value={String(enrollment.grad_year)} />}
+                    {enrollment.advisor_name && <Fact label="Advisor" value={enrollment.advisor_name} />}
+                    {enrollment.enrolled_since && <Fact label="At Pacifica since" value={enrollment.enrolled_since.slice(0, 4)} />}
+                  </div>
+                )}
+                {historyYears.length > 0 && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {historyYears.map((year) => (
+                      <div key={year} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-canvas)] p-4">
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">{year}</p>
+                        <ul className="flex flex-wrap gap-1.5">
+                          {classHistory
+                            .filter((h) => h.school_year === year)
+                            .map((h) => (
+                              <li
+                                key={h.section_id}
+                                title={h.offering_type ?? undefined}
+                                className={`rounded-full px-2.5 py-1 text-xs ${offeringStyle(h.offering_type)}`}
+                              >
+                                {h.course_title}
+                              </li>
+                            ))}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {historyYears.length > 0 && (
+                  <p className="flex flex-wrap gap-3 text-[11px] text-[var(--color-ink-muted)]">
+                    <span className="flex items-center gap-1"><span className={`inline-block h-2.5 w-2.5 rounded-full ${offeringStyle("Academics")}`} /> Academics</span>
+                    <span className="flex items-center gap-1"><span className={`inline-block h-2.5 w-2.5 rounded-full ${offeringStyle("Arts")}`} /> Arts</span>
+                    <span className="flex items-center gap-1"><span className={`inline-block h-2.5 w-2.5 rounded-full ${offeringStyle("Athletics")}`} /> Athletics &amp; activities</span>
                   </p>
                 )}
-                {comments.map((e) => (
-                  <blockquote key={e.id} className="border-l-2 border-[var(--color-pacific)] pl-3">
-                    <p className="text-xs text-[var(--color-ink-muted)]">{courseName.get(e.canvas_course_id)} · {e.assignment_name}</p>
-                    <p className="mt-1 text-[var(--color-ink)]">&ldquo;{e.teacher_comment}&rdquo;</p>
-                  </blockquote>
-                ))}
+                {canvasOnly.length > 0 && (
+                  <ul className="flex flex-wrap gap-1.5">
+                    {canvasOnly.map((c) => (
+                      <li key={c.canvas_course_id} className="rounded-full border border-[var(--color-border)] bg-white px-2.5 py-1 text-xs text-[var(--color-navy-ink)]">
+                        {c.course_name}
+                        {c.teacher_name ? <span className="text-[var(--color-ink-muted)]"> · {c.teacher_name}</span> : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {comments.length > 0 && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {comments.map((e) => (
+                      <blockquote key={e.id} className="rounded-xl border-l-4 border-[var(--color-pacific)] bg-[var(--color-pacific-light)] p-4">
+                        <p className="text-[var(--color-ink)]">&ldquo;{e.teacher_comment}&rdquo;</p>
+                        <p className="mt-2 text-xs text-[var(--color-ink-muted)]">{courseName.get(e.canvas_course_id)} · {e.assignment_name}</p>
+                      </blockquote>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </Section>

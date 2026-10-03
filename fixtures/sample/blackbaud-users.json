@@ -1,11 +1,367 @@
 {
-  "_note": "FICTIONAL sample shaped like Blackbaud SKY API School responses (GET /school/v1/users/{id} plus enrollment fields). Verify field names against your first live response.",
+  "_note": "FICTIONAL sample shaped like Blackbaud SKY API School responses (GET /school/v1/users/{id} plus enrollment fields). Verify field names against your first live response. `sections` is fictional class history (course titles only, never grades).",
   "users": [
-    { "id": "BB-S-5501", "first_name": "Mateo", "last_name": "Villanueva-Park", "preferred_name": null,
-      "student_info": { "grad_year": 2029, "grade_level": 11, "advisor_name": "Ms. Harriet Fenwick", "enroll_date": "2025-08-19" } },
-    { "id": "BB-S-5502", "first_name": "Iris", "last_name": "Okonkwo-Hale", "preferred_name": null,
-      "student_info": { "grad_year": 2028, "grade_level": 12, "advisor_name": "Mr. Desmond Achebe", "enroll_date": "2024-08-20" } },
-    { "id": "BB-S-5503", "first_name": "Benedict", "last_name": "Szabo", "preferred_name": "Ben",
-      "student_info": { "grad_year": 2029, "grade_level": 11, "advisor_name": "Ms. Harriet Fenwick", "enroll_date": "2026-01-06" } }
+    {
+      "id": "BB-S-5501",
+      "first_name": "Mateo",
+      "last_name": "Villanueva-Park",
+      "preferred_name": null,
+      "student_info": {
+        "grad_year": 2029,
+        "grade_level": 11,
+        "advisor_name": "Ms. Harriet Fenwick",
+        "enroll_date": "2025-08-19"
+      },
+      "sections": [
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5501-SEC-01",
+          "course_title": "English 11: American Voices",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5501-SEC-02",
+          "course_title": "Precalculus",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5501-SEC-03",
+          "course_title": "Physics",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5501-SEC-04",
+          "course_title": "U.S. History",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5501-SEC-05",
+          "course_title": "Spanish III",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5501-SEC-06",
+          "course_title": "Theology: Christian Ethics",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5501-SEC-07",
+          "course_title": "Concert Choir",
+          "offering_type": {
+            "description": "Arts"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5501-SEC-08",
+          "course_title": "Varsity Cross Country",
+          "offering_type": {
+            "description": "Athletics"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5501-SEC-09",
+          "course_title": "English 10",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5501-SEC-10",
+          "course_title": "Algebra II",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5501-SEC-11",
+          "course_title": "Chemistry",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5501-SEC-12",
+          "course_title": "World History",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5501-SEC-13",
+          "course_title": "Spanish II",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5501-SEC-14",
+          "course_title": "Theology: Scripture",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5501-SEC-15",
+          "course_title": "Concert Choir",
+          "offering_type": {
+            "description": "Arts"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5501-SEC-16",
+          "course_title": "JV Cross Country",
+          "offering_type": {
+            "description": "Athletics"
+          }
+        }
+      ]
+    },
+    {
+      "id": "BB-S-5502",
+      "first_name": "Iris",
+      "last_name": "Okonkwo-Hale",
+      "preferred_name": null,
+      "student_info": {
+        "grad_year": 2028,
+        "grade_level": 12,
+        "advisor_name": "Mr. Desmond Achebe",
+        "enroll_date": "2024-08-20"
+      },
+      "sections": [
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5502-SEC-01",
+          "course_title": "AP Literature",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5502-SEC-02",
+          "course_title": "Statistics",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5502-SEC-03",
+          "course_title": "AP Biology",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5502-SEC-04",
+          "course_title": "Government & Economics",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5502-SEC-05",
+          "course_title": "Theology: Senior Capstone",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5502-SEC-06",
+          "course_title": "Studio Art III",
+          "offering_type": {
+            "description": "Arts"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5502-SEC-07",
+          "course_title": "Chapel Worship Team",
+          "offering_type": {
+            "description": "Activities"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5502-SEC-08",
+          "course_title": "English 11",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5502-SEC-09",
+          "course_title": "Precalculus",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5502-SEC-10",
+          "course_title": "Anatomy & Physiology",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5502-SEC-11",
+          "course_title": "U.S. History",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5502-SEC-12",
+          "course_title": "Studio Art II",
+          "offering_type": {
+            "description": "Arts"
+          }
+        },
+        {
+          "school_year": "2025 - 2026",
+          "id": "BB-S-5502-SEC-13",
+          "course_title": "Peer Mentoring",
+          "offering_type": {
+            "description": "Activities"
+          }
+        },
+        {
+          "school_year": "2024 - 2025",
+          "id": "BB-S-5502-SEC-14",
+          "course_title": "English 10",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2024 - 2025",
+          "id": "BB-S-5502-SEC-15",
+          "course_title": "Algebra II",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2024 - 2025",
+          "id": "BB-S-5502-SEC-16",
+          "course_title": "Chemistry",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2024 - 2025",
+          "id": "BB-S-5502-SEC-17",
+          "course_title": "Studio Art I",
+          "offering_type": {
+            "description": "Arts"
+          }
+        }
+      ]
+    },
+    {
+      "id": "BB-S-5503",
+      "first_name": "Benedict",
+      "last_name": "Szabo",
+      "preferred_name": "Ben",
+      "student_info": {
+        "grad_year": 2029,
+        "grade_level": 11,
+        "advisor_name": "Ms. Harriet Fenwick",
+        "enroll_date": "2026-01-06"
+      },
+      "sections": [
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5503-SEC-01",
+          "course_title": "English 11",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5503-SEC-02",
+          "course_title": "Algebra II",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5503-SEC-03",
+          "course_title": "Environmental Science",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5503-SEC-04",
+          "course_title": "U.S. History",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5503-SEC-05",
+          "course_title": "Intro to Engineering",
+          "offering_type": {
+            "description": "Academics"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5503-SEC-06",
+          "course_title": "Robotics Club",
+          "offering_type": {
+            "description": "Activities"
+          }
+        },
+        {
+          "school_year": "2026 - 2027",
+          "id": "BB-S-5503-SEC-07",
+          "course_title": "Varsity Soccer",
+          "offering_type": {
+            "description": "Athletics"
+          }
+        }
+      ]
+    }
   ]
 }

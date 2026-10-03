@@ -24,3 +24,15 @@ test("the basic record (no student_info) reports grade and class year missing", 
   assert.equal(record.grade, null);
   assert.deepEqual(missing, ["grade", "gradYear"]);
 });
+
+test("a class section keeps only title, code, year and offering type", async () => {
+  const { mapSection, readSampleClassHistory } = await import("../lib/sor/importers/blackbaud.ts");
+  assert.deepEqual(
+    mapSection({ id: 991, course_title: "Physics", course_code: "SCI-301", offering_type: { id: 1, description: "Academics" }, grade: "A", teacher: "x" }, "2025 - 2026"),
+    { sectionId: "991", schoolYear: "2025 - 2026", courseTitle: "Physics", courseCode: "SCI-301", offeringType: "Academics" }
+  );
+  assert.equal(mapSection({ id: 5 }, "2025 - 2026"), null); // no title → skipped
+  const sample = readSampleClassHistory(new Set(["BB-S-5502"]));
+  assert.ok(sample.get("BB-S-5502").length >= 10);
+  assert.ok(!sample.has("BB-S-5501")); // only allowlisted ids
+});
