@@ -4,7 +4,7 @@ import { getPersonProfile, logAccess, requireStaff } from "@/lib/sor/queries";
 import { displayName } from "@/lib/sor/types";
 import { PathwaysDisplay } from "@/components/PathwaysDisplay";
 import { TagChip } from "@/components/TagChips";
-import { ApproveButton, ConsentPanel, DraftButton, ExternalIdsPanel, WithdrawButton } from "@/components/sor/PersonControls";
+import { ApproveButton, ConsentPanel, DraftButton, EditPathwaysPanel, ExternalIdsPanel, WithdrawButton } from "@/components/sor/PersonControls";
 
 function Section({ title, source, children }: { title: string; source?: string; children: React.ReactNode }) {
   return (
@@ -130,7 +130,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="font-display text-xl text-[var(--color-navy-ink)]">Who {person.preferred_name || person.first_name} is today, and three roads to Ruakh 2.0</h2>
-                  <p className="text-xs text-[var(--color-ink-muted)]">Drafted from everything above. Staff only, never sent to a family.</p>
+                  <p className="text-xs text-[var(--color-ink-muted)]">Drafted from everything above. Staff only until a named adult edits and signs it; then the three pathways (never this portrait) can be opened with the student.</p>
                 </div>
                 <DraftButton personId={person.id} hasDraft={Boolean(latest)} allowed={aiConsent} />
               </div>
@@ -155,9 +155,19 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                   <PathwaysDisplay applicantName={name} generated={{ pathways: latest.pathways, seedObservations: [] }} />
                   <div className="text-center">
                     {latest.status === "approved" ? (
-                      <p className="text-sm text-[var(--color-navy-ink)]">Reviewed and signed by {latest.approved_by}, {latest.approved_at?.slice(0, 10)}.</p>
+                      <p className="text-sm text-[var(--color-navy-ink)]">
+                        Reviewed and signed by {latest.approved_by}, {latest.approved_at?.slice(0, 10)}.{" "}
+                        <Link href={`/pathway/${person.id}`} className="font-semibold underline">
+                          Open it with {person.preferred_name || person.first_name} →
+                        </Link>
+                      </p>
                     ) : (
-                      <ApproveButton draftId={latest.id} personId={person.id} />
+                      <div className="space-y-3">
+                        <EditPathwaysPanel key={latest.id} draftId={latest.id} personId={person.id} pathways={latest.pathways} />
+                        <div>
+                          <ApproveButton draftId={latest.id} personId={person.id} />
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
