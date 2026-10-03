@@ -4,7 +4,9 @@ import path from "path";
 /**
  * Blackbaud SKY API (School) → enrollments.
  *
- * Live mode fetches ONE user at a time by id (GET /school/v1/users/{id}) for
+ * Live mode fetches ONE user at a time by id (GET /school/v1/users/extended/{id},
+ * whose `student_info` carries grad_year and grade_level; the basic
+ * /users/{id} has neither) for
  * allowlisted pilot participants only — it never lists the school.
  * Needs BLACKBAUD_SUBSCRIPTION_KEY (developer.blackbaud.com) and a SKY access
  * token from "Connect Blackbaud" on /pilot (lib/sor/blackbaud-auth.ts), which
@@ -33,13 +35,21 @@ const pick = (o: Raw | undefined, ...keys: string[]) => {
   return null;
 };
 const num = (v: unknown) => (v == null || v === "" || isNaN(Number(v)) ? null : Number(v));
+/** A grade from 9, "9", "09" or a description like "9th Grade" / "Grade 10". */
+const gradeNum = (v: unknown) => {
+  if (typeof v === "number") return v;
+  const m = typeof v === "string" ? /\b(\d{1,2})(?:st|nd|rd|th)?\b/i.exec(v) : null;
+  return m ? Number(m[1]) : null;
+};
 
 export function mapBlackbaudUser(raw: Raw): { record: BlackbaudRecord; missing: string[] } {
   const info = (raw.student_info ?? raw.student ?? {}) as Raw;
   const record: BlackbaudRecord = {
     externalId: String(raw.id),
     preferredName: (pick(raw, "preferred_name", "nick_name") as string) ?? null,
-    grade: num(pick(info, "grade_level", "grade") ?? pick(raw, "grade_level", "grade")),
+    grade:
+      gradeNum(pick(info, "grade_level", "grade") ?? pick(raw, "grade_level", "grade")) ??
+      gradeNum(pick(info, "grade_level_description") ?? pick(raw, "grade_level_description")),
     gradYear: num(pick(info, "grad_year", "class_of") ?? pick(raw, "grad_year", "class_of")),
     advisorName: (pick(info, "advisor_name") ?? pick(raw, "advisor_name")) as string | null,
     enrolledSince: (pick(info, "enroll_date") ?? pick(raw, "enroll_date")) as string | null,
@@ -92,6 +102,16 @@ async function skyError(res: Response): Promise<Error> {
   return new Error(`Blackbaud SKY ${res.status}: ${hint}.${why ? ` Blackbaud says: ${why}` : ""}`);
 }
 
+/** The extended user record (student_info with grad year and grade). If this
+ *  account's role can't read the extended route, fall back to the basic one,
+ *  which still links names but has no grade or class year. */
+async function fetchUser(id: string, token: string): Promise<Response> {
+  const get = (path: string) => fetch(`${SKY_BASE}${path}${encodeURIComponent(id)}`, { headers: skyHeaders(token), cache: "no-store" });
+  const extended = await get("/users/extended/");
+  if (extended.status !== 401 && extended.status !== 403) return extended;
+  return get("/users/");
+}
+
 /** Every key path in an object, e.g. "student_info.grad_year". Names only. */
 function keyPaths(o: Raw, prefix = "", depth = 0): string[] {
   return Object.entries(o).flatMap(([k, v]) =>
@@ -103,7 +123,7 @@ function keyPaths(o: Raw, prefix = "", depth = 0): string[] {
  *  found, never values. Meant for an admin's OWN staff record, to prove the
  *  connection and check the field map before any student is pulled. */
 export async function checkBlackbaudUser(id: string, token: string): Promise<{ found: boolean; keys: string[]; mapped: string[] }> {
-  const res = await fetch(`${SKY_BASE}/users/${encodeURIComponent(id)}`, { headers: skyHeaders(token), cache: "no-store" });
+  const res = await fetchUser(id, token);
   if (res.status === 404) return { found: false, keys: [], mapped: [] };
   if (!res.ok) throw await skyError(res);
   const raw = (await res.json()) as Raw;
@@ -119,14 +139,16 @@ export async function fetchLiveBlackbaud(
   const records: BlackbaudRecord[] = [];
   const warnings: string[] = [];
   for (const id of allowlist) {
-    const res = await fetch(`${SKY_BASE}/users/${encodeURIComponent(id)}`, { headers: skyHeaders(token), cache: "no-store" });
+    const res = await fetchUser(id, token);
     if (res.status === 404) continue;
     if (!res.ok) throw await skyError(res);
     const raw = (await res.json()) as Raw;
     const { record, missing } = mapBlackbaudUser(raw);
     if (missing.length) {
       warnings.push(
-        `Blackbaud user ${id}: no ${missing.join("/")} in response; keys seen: ${Object.keys(raw).join(", ")}`
+        `Blackbaud user ${id}: no ${missing.join("/")} in response${
+          raw.student_info ? "" : " (no student_info: not a student record, or your Blackbaud role can't read /users/extended)"
+        }; keys seen: ${Object.keys(raw).join(", ")}`
       );
     }
     records.push(record);
