@@ -44,6 +44,15 @@ function hasConsent(profile: PersonProfile, scope: ConsentScope): boolean {
   return profile.person.is_sample || profile.consents.some((c) => c.scope === scope && !c.revoked_at);
 }
 
+/** A real student's details reach Claude only when BOTH the family consented
+ *  (ai_drafting) AND the school has switched real-student AI on
+ *  (AI_REAL_STUDENTS=on), which waits on confirming that Pacifica's Anthropic
+ *  terms cover student data. Sample students and the fictional demo only need
+ *  the key, so an API key set for a demo can't reach a real record by itself. */
+const realStudentAiOn = () => process.env.AI_REAL_STUDENTS?.trim() === "on";
+const AI_OFF_FOR_REAL =
+  "AI for real students is switched off until the school confirms Anthropic's terms cover student data (AI_REAL_STUDENTS).";
+
 // ---------------------------------------------------------------- auth
 
 /** Only same-site paths, so a crafted ?next= can't bounce staff elsewhere. */
@@ -539,6 +548,16 @@ export async function draftCaptureAction(
         aiNote: "No AI-drafting consent for this student. Saving your words as spoken.",
       };
     }
+    if (!profile.person.is_sample && !realStudentAiOn()) {
+      return {
+        ok: true,
+        cleanText: transcript.trim(),
+        tags: [],
+        disciplineFlag: null,
+        aiUsed: false,
+        aiNote: `${AI_OFF_FOR_REAL} Saving your words as spoken.`,
+      };
+    }
     const draft = await draftObservation(transcript);
     return {
       ok: true,
@@ -622,6 +641,9 @@ export async function draftPathwaysAction(personId: string): Promise<Result> {
     if (!hasConsent(profile, "ai_drafting")) {
       return { ok: false, error: "No AI-drafting consent on file for this student." };
     }
+    if (!profile.person.is_sample && !realStudentAiOn()) {
+      return { ok: false, error: `${AI_OFF_FOR_REAL} Sample students can be drafted now.` };
+    }
     const input = toRuakhInput(profile);
     const draft = await draftRuakhPathways(input);
     const sources = [
@@ -642,6 +664,95 @@ export async function draftPathwaysAction(personId: string): Promise<Result> {
     if (error) return fail(error);
     await logAccess(staff, "draft_pathways", personId, { usedFallback: draft.usedFallback, sources });
     revalidatePath(`/pilot/people/${personId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Staff edit a pathway draft before signing it (principle #1: humans
+ *  author, AI drafts). Signed drafts are locked; draft again to change one. */
+export async function updateDraftPathwaysAction(input: {
+  draftId: string;
+  personId: string;
+  pathways: { name: string; firstSemester: string; mentorArchetype: string; stretchChallenge: string; fourYearHorizon: string[] }[];
+}): Promise<Result> {
+  try {
+    const staff = await requireRole("admin", "admissions");
+    const clip = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
+    const pathways = input.pathways.slice(0, 3).map((p) => ({
+      name: clip(p.name, 120),
+      firstSemester: clip(p.firstSemester, 1500),
+      mentorArchetype: clip(p.mentorArchetype, 800),
+      stretchChallenge: clip(p.stretchChallenge, 800),
+      fourYearHorizon: (Array.isArray(p.fourYearHorizon) ? p.fourYearHorizon : []).map((h) => clip(h, 300)).filter(Boolean).slice(0, 6),
+    }));
+    if (pathways.length !== 3 || pathways.some((p) => !p.name || !p.firstSemester)) {
+      throw new Error("Each of the three pathways needs a name and a first-semester description.");
+    }
+    const supabase = await getSorClient();
+    const { data, error } = await supabase
+      .from("pathway_drafts")
+      .update({ pathways })
+      .eq("id", input.draftId)
+      .eq("person_id", input.personId)
+      .eq("status", "draft")
+      .select("id");
+    if (error) return fail(error);
+    if (!data?.length) throw new Error("Only an unsigned draft can be edited. Draft again to change a signed one.");
+    await logAccess(staff, "edit_draft", input.personId, { draftId: input.draftId });
+    revalidatePath(`/pilot/people/${input.personId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** In a signed-pathway conversation (/pathway/[personId]) the student picks
+ *  the possibility that excites them. Saved as an observation by the adult
+ *  who's signed in, so it's theirs, consent-checked by the database, and
+ *  feeds the next draft. Only for a SIGNED draft of that same student. */
+export async function recordPathwayChoiceAction(input: {
+  personId: string;
+  draftId: string;
+  pathwayIndex: number;
+  note: string;
+}): Promise<Result> {
+  try {
+    const staff = await requireRole("admin", "admissions");
+    const supabase = await getSorClient();
+    const { data: draft } = await supabase
+      .from("pathway_drafts")
+      .select("id, person_id, status, pathways")
+      .eq("id", input.draftId)
+      .maybeSingle();
+    if (!draft || draft.person_id !== input.personId || draft.status !== "approved") {
+      throw new Error("That pathway isn't signed, so it can't be chosen yet.");
+    }
+    const chosen = (draft.pathways as { name?: string }[])[input.pathwayIndex];
+    if (!chosen?.name) throw new Error("Choose one of the three pathways.");
+    const { data: person } = await supabase
+      .from("people")
+      .select("first_name, preferred_name")
+      .eq("id", input.personId)
+      .maybeSingle();
+    const first = person?.preferred_name || person?.first_name || "They";
+    const note = input.note.trim().slice(0, 500);
+    const body =
+      `In our pathway conversation, ${first} chose "${chosen.name}" as the possibility that excites them most.` +
+      (note ? ` In their words: "${note}"` : "");
+    const { error } = await supabase.from("observations").insert({
+      person_id: input.personId,
+      author_id: staff.user_id,
+      author_name: staff.display_name,
+      source: "text",
+      raw_text: body,
+      body,
+      tags: ["Sense of Calling"],
+    });
+    if (error) return fail(error);
+    await logAccess(staff, "pathway_choice", input.personId, { draftId: input.draftId, pathwayIndex: input.pathwayIndex });
+    revalidatePath(`/pilot/people/${input.personId}`);
     return { ok: true };
   } catch (e) {
     return fail(e);

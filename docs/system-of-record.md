@@ -73,6 +73,31 @@ These are for school leadership, not code:
 
 Then an admin records the sign-off on `/pilot`. That flip is logged too.
 
+## Signed pathways with students
+
+1. On a student's page, **Draft** (needs `ai_drafting` consent, and for a real
+   student `AI_REAL_STUDENTS=on`; see below). Read it, then **Edit the pathways
+   before signing** to change any word. The portrait stays staff-only.
+2. **Sign** it. Signed drafts are locked; draft again to change one.
+3. **Open it with [name]** → `/pathway/[personId]`. This is a full-screen,
+   family-facing view of the three signed pathways, with no staff menus,
+   opened by staff and explored **in person** with the student or family.
+   Sign-in is required, and there is no student or family login. Admin and
+   admissions can open it, following the RLS on `pathway_drafts`. Teacher
+   access would be a policy change.
+4. The student taps **This one excites me** (with an optional sentence in
+   their own words). It's saved as an observation by the signed-in adult,
+   tagged *Sense of Calling* and consent-checked by the database, so it
+   feeds the next draft.
+
+**AI for real students is a separate switch.** `ANTHROPIC_API_KEY` alone runs
+AI for the fictional demo and the six sample students only. A real student's
+details reach Claude only when the family consented (`ai_drafting`) **and**
+`AI_REAL_STUDENTS=on`. Turn that on only after confirming that Pacifica's
+Anthropic terms cover student data (no training on inputs, FERPA-aligned).
+Until then, capture saves real students' notes as spoken, and drafting says
+why it can't.
+
 ## Starting the real-student beta
 
 For a few of seno's own students whose parents have approved. Parent approval

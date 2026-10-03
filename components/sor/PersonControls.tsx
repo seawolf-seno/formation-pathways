@@ -7,6 +7,7 @@ import {
   recordConsentAction,
   revokeConsentAction,
   setExternalIdsAction,
+  updateDraftPathwaysAction,
   withdrawParticipantAction,
 } from "@/lib/sor/actions";
 import { CONSENT_SCOPES, type Consent } from "@/lib/sor/types";
@@ -191,5 +192,86 @@ export function ExternalIdsPanel({
       <button disabled={pending} className={button}>{pending ? "Saving…" : "Save ids"}</button>
       {msg && <p className={`text-xs ${msg.ok ? "text-[var(--color-ink-muted)]" : "text-red-700"}`}>{msg.text}</p>}
     </form>
+  );
+}
+
+type EditablePathway = {
+  name: string;
+  firstSemester: string;
+  mentorArchetype: string;
+  stretchChallenge: string;
+  fourYearHorizon: string[];
+};
+
+/** Edit an unsigned draft's three pathways before signing it. */
+export function EditPathwaysPanel({
+  draftId,
+  personId,
+  pathways,
+}: {
+  draftId: string;
+  personId: string;
+  pathways: EditablePathway[];
+}) {
+  const [open, setOpen] = useState(false);
+  const [rows, setRows] = useState(() => pathways.map((p) => ({ ...p, horizon: p.fourYearHorizon.join("\n") })));
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const set = (i: number, key: keyof EditablePathway | "horizon", value: string) =>
+    setRows((r) => r.map((row, j) => (j === i ? { ...row, [key]: value } : row)));
+
+  if (!open) {
+    return (
+      <button className={quiet} onClick={() => setOpen(true)}>
+        Edit the pathways before signing
+      </button>
+    );
+  }
+  const save = () =>
+    start(async () => {
+      const res = await updateDraftPathwaysAction({
+        draftId,
+        personId,
+        pathways: rows.map(({ horizon, ...p }) => ({ ...p, fourYearHorizon: horizon.split("\n") })),
+      });
+      if (res.ok) {
+        setError(null);
+        setOpen(false);
+      } else setError(res.error);
+    });
+  const area = `${input} mt-1 leading-relaxed`;
+  return (
+    <div className="space-y-5 rounded-xl bg-white p-5 text-left">
+      {rows.map((row, i) => (
+        <fieldset key={i} className="space-y-2 border-t border-[var(--color-border)] pt-4 first:border-0 first:pt-0">
+          <legend className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Pathway {i + 1}</legend>
+          <label className="block text-xs text-[var(--color-ink-muted)]">
+            Name
+            <input value={row.name} onChange={(e) => set(i, "name", e.target.value)} className={`${input} mt-1`} />
+          </label>
+          <label className="block text-xs text-[var(--color-ink-muted)]">
+            Next semester
+            <textarea value={row.firstSemester} onChange={(e) => set(i, "firstSemester", e.target.value)} rows={3} className={area} />
+          </label>
+          <label className="block text-xs text-[var(--color-ink-muted)]">
+            People to learn alongside (department only for real faculty)
+            <textarea value={row.mentorArchetype} onChange={(e) => set(i, "mentorArchetype", e.target.value)} rows={2} className={area} />
+          </label>
+          <label className="block text-xs text-[var(--color-ink-muted)]">
+            Room to stretch
+            <textarea value={row.stretchChallenge} onChange={(e) => set(i, "stretchChallenge", e.target.value)} rows={2} className={area} />
+          </label>
+          <label className="block text-xs text-[var(--color-ink-muted)]">
+            Beyond these four years (one per line)
+            <textarea value={row.horizon} onChange={(e) => set(i, "horizon", e.target.value)} rows={3} className={area} />
+          </label>
+        </fieldset>
+      ))}
+      <div className="flex gap-2">
+        <button disabled={pending} className={button} onClick={save}>{pending ? "Saving…" : "Save edits"}</button>
+        <button disabled={pending} className={quiet} onClick={() => setOpen(false)}>Cancel</button>
+      </div>
+      {error && <p className="text-sm text-red-700">{error}</p>}
+    </div>
   );
 }
