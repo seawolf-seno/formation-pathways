@@ -6,7 +6,8 @@ import { requestOrigin } from "@/lib/origin";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { draftObservation, draftRuakhPathways, type RuakhInput } from "@/lib/claude";
-import { FORMATION_TAGS, type FormationTag } from "@/lib/types";
+import { FORMATION_TAGS, type FormationTag, type GeneratedPathway } from "@/lib/types";
+import { sanitizeGlimpse, sanitizeMilestones } from "@/lib/pathway-journey";
 import { getSorClient } from "./supabase-server";
 import { getCaptureRoster, getPersonProfile, logAccess, requireStaff } from "./queries";
 import { matchPeople } from "./match";
@@ -675,18 +676,26 @@ export async function draftPathwaysAction(personId: string): Promise<Result> {
 export async function updateDraftPathwaysAction(input: {
   draftId: string;
   personId: string;
-  pathways: { name: string; firstSemester: string; mentorArchetype: string; stretchChallenge: string; fourYearHorizon: string[] }[];
+  pathways: GeneratedPathway[];
 }): Promise<Result> {
   try {
     const staff = await requireRole("admin", "admissions");
     const clip = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
-    const pathways = input.pathways.slice(0, 3).map((p) => ({
-      name: clip(p.name, 120),
-      firstSemester: clip(p.firstSemester, 1500),
-      mentorArchetype: clip(p.mentorArchetype, 800),
-      stretchChallenge: clip(p.stretchChallenge, 800),
-      fourYearHorizon: (Array.isArray(p.fourYearHorizon) ? p.fourYearHorizon : []).map((h) => clip(h, 300)).filter(Boolean).slice(0, 6),
-    }));
+    const pathways = input.pathways.slice(0, 3).map((p) => {
+      // Fewer than three complete milestones, or an empty glimpse, means
+      // "none": the journey visual then derives its steps.
+      const milestones = sanitizeMilestones(p.milestones);
+      const glimpse = sanitizeGlimpse(p.glimpse);
+      return {
+        name: clip(p.name, 120),
+        firstSemester: clip(p.firstSemester, 1500),
+        mentorArchetype: clip(p.mentorArchetype, 800),
+        stretchChallenge: clip(p.stretchChallenge, 800),
+        fourYearHorizon: (Array.isArray(p.fourYearHorizon) ? p.fourYearHorizon : []).map((h) => clip(h, 300)).filter(Boolean).slice(0, 6),
+        ...(milestones ? { milestones } : {}),
+        ...(glimpse ? { glimpse } : {}),
+      };
+    });
     if (pathways.length !== 3 || pathways.some((p) => !p.name || !p.firstSemester)) {
       throw new Error("Each of the three pathways needs a name and a first-semester description.");
     }

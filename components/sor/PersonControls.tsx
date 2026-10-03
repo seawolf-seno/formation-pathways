@@ -201,7 +201,12 @@ type EditablePathway = {
   mentorArchetype: string;
   stretchChallenge: string;
   fourYearHorizon: string[];
+  milestones?: { when: string; title: string; detail: string }[];
+  glimpse?: string;
 };
+type TextKey = "name" | "firstSemester" | "mentorArchetype" | "stretchChallenge" | "horizon" | "glimpse";
+type Milestone = { when: string; title: string; detail: string };
+const EMPTY_STEPS: Milestone[] = Array.from({ length: 4 }, () => ({ when: "", title: "", detail: "" }));
 
 /** Edit an unsigned draft's three pathways before signing it. */
 export function EditPathwaysPanel({
@@ -214,11 +219,28 @@ export function EditPathwaysPanel({
   pathways: EditablePathway[];
 }) {
   const [open, setOpen] = useState(false);
-  const [rows, setRows] = useState(() => pathways.map((p) => ({ ...p, horizon: p.fourYearHorizon.join("\n") })));
+  const [rows, setRows] = useState(() =>
+    pathways.map((p) => ({
+      name: p.name,
+      firstSemester: p.firstSemester,
+      mentorArchetype: p.mentorArchetype,
+      stretchChallenge: p.stretchChallenge,
+      horizon: p.fourYearHorizon.join("\n"),
+      glimpse: p.glimpse ?? "",
+      // Always four editable steps; blank ones are dropped on save.
+      steps: [...(p.milestones ?? []), ...EMPTY_STEPS].slice(0, Math.max(4, p.milestones?.length ?? 0)),
+    }))
+  );
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
-  const set = (i: number, key: keyof EditablePathway | "horizon", value: string) =>
+  const set = (i: number, key: TextKey, value: string) =>
     setRows((r) => r.map((row, j) => (j === i ? { ...row, [key]: value } : row)));
+  const setStep = (i: number, s: number, key: keyof Milestone, value: string) =>
+    setRows((r) =>
+      r.map((row, j) =>
+        j === i ? { ...row, steps: row.steps.map((st, k) => (k === s ? { ...st, [key]: value } : st)) } : row
+      )
+    );
 
   if (!open) {
     return (
@@ -232,7 +254,12 @@ export function EditPathwaysPanel({
       const res = await updateDraftPathwaysAction({
         draftId,
         personId,
-        pathways: rows.map(({ horizon, ...p }) => ({ ...p, fourYearHorizon: horizon.split("\n") })),
+        pathways: rows.map(({ horizon, steps, glimpse, ...p }) => ({
+          ...p,
+          fourYearHorizon: horizon.split("\n"),
+          milestones: steps.filter((st) => st.when.trim() || st.title.trim() || st.detail.trim()),
+          glimpse,
+        })),
       });
       if (res.ok) {
         setError(null);
@@ -264,6 +291,41 @@ export function EditPathwaysPanel({
           <label className="block text-xs text-[var(--color-ink-muted)]">
             Beyond these four years (one per line)
             <textarea value={row.horizon} onChange={(e) => set(i, "horizon", e.target.value)} rows={3} className={area} />
+          </label>
+          <div className="space-y-2 rounded-lg bg-[var(--color-canvas)] p-3">
+            <p className="text-xs text-[var(--color-ink-muted)]">
+              The road, step by step (shown as the animated journey; at least three complete steps, or leave blank to let the page build them from the text above)
+            </p>
+            {row.steps.map((st, s) => (
+              <div key={s} className="grid gap-2 sm:grid-cols-[9rem_1fr]">
+                <input
+                  value={st.when}
+                  onChange={(e) => setStep(i, s, "when", e.target.value)}
+                  placeholder={["Next semester", "This year", "Next year", "Senior year"][s] ?? "When"}
+                  aria-label={`Step ${s + 1}: when`}
+                  className={input}
+                />
+                <input
+                  value={st.title}
+                  onChange={(e) => setStep(i, s, "title", e.target.value)}
+                  placeholder="Short title"
+                  aria-label={`Step ${s + 1}: title`}
+                  className={input}
+                />
+                <textarea
+                  value={st.detail}
+                  onChange={(e) => setStep(i, s, "detail", e.target.value)}
+                  rows={2}
+                  placeholder="One sentence"
+                  aria-label={`Step ${s + 1}: detail`}
+                  className={`${area} sm:col-span-2`}
+                />
+              </div>
+            ))}
+          </div>
+          <label className="block text-xs text-[var(--color-ink-muted)]">
+            A glimpse (2–3 sentences, &quot;Picture a Thursday next spring…&quot;; an invitation, not a promise)
+            <textarea value={row.glimpse} onChange={(e) => set(i, "glimpse", e.target.value)} rows={3} className={area} />
           </label>
         </fieldset>
       ))}

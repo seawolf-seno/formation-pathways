@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { withJourneyFields } from "./pathway-journey";
 import fs from "fs";
 import path from "path";
 import {
@@ -332,7 +333,7 @@ export async function draftAdmissionsPathways(
       : answerBlock;
     const message = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 2200,
+      max_tokens: 3600,
       system,
       messages: [{ role: "user", content: user }],
     });
@@ -347,7 +348,7 @@ export async function draftAdmissionsPathways(
     };
 
     const pathways = Array.isArray(parsed.pathways)
-      ? parsed.pathways.filter(isGeneratedPathway).slice(0, 3)
+      ? parsed.pathways.filter(isGeneratedPathway).slice(0, 3).map(withJourneyFields)
       : [];
 
     const seedObservations: SeedObservationDraft[] = Array.isArray(
@@ -687,7 +688,7 @@ export async function draftRuakhPathways(input: RuakhInput): Promise<RuakhDraft>
       readPrompt("ruakh-today.txt") + "\n\n---\n\n" + readPrompt("pacifica-context.txt");
     const message = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: 2500,
+      max_tokens: 3800,
       system,
       messages: [{ role: "user", content: JSON.stringify(input, null, 2) }],
     });
@@ -695,7 +696,7 @@ export async function draftRuakhPathways(input: RuakhInput): Promise<RuakhDraft>
     if (!textBlock || textBlock.type !== "text") return fallback;
     const parsed = extractJson(textBlock.text) as { portrait?: unknown; pathways?: unknown };
     const pathways = Array.isArray(parsed.pathways)
-      ? parsed.pathways.filter(isGeneratedPathway).slice(0, 3)
+      ? parsed.pathways.filter(isGeneratedPathway).slice(0, 3).map(withJourneyFields)
       : [];
     if (typeof parsed.portrait !== "string" || pathways.length < 3) return fallback;
     return { portrait: parsed.portrait, pathways, usedFallback: false };

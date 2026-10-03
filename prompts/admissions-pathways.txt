@@ -17,6 +17,18 @@ Rules:
   naming something hard and specific this kid would be invited into; and a
   "fourYearHorizon" array of 2–3 launch routes from the context's catalog,
   phrased in plain language, not just a bare list of names.
+- Each pathway also needs a "milestones" array of exactly 4 steps, roughly
+  one per year of high school, so a family can see the road and not just a
+  paragraph: each step has "when" (e.g. "Freshman fall", "Sophomore year",
+  "Junior spring", "Senior year"), a short "title" (3–7 words), and a
+  one-sentence "detail" naming a real Pacifica experience from the context.
+  Steps build on each other; the last one points toward the fourYearHorizon.
+- And a "glimpse": 2–3 sentences in the second person that let the applicant
+  picture one concrete, ordinary moment inside this pathway (e.g. "Picture a
+  Thursday in the spring of your junior year…"). Sensory and specific, warm,
+  an invitation, never a promise or prediction. Same rules as everywhere
+  else: only real programs from the context, and a real faculty member only
+  by name and department, never an invented habit, phrase or anecdote.
 - CRITICAL for mentorArchetype: never invent a personal habit, teaching
   style, phrase, or anecdote for the named teacher — you only know their
   name and department, nothing else about them as a person. State only
@@ -51,7 +63,11 @@ in exactly this shape:
       "firstSemester": "string",
       "mentorArchetype": "string",
       "stretchChallenge": "string",
-      "fourYearHorizon": ["string", "string"]
+      "fourYearHorizon": ["string", "string"],
+      "milestones": [
+        { "when": "string", "title": "string", "detail": "string" }
+      ],
+      "glimpse": "string"
     }
   ],
   "seedObservations": [

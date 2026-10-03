@@ -1,0 +1,309 @@
+/* PathwayJourney: a pathway drawn as a road. Brand: navy #16324F, Pacific
+   blue #8FB3D9, gold #C9A24B (darkened to #ad863d for text contrast). */
+.journey {
+  --j-ink: #16324f;
+  --j-muted: #526474;
+  --j-gold: #ad863d;
+  --j-gold-soft: #c9a24b;
+  --j-sky: #8fb3d9;
+  --j-paper: #fffdf8;
+  --j-beat: 420ms;
+  color: var(--j-ink);
+  display: grid;
+  gap: 28px;
+  min-width: 0;
+}
+
+/* Everything waits, fully hidden, until the journey scrolls into view. */
+.journey:not(.is-in-view) *,
+.journey:not(.is-in-view) *::after {
+  animation-play-state: paused !important;
+}
+
+/* ---------- the road */
+.journey-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.journey-step {
+  position: relative;
+  padding: 0 0 30px 46px;
+  min-width: 0;
+  opacity: 0;
+  transform: translateY(10px);
+  animation: journey-rise 600ms cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation-delay: calc(var(--i) * var(--j-beat) + 120ms);
+}
+.journey-step:last-child {
+  padding-bottom: 6px;
+}
+.journey-node {
+  position: absolute;
+  left: 8px;
+  top: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--j-paper);
+  border: 2px solid var(--j-gold-soft);
+  box-shadow: 0 0 0 5px rgba(201, 162, 75, 0.14);
+  transform: scale(0.4);
+  animation: journey-pop 520ms cubic-bezier(0.3, 1.5, 0.5, 1) forwards;
+  animation-delay: calc(var(--i) * var(--j-beat) + 120ms);
+}
+.journey-node::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 50%;
+  background: var(--j-ink);
+}
+.journey-seg {
+  position: absolute;
+  left: 9px;
+  top: 27px;
+  width: 20px;
+  /* from under this node to the top of the next one */
+  height: calc(100% - 24px);
+  overflow: visible;
+}
+.journey-seg path,
+.journey-branches path {
+  fill: none;
+  stroke: var(--j-sky);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: journey-draw 520ms ease-in-out forwards;
+  animation-delay: calc(var(--i) * var(--j-beat) + 380ms);
+}
+.journey-when {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--j-gold);
+}
+.journey-title {
+  margin: 0 0 6px;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 22px;
+  line-height: 1.25;
+}
+.journey-detail {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--j-muted);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- where the road branches */
+.journey-horizon {
+  opacity: 0;
+  animation: journey-rise 600ms ease forwards;
+  animation-delay: calc(var(--i) * var(--j-beat) + 120ms);
+}
+/* The label sits beside the stem, so the trail runs unbroken into the branches. */
+.journey-horizon {
+  position: relative;
+  margin-top: -6px;
+}
+.journey-horizon > .journey-when {
+  position: absolute;
+  top: 4px;
+  left: 46px;
+}
+.journey-branches {
+  display: block;
+  width: 100%;
+  height: 48px;
+  overflow: visible;
+}
+.journey-branches path {
+  animation-delay: calc(var(--i) * var(--j-beat) + 260ms);
+}
+.journey-roads {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  gap: 12px;
+}
+.journey-road {
+  border: 1px solid rgba(22, 50, 79, 0.16);
+  background: var(--j-paper);
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-size: 13px;
+  line-height: 1.55;
+  text-align: center;
+  opacity: 0;
+  transform: translateY(8px);
+  animation: journey-rise 520ms ease forwards;
+  animation-delay: calc(var(--i) * var(--j-beat) + 120ms);
+  overflow-wrap: anywhere;
+}
+
+/* ---------- a glimpse of one ordinary day */
+.journey-glimpse {
+  margin: 0;
+  position: relative;
+  border-radius: 18px;
+  padding: 26px 26px 24px 30px;
+  background: linear-gradient(135deg, #16324f 0%, #1f4569 100%);
+  color: #f8f5ed;
+  box-shadow: 0 18px 40px -24px rgba(22, 50, 79, 0.7);
+  opacity: 0;
+  transform: translateY(10px);
+  animation: journey-rise 700ms ease forwards;
+  animation-delay: calc(var(--i) * var(--j-beat) + 120ms);
+}
+.journey-glimpse::before {
+  content: "“";
+  position: absolute;
+  top: -6px;
+  right: 22px;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 96px;
+  line-height: 1;
+  color: rgba(201, 162, 75, 0.45);
+}
+.journey-glimpse figcaption {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--j-gold-soft);
+  margin-bottom: 10px;
+}
+.journey-glimpse blockquote {
+  margin: 0;
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 19px;
+  line-height: 1.6;
+  font-style: italic;
+}
+
+/* ---------- people + stretch (only when milestones are the pathway's own) */
+.journey-companions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  opacity: 0;
+  animation: journey-rise 600ms ease forwards;
+  animation-delay: calc(var(--i) * var(--j-beat) + 120ms);
+}
+.journey-companions > div {
+  border-top: 2px solid var(--j-sky);
+  padding-top: 12px;
+}
+
+@keyframes journey-rise {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes journey-pop {
+  to {
+    transform: scale(1);
+  }
+}
+@keyframes journey-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ---------- phones: one column, a straight stem instead of branches */
+@media (max-width: 600px) {
+  .journey-step {
+    padding-left: 40px;
+  }
+  .journey-node {
+    left: 4px;
+  }
+  .journey-seg {
+    left: 5px;
+  }
+  .journey-title {
+    font-size: 20px;
+  }
+  .journey-branches {
+    display: none;
+  }
+  .journey-horizon {
+    margin-top: 0;
+  }
+  .journey-horizon > .journey-when {
+    position: static;
+    margin: 0 0 10px;
+  }
+  .journey-roads {
+    grid-template-columns: 1fr;
+  }
+  .journey-road {
+    text-align: left;
+  }
+  .journey-companions {
+    grid-template-columns: 1fr;
+  }
+  .journey-glimpse blockquote {
+    font-size: 17px;
+  }
+}
+
+/* ---------- no motion: everything simply present */
+.journey--still .journey-step,
+.journey--still .journey-node,
+.journey--still .journey-horizon,
+.journey--still .journey-road,
+.journey--still .journey-glimpse,
+.journey--still .journey-companions,
+.journey--still .journey-seg path,
+.journey--still .journey-branches path {
+  animation: none;
+  opacity: 1;
+  transform: none;
+  stroke-dashoffset: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .journey .journey-step,
+  .journey .journey-node,
+  .journey .journey-horizon,
+  .journey .journey-road,
+  .journey .journey-glimpse,
+  .journey .journey-companions,
+  .journey .journey-seg path,
+  .journey .journey-branches path {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    stroke-dashoffset: 0;
+  }
+}
+@media print {
+  .journey .journey-step,
+  .journey .journey-node,
+  .journey .journey-horizon,
+  .journey .journey-road,
+  .journey .journey-glimpse,
+  .journey .journey-companions,
+  .journey .journey-seg path,
+  .journey .journey-branches path {
+    animation: none;
+    opacity: 1;
+    transform: none;
+    stroke-dashoffset: 0;
+  }
+  .journey-glimpse {
+    background: none;
+    color: var(--j-ink);
+    border: 1px solid var(--j-ink);
+  }
+}
