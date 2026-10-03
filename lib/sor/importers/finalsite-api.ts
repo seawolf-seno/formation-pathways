@@ -380,6 +380,7 @@ const SETUP_LISTS: Record<string, (o: Raw) => unknown[]> = {
   "checklist items": (o) => (Array.isArray(o.checklist_answers) ? o.checklist_answers.map((c: Raw) => c?.name) : []),
   "custom fields": (o) => (Array.isArray(o.custom_attributes) ? o.custom_attributes.map((c: Raw) => c?.field_name) : []),
   "track fields": (o) => (Array.isArray(o.track_attributes) ? o.track_attributes.map((c: Raw) => c?.field_name) : []),
+  "id fields": (o) => (Array.isArray(o.id_attributes) ? o.id_attributes.map((c: Raw) => c?.field_name) : []),
   status: (o) => [o.status],
   enrollment_type: (o) => [o.enrollment_type],
   review_decision: (o) => [o.review_decision],
