@@ -73,7 +73,7 @@ export function GatePanel({ settings, isAdmin }: { settings: PilotSettings; isAd
 }
 
 const SOURCES: { system: SourceSystem; label: string; liveHint: string }[] = [
-  { system: "finalsite", label: "Finalsite", liveHint: "Upload a report export (CSV) for a live import" },
+  { system: "finalsite", label: "Finalsite", liveHint: "Live from the Finalsite API when configured; or upload a report export (CSV)" },
   { system: "blackbaud", label: "Blackbaud", liveHint: "Live while Blackbaud is connected (above)" },
   { system: "canvas", label: "Canvas", liveHint: "Live when Canvas token + pilot course ids are set" },
 ];
@@ -164,7 +164,7 @@ export function ImportPanel({ live }: { live: Record<SourceSystem, boolean> }) {
             <div className="flex items-center justify-between">
               <p className="font-medium text-[var(--color-navy-ink)]">{label}</p>
               <span className="rounded-full bg-[var(--color-pacific-light)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-navy-ink)]">
-                {system === "finalsite" ? "sample / upload" : live[system] ? "live" : "sample"}
+                {live[system] ? "live" : system === "finalsite" ? "sample / upload" : "sample"}
               </span>
             </div>
             <p className="mt-1 text-xs text-[var(--color-ink-muted)]">{liveHint}</p>

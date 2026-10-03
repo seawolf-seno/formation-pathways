@@ -451,3 +451,123 @@ export async function checkFinalsiteConnection(currentEntryYear: number): Promis
     season: { schoolYear: sy?.name ?? null, newFamilies: seasonal.length },
   };
 }
+
+// ---------------------------------------------------------- pilot students
+//
+// The per-student import for the consented pilot (replaces the CSV upload when
+// the API is configured). Reads the current and next school years' contacts,
+// keeps ONLY allowlisted pilot students, and maps an explicit field allowlist
+// agreed with seno 2026-10-02. Everyone else is dropped as soon as they're
+// seen, like non-pilot rows in a CSV. Nothing is fetched for anyone without
+// import_records consent: they're not on the allowlist.
+//
+// Never imported, by design: parent questionnaire answers (bsr_prnt_*), family
+// circumstances and custody, income / net worth / home value, financial aid,
+// race, religion, language, GPA (no numbers on a student), addresses, phones,
+// birthplace. Adding a field means adding it below, on purpose.
+
+/** The student's own words: imported as application responses. */
+export const STUDENT_RESPONSE_FIELDS = ["application_essay_1", "bsr_stdnt_q_1", "bsr_stdnt_q_2", "bsr_stdnt_q_3"] as const;
+/** What they're drawn to: imported as interests. */
+export const STUDENT_INTEREST_FIELDS = [
+  "inquiry_interests",
+  "inquiry_form_summarized_interests_ms",
+  "inquiry_interests_other_txt",
+  "sports_inquiry_interests_ms",
+] as const;
+
+export interface FinalsiteStudentRecord {
+  contactId: string;
+  entryYear: number | null;
+  enteringGrade: number | null;
+  status: string | null;
+  previousSchool: string | null;
+  interests: string[];
+  responses: { question: string; answer: string }[];
+}
+
+const textList = (v: unknown): string[] =>
+  (Array.isArray(v) ? v : typeof v === "string" ? v.split(/[;,\n]/) : [])
+    .filter((x): x is string => typeof x === "string")
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+/** Contact → only the allowlisted fields. */
+export function mapFinalsiteStudent(raw: Raw): FinalsiteStudentRecord {
+  const custom = new Map<string, Raw>(
+    (Array.isArray(raw.custom_attributes) ? (raw.custom_attributes as Raw[]) : [])
+      .filter((c) => c && typeof c.field_name === "string")
+      .map((c) => [c.field_name as string, c])
+  );
+  const responses = STUDENT_RESPONSE_FIELDS.flatMap((f) => {
+    const c = custom.get(f);
+    const answer = typeof c?.value === "string" ? c.value.trim().slice(0, 4000) : "";
+    if (!answer) return [];
+    const question = typeof c?.field_display_name === "string" && c.field_display_name.trim() ? c.field_display_name.trim() : f;
+    return [{ question, answer }];
+  });
+  const interests = [...new Set(STUDENT_INTEREST_FIELDS.flatMap((f) => textList(custom.get(f)?.value)))].slice(0, 30);
+  const grade = at(raw, "prospect_entry_grade.name");
+  const gradeMatch = typeof grade === "string" ? /\d{1,2}/.exec(grade) : null;
+  const prev = raw.previous_school_1 ?? custom.get("current_school")?.value;
+  return {
+    contactId: String(raw.id),
+    entryYear: toYear(at(raw, "prospect_entry_year.start_year")),
+    enteringGrade: gradeMatch ? Number(gradeMatch[0]) : null,
+    status: typeof raw.status === "string" ? raw.status : null,
+    previousSchool: typeof prev === "string" && prev.trim() ? prev.trim().slice(0, 200) : null,
+    interests,
+    responses,
+  };
+}
+
+/** The value of one id_attributes field (e.g. the SIS / Blackbaud user id). */
+function idAttribute(raw: Raw, fieldName: string): string | null {
+  const hit = (Array.isArray(raw.id_attributes) ? (raw.id_attributes as Raw[]) : []).find((a) => a?.field_name === fieldName);
+  const v = hit?.value;
+  return v == null || v === "" ? null : String(v).trim();
+}
+
+/** Start year of the school year containing `date` (Aug 1 → Jul 31). */
+const schoolYearOf = (date: Date) => (date.getUTCMonth() >= 7 ? date.getUTCFullYear() : date.getUTCFullYear() - 1);
+
+/**
+ * Pilot students from Finalsite, matched by Finalsite contact id, or (when
+ * FINALSITE_SIS_ID_FIELD names the id_attributes field holding the Blackbaud
+ * user id) by their Blackbaud id. Stops as soon as everyone is found.
+ */
+export async function fetchLiveFinalsiteStudents(want: {
+  contactIds: Set<string>;
+  blackbaudIds: Set<string>;
+}): Promise<{ matches: { by: "contact" | "blackbaud"; key: string; record: FinalsiteStudentRecord }[]; warnings: string[] }> {
+  const sisField = clean(process.env.FINALSITE_SIS_ID_FIELD);
+  const warnings: string[] = [];
+  const blackbaudIds = sisField ? want.blackbaudIds : new Set<string>();
+  if (!sisField && want.blackbaudIds.size) {
+    warnings.push(
+      `${want.blackbaudIds.size} student(s) have no Finalsite id. Add it on their page, or set FINALSITE_SIS_ID_FIELD to the Finalsite id field that holds the Blackbaud user id (see "id fields" in Check connection).`
+    );
+  }
+  const remaining = new Set([...want.contactIds].map((k) => `c:${k}`).concat([...blackbaudIds].map((k) => `b:${k}`)));
+  const matches: { by: "contact" | "blackbaud"; key: string; record: FinalsiteStudentRecord }[] = [];
+  if (!remaining.size) return { matches, warnings };
+
+  const now = schoolYearOf(new Date());
+  const years = await resolveSchoolYears([now, now + 1]);
+  for (const start of [now, now + 1]) {
+    const sy = years.get(start);
+    if (!sy || !remaining.size) continue;
+    for await (const items of pages(400, { school_year_id: sy.id })) {
+      for (const raw of items) {
+        const id = String(raw.id ?? "");
+        const bb = sisField ? idAttribute(raw, sisField) : null;
+        const key = remaining.has(`c:${id}`) ? `c:${id}` : bb && remaining.has(`b:${bb}`) ? `b:${bb}` : null;
+        if (!key) continue; // not on the pilot: dropped, never kept
+        remaining.delete(key);
+        matches.push({ by: key.startsWith("c:") ? "contact" : "blackbaud", key: key.slice(2), record: mapFinalsiteStudent(raw) });
+      }
+      if (!remaining.size) break;
+    }
+  }
+  return { matches, warnings };
+}
