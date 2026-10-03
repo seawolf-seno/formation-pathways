@@ -371,6 +371,14 @@ const APPLICANTS: SeedApplicant[] = [
             "an engineering-focused university research track",
             "a summer apprenticeship with a robotics or hardware startup",
           ],
+          milestones: [
+            { when: "Freshman fall", title: "Open something up", detail: "Join STEM Scholars and claim a bench in the Makers Space, where taking things apart is the assignment." },
+            { when: "Sophomore year", title: "Fly what you build", detail: "Build and rebuild with the Drone Club as it gets ready for the Aerial Drone Competition." },
+            { when: "Junior year", title: "Show it before it's finished", detail: "Bring a half-built robot to the i.Sight Festival and talk people through what isn't working yet." },
+            { when: "Senior year", title: "Hand off what you've learned", detail: "Lead a Makers Space project with younger students, then choose the road that fits what you've built." },
+          ],
+          glimpse:
+            "Picture a Thursday in the spring of your junior year. It's after school in the Makers Space, the drone's left motor is still stuttering, and two freshmen are watching you take it apart again, because you're the one who isn't afraid to open it up.",
         },
         {
           name: "Abuela's Engineer",
@@ -384,6 +392,14 @@ const APPLICANTS: SeedApplicant[] = [
             "a service-academy or vocational engineering track",
             "a selective university with a strong applied-engineering program",
           ],
+          milestones: [
+            { when: "Freshman fall", title: "Start with one real need", detail: "Sketch an assistive-device idea for your abuela's knees in the Makers Space, with real tools from day one." },
+            { when: "Sophomore year", title: "Do the math it takes", detail: "Use the problem-solving from your STEM Scholars math courses to make a prototype that actually holds weight." },
+            { when: "Junior year", title: "Build for more than one person", detail: "Test the design with Women in STEM's service projects, so it helps people beyond your own family." },
+            { when: "Senior year", title: "Share the plans", detail: "Present your 100 hours of STEM work to the community and choose where to keep building." },
+          ],
+          glimpse:
+            "Picture a Saturday morning at your abuela's kitchen table. She's testing the third version of the thing you built for her knees, and this time she doesn't hand it back. She asks if you can make two more for her friends.",
         },
         {
           name: "The One Who Sits Down",
@@ -397,6 +413,14 @@ const APPLICANTS: SeedApplicant[] = [
             "a selective college with strong community-engagement programs",
             "a gap-year fellowship focused on mentorship or service",
           ],
+          milestones: [
+            { when: "Freshman fall", title: "Notice who's on the edge", detail: "Go on the All-School Retreat, where small groups talk honestly about real life and faith." },
+            { when: "Sophomore year", title: "Make room at the table", detail: "Bring the habit you already have, sitting with the one who's alone, into weekly chapel and your small group." },
+            { when: "Junior year", title: "Lead a small group", detail: "Mentor a newer student the way you wished someone had for you in 7th grade." },
+            { when: "Senior year", title: "Pass it on", detail: "Help shape the retreat for the class behind you, then choose a road built around people." },
+          ],
+          glimpse:
+            "Picture the second night of the All-School Retreat. The fire is low, your small group has gone quiet, and you're the one who scoots over so the new kid has somewhere to sit. Nobody else noticed. You did.",
         },
       ],
       seedObservations: [
@@ -467,6 +491,14 @@ const APPLICANTS: SeedApplicant[] = [
             "a selective college with a strong debate or rhetoric program",
             "a ministry-track apprenticeship under a working pastor",
           ],
+          milestones: [
+            { when: "Sophomore fall", title: "Ask it out loud", detail: "Bring the question you were scared to raise into an Oxford-style seminar in the Center for Philosophy & Theology." },
+            { when: "Sophomore spring", title: "Go to the sources", detail: "Read the early Church fathers for real in Patristic Theology, not just for a debate." },
+            { when: "Junior year", title: "Stay in the room", detail: "Defend a position you hold in front of people who disagree, then keep talking afterward." },
+            { when: "Senior year", title: "Teach the conversation", detail: "Help younger students practice Intellectual Hospitality, then choose where to keep asking." },
+          ],
+          glimpse:
+            "Picture a Tuesday seminar in the spring of your junior year. Six chairs, one table, and a classmate who thinks you're wrong about something that matters. You lean in instead of out, because you've learned that asking out loud is where it gets real.",
         },
         {
           name: "Steelman",
@@ -480,6 +512,14 @@ const APPLICANTS: SeedApplicant[] = [
             "a research track in philosophy, theology, or rhetoric at a selective university",
             "a fellowship or program built around public discourse and civic debate",
           ],
+          milestones: [
+            { when: "Sophomore fall", title: "Argue the other side", detail: "Take a position you disagree with in your first seminar and build it as strongly as you can." },
+            { when: "Sophomore spring", title: "Put it on paper", detail: "Learn to build and take apart an argument in writing through your English coursework." },
+            { when: "Junior year", title: "Answer your own best critic", detail: "Write the strongest case against what you believe, then answer it honestly in Moral Philosophy." },
+            { when: "Senior year", title: "Take it public", detail: "Make the case in front of the Insight Speaker Series audience, then choose where to keep arguing well." },
+          ],
+          glimpse:
+            "Picture finishing a paper at the kitchen table that argues against your own view, and realizing it's the best thing you've written. Tomorrow you'll answer it, and you'll understand your own position better than you ever have.",
         },
         {
           name: "Unshaken, Not Unquestioned",
@@ -493,6 +533,14 @@ const APPLICANTS: SeedApplicant[] = [
             "a vocational-ministry track",
             "a selective college with a strong philosophy or religious-studies department",
           ],
+          milestones: [
+            { when: "Sophomore fall", title: "Say it to peers", detail: "Share what you only admitted alone last year, in your small group at the All-School Retreat." },
+            { when: "Sophomore spring", title: "Sit with the hard question", detail: "Work through it in theology courses built on Intellectual Hospitality, where doubt is worth staying with." },
+            { when: "Junior year", title: "Disagree on purpose", detail: "Seek out a classmate who sees God differently and stay curious instead of defensive." },
+            { when: "Senior year", title: "Be the safe person", detail: "Be someone a younger student can bring their doubt to in chapel and small groups, then choose your road." },
+          ],
+          glimpse:
+            "Picture walking out of chapel next to the classmate you argued with all semester. You still don't agree. You're both laughing anyway, and you realize the faith you were afraid would break has only grown roots.",
         },
       ],
       seedObservations: [

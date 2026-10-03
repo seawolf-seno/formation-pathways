@@ -4,6 +4,7 @@ import { PacificaLogo } from "@/components/PacificaLogo";
 import { useRef, useState } from "react";
 import type { GeneratedPathway } from "@/lib/types";
 import { ShareStudio, type ExistingShare } from "./ShareStudio";
+import { PathwayJourney } from "./PathwayJourney";
 import "./family-pathways.css";
 
 export function FamilyPathways({
@@ -138,48 +139,7 @@ export function FamilyPathways({
           </button>
           <span className="family-small">You choose what others see.</span>
         </div>
-        <div className="family-chapters">
-          <article>
-            <span className="family-chapter-mark" aria-hidden="true">
-              01
-            </span>
-            <div>
-              <h3>Your first semester</h3>
-              <p>{pathway.firstSemester}</p>
-            </div>
-          </article>
-          <article>
-            <span className="family-chapter-mark" aria-hidden="true">
-              02
-            </span>
-            <div>
-              <h3>People to learn alongside</h3>
-              <p>{pathway.mentorArchetype}</p>
-            </div>
-          </article>
-          <article>
-            <span className="family-chapter-mark" aria-hidden="true">
-              03
-            </span>
-            <div>
-              <h3>Room to stretch</h3>
-              <p>{pathway.stretchChallenge}</p>
-            </div>
-          </article>
-          <article>
-            <span className="family-chapter-mark" aria-hidden="true">
-              04
-            </span>
-            <div>
-              <h3>Beyond these four years</h3>
-              <ul>
-                {pathway.fourYearHorizon.map((route, i) => (
-                  <li key={i}>{route}</li>
-                ))}
-              </ul>
-            </div>
-          </article>
-        </div>
+        <PathwayJourney key={selected} pathway={pathway} mode="applicant" />
       </section>
       <section className="family-closing">
         <p className="family-eyebrow">A story still being written</p>

@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { PacificaLogo } from "@/components/PacificaLogo";
+import { PathwayJourney } from "@/components/PathwayJourney";
 import { recordPathwayChoiceAction } from "@/lib/sor/actions";
 import type { GeneratedPathway } from "@/lib/types";
 import "@/components/family-pathways.css";
@@ -148,40 +149,7 @@ export function SignedPathwayConversation({
             <span className="family-small">Talk it through together; there&apos;s no consent on file to save a note here.</span>
           )}
         </div>
-        <div className="family-chapters">
-          <article>
-            <span className="family-chapter-mark" aria-hidden="true">01</span>
-            <div>
-              <h3>Your next semester</h3>
-              <p>{pathway.firstSemester}</p>
-            </div>
-          </article>
-          <article>
-            <span className="family-chapter-mark" aria-hidden="true">02</span>
-            <div>
-              <h3>People to learn alongside</h3>
-              <p>{pathway.mentorArchetype}</p>
-            </div>
-          </article>
-          <article>
-            <span className="family-chapter-mark" aria-hidden="true">03</span>
-            <div>
-              <h3>Room to stretch</h3>
-              <p>{pathway.stretchChallenge}</p>
-            </div>
-          </article>
-          <article>
-            <span className="family-chapter-mark" aria-hidden="true">04</span>
-            <div>
-              <h3>Beyond these four years</h3>
-              <ul>
-                {pathway.fourYearHorizon.map((route, i) => (
-                  <li key={i}>{route}</li>
-                ))}
-              </ul>
-            </div>
-          </article>
-        </div>
+        <PathwayJourney key={selected} pathway={pathway} mode="student" />
       </section>
       <section className="family-closing">
         <p className="family-eyebrow">A story still being written</p>

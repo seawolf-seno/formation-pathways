@@ -82,12 +82,25 @@ export interface ApplicantAnswer {
   answer: string;
 }
 
+export interface PathwayMilestone {
+  /** e.g. "Freshman fall", "Junior year", "This spring". */
+  when: string;
+  title: string;
+  detail: string;
+}
+
 export interface GeneratedPathway {
   name: string;
   firstSemester: string;
   mentorArchetype: string;
   stretchChallenge: string;
   fourYearHorizon: string[];
+  /** Optional: about one step per year, for the journey visual. Older drafts
+   *  don't have it; lib/pathway-journey.ts derives steps instead. */
+  milestones?: PathwayMilestone[];
+  /** Optional: 2–3 sentences, second person, a concrete moment ("Picture a
+   *  Thursday in spring of junior year…"). An invitation, not a prediction. */
+  glimpse?: string;
 }
 
 import type { SparkResponse } from "./spark";

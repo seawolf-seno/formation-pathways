@@ -29,6 +29,18 @@ Rules:
   that department or program does, from the context only); "stretchChallenge"
   (one sentence, hard and specific); "fourYearHorizon" (2–3 launch routes
   from the context's catalog, in plain language).
+- Each pathway also needs a "milestones" array of exactly 4 steps from where
+  the student is NOW (use their grade) to graduation, so the road is visible:
+  "when" (relative and real, e.g. "This spring", "Next fall", "Junior year",
+  "Senior year"; never a year they've already finished), a short "title"
+  (3–7 words), and a one-sentence "detail" naming a real Pacifica experience
+  from the context. The last step points toward the fourYearHorizon.
+- And a "glimpse": 2–3 sentences in the second person, written so the
+  student could read it in a conversation with a teacher, picturing one
+  concrete, ordinary moment inside this pathway ("Picture a Tuesday next
+  spring…"). Warm, specific, an invitation, never a promise or prediction;
+  no grades, no deficits, and a real faculty member only by name and
+  department.
 - Never invent a personal habit, phrase or anecdote for a real teacher.
 - Never invent a program not in the context. Never mention grades, scores,
   GPA, rank, test results, lateness or missing work. Never use the word
@@ -47,7 +59,11 @@ Respond with ONLY valid JSON, no prose, no markdown fences, exactly:
       "firstSemester": "string",
       "mentorArchetype": "string",
       "stretchChallenge": "string",
-      "fourYearHorizon": ["string", "string"]
+      "fourYearHorizon": ["string", "string"],
+      "milestones": [
+        { "when": "string", "title": "string", "detail": "string" }
+      ],
+      "glimpse": "string"
     }
   ]
 }
