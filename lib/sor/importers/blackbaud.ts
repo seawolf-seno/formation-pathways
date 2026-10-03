@@ -161,3 +161,110 @@ export function readSampleBlackbaud(allowlist: Set<string>): BlackbaudRecord[] {
   const { users } = JSON.parse(fs.readFileSync(file, "utf-8")) as { users: Raw[] };
   return users.filter((u) => allowlist.has(String(u.id))).map((u) => mapBlackbaudUser(u).record);
 }
+
+// ---------------------------------------------------------- class history
+//
+// GET /school/v1/academics/enrollments/{user_id}?school_year=<label>: the
+// course sections a student is in for one year. Needs the "Academic Group
+// Manager" or "Schedule Manager" role in Blackbaud. Only the course title,
+// code and offering type (Academics, Arts, Athletics…) are kept: never
+// grades, attendance or teacher notes. Year labels come from /school/v1/years.
+
+export interface ClassSection {
+  sectionId: string;
+  schoolYear: string;
+  courseTitle: string;
+  courseCode: string | null;
+  offeringType: string | null;
+}
+
+const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : typeof v === "number" ? String(v) : null);
+
+/** One enrollment row → the few fields we keep, or null if it has no title. */
+export function mapSection(raw: Raw, schoolYear: string): ClassSection | null {
+  const offering = raw.offering_type as Raw | string | undefined;
+  const title = str(pick(raw, "course_title", "course_name", "section_name", "name", "title"));
+  const sectionId = str(pick(raw, "id", "section_id", "lead_section_id"));
+  if (!title || !sectionId) return null;
+  return {
+    sectionId,
+    schoolYear,
+    courseTitle: title.slice(0, 160),
+    courseCode: str(pick(raw, "course_code", "code"))?.slice(0, 40) ?? null,
+    offeringType: (typeof offering === "string" ? str(offering) : str(offering?.description ?? offering?.name))?.slice(0, 60) ?? null,
+  };
+}
+
+/** The current school year and up to three before it, as Blackbaud labels them. */
+async function recentSchoolYears(token: string): Promise<string[]> {
+  const res = await fetch(`${SKY_BASE}/years`, { headers: skyHeaders(token), cache: "no-store" });
+  if (!res.ok) throw await skyError(res);
+  const json = (await res.json()) as Raw | Raw[];
+  const years = (Array.isArray(json) ? json : ((json.value ?? []) as Raw[]))
+    .map((y) => ({ label: str(y.school_year_label), begin: str(y.begin_date) ?? "", current: Boolean(y.current_year) }))
+    .filter((y): y is { label: string; begin: string; current: boolean } => Boolean(y.label))
+    .sort((a, b) => b.begin.localeCompare(a.begin));
+  const currentAt = years.findIndex((y) => y.current);
+  return years.slice(Math.max(0, currentAt), Math.max(0, currentAt) + 4).map((y) => y.label);
+}
+
+/** Class history for allowlisted students. A role that can't read schedules
+ *  only adds a warning: the rest of the Blackbaud import still counts. */
+export async function fetchClassHistory(
+  ids: string[],
+  token: string
+): Promise<{ byUser: Map<string, ClassSection[]>; warnings: string[] }> {
+  const byUser = new Map<string, ClassSection[]>();
+  const warnings: string[] = [];
+  if (!ids.length) return { byUser, warnings };
+  let years: string[];
+  try {
+    years = await recentSchoolYears(token);
+  } catch (e) {
+    warnings.push(`Class history skipped: couldn't read school years (${e instanceof Error ? e.message : e}).`);
+    return { byUser, warnings };
+  }
+  const untitledKeys = new Set<string>();
+  for (const id of ids) {
+    const sections: ClassSection[] = [];
+    for (const year of years) {
+      const url = `${SKY_BASE}/academics/enrollments/${encodeURIComponent(id)}?school_year=${encodeURIComponent(year)}`;
+      const res = await fetch(url, { headers: skyHeaders(token), cache: "no-store" });
+      if (res.status === 404) continue;
+      if (!res.ok) {
+        const err = await skyError(res);
+        warnings.push(
+          res.status === 401 || res.status === 403
+            ? `Class history skipped: it needs the Academic Group Manager or Schedule Manager role in Blackbaud. (${err.message})`
+            : `Class history skipped: ${err.message}`
+        );
+        return { byUser, warnings };
+      }
+      const json = (await res.json()) as Raw | Raw[];
+      for (const row of Array.isArray(json) ? json : ((json.value ?? []) as Raw[])) {
+        const s = mapSection(row, year);
+        if (s) sections.push(s);
+        else Object.keys(row).forEach((k) => untitledKeys.add(k));
+      }
+    }
+    byUser.set(id, sections);
+  }
+  if (untitledKeys.size) {
+    warnings.push(`Some class rows had no course title; keys seen: ${[...untitledKeys].sort().join(", ")}`);
+  }
+  return { byUser, warnings };
+}
+
+/** Fictional class history for the sample students (fixtures). */
+export function readSampleClassHistory(allowlist: Set<string>): Map<string, ClassSection[]> {
+  const file = path.join(process.cwd(), "fixtures/sample/blackbaud-users.json");
+  const { users } = JSON.parse(fs.readFileSync(file, "utf-8")) as { users: (Raw & { sections?: Raw[] })[] };
+  return new Map(
+    users
+      .filter((u) => allowlist.has(String(u.id)))
+      .map((u) => [
+        String(u.id),
+        (u.sections ?? []).flatMap((row) => mapSection(row, String(row.school_year)) ?? []),
+      ])
+  );
+}

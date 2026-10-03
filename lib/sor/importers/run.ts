@@ -2,7 +2,7 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SourceSystem, StaffMember } from "../types";
 import { readFinalsiteCsv, readSampleFinalsite, stageFromFinalsiteStatus, type FinalsiteRecord } from "./finalsite";
-import { fetchLiveBlackbaud, isLiveBlackbaudConfigured, readSampleBlackbaud, type BlackbaudRecord } from "./blackbaud";
+import { fetchClassHistory, fetchLiveBlackbaud, isLiveBlackbaudConfigured, readSampleBlackbaud, readSampleClassHistory, type BlackbaudRecord } from "./blackbaud";
 import { fetchLiveCanvas, isLiveCanvasPilotConfigured, readSampleCanvas, type CanvasCourseRecord } from "./canvas";
 import { fetchLiveFinalsiteStudents, isLiveFinalsiteApiConfigured } from "./finalsite-api";
 
@@ -120,6 +120,30 @@ export async function runImport(
       } else records = readSampleBlackbaud(allowlist);
       for (const r of records) await writeBlackbaud(supabase, targets.get(r.externalId)!, r);
       found = new Set(records.map((r) => r.externalId));
+      {
+        const history = live
+          ? await fetchClassHistory([...found], bbToken!)
+          : { byUser: readSampleClassHistory(found), warnings: [] as string[] };
+        outcome.warnings.push(...history.warnings);
+        for (const [id, sections] of history.byUser) {
+          const t = targets.get(id)!;
+          if (!sections.length) continue;
+          await must(
+            supabase.from("course_history").upsert(
+              sections.map((s) => ({
+                person_id: t.personId,
+                source: "blackbaud",
+                section_id: s.sectionId,
+                school_year: s.schoolYear,
+                course_title: s.courseTitle,
+                course_code: s.courseCode,
+                offering_type: s.offeringType,
+                imported_at: new Date().toISOString(),
+              }))
+            )
+          );
+        }
+      }
     } else {
       const courses = live ? await fetchLiveCanvas(allowlist) : readSampleCanvas(allowlist);
       for (const c of courses) await writeCanvas(supabase, targets, c);
