@@ -3,133 +3,150 @@
 A self-guided walkthrough of everything built so far, on the live site:
 **https://formation-pathways.vercel.app**
 
-Allow about 45 minutes. Use a laptop for most of it and your phone for step 7.
+Allow about an hour. Use a laptop for most of it, and your phone for steps 7
+and 8.
 
-> **Everything here is fictional or sample data.** Please don't type a real
-> student's or family's name anywhere, including the application form and
-> voice capture. The real-student pilot is locked and opens only after
-> leadership signs off.
+> **Please try everything on the fictional and sample students only.** Emma,
+> Marcus, and the six students marked **Sample** on `/pilot` (Amara, Ben, Iris,
+> Mateo, Roz, Theo) are invented. `/pilot` also lists a few real students in a
+> small, consented pilot: please don't draft, capture, or start a Spark
+> conversation for them. And please don't type a real family's name into the
+> application form or capture.
 
 ## Before you start (for seno, before sending this)
 
-1. **Custom SMTP, then the email code.** Supabase's built-in email only delivers
-   to members of the Supabase organization's team, so without custom SMTP her
-   sign-in email never arrives. (Don't add her to the Supabase team instead: that
-   gives her the database dashboard.) Set up SMTP under Project settings →
-   Authentication → SMTP (see `docs/system-of-record.md`, Setup step 2), then in
-   Authentication → Emails add `{{ .Token }}` to the *Magic Link* and *Confirm
-   signup* templates so the email carries a 6-digit code as well as the link.
-2. **Approve her.** After her first sign-in, open `/pilot` → Staff, approve her
-   account and set the role to **Admissions**. Until you do, she can open the
-   fictional demo but `/season`, `/pilot` and `/capture` send her back to the
-   sign-in page with a message that her account is waiting for approval.
-3. **Sample figures.** On `/season`, check that the badge reads "Sample figures
-   (fictional)". If it doesn't, click **Load sample figures** (only an admin can).
-4. **Sample students.** On `/pilot`, check that the six sample students are
-   listed (Amara, Ben, Iris, Mateo, Roz, Theo).
+1. **Approve her** after her first sign-in: `/pilot` → Staff → approve, role
+   **Admissions**. Until then `/season`, `/pilot` and `/capture` say her account
+   is waiting for approval.
+2. **Refresh the fictional demo** so Emma and Marcus show their hand-written
+   journeys: run `delete from demo_snapshots;` in the Supabase SQL editor (it
+   also clears old demo share links).
+3. **Sample class history:** on `/pilot`, while Blackbaud is *not* connected
+   (the connection lasts an hour), click **Import from Blackbaud** once. The
+   sample students then show their fictional classes.
+4. **Season numbers:** `/season` now shows **live** whole-school Finalsite
+   counts (totals only, no names). She's the right person to check them (step 2).
 
 ## 1. Sign in
 
-1. Open **https://formation-pathways.vercel.app** and enter your
-   `@pacificachristian.org` email.
-2. Check your inbox for the 6-digit code (or click the link in the email, on
-   this same laptop). Sign-in emails are limited to a few an hour, so request
-   one code and wait a minute before asking again.
-3. **First time only:** seno approves your account. After that you stay
-   signed in on this browser.
+1. Open **https://formation-pathways.vercel.app**.
+2. Click **Continue with Google** and choose your `@pacificachristian.org`
+   account. (Or enter your email and type the 6-digit code you're sent.)
+3. **First time only:** seno approves your account. After that you stay signed
+   in on this browser.
 
-## 2. The admissions season dashboard: `/season`
+## 2. The admissions season, live: `/season`
 
 Open **https://formation-pathways.vercel.app/season**.
 
-- Tiles at the top compare this season with last season **on the same date**.
-- Click the stage tabs (Inquiries, Applications, …) and watch the pace chart
-  change. Hover over it for the numbers on a given day.
-- Scroll through the application rate and the yield table.
-- **Data source** at the bottom: live Finalsite counts are built but switched
-  off until leadership approves them. *Import live counts* is meant to be
-  disabled.
-- **"How we'll know if pathways help"**: the measurement plan. It deliberately
-  shows no result yet, because families haven't used pathways yet.
-
-Keep in mind that all numbers are made up, including "inquiries behind last
-season".
+- Real whole-school Finalsite counts, **totals only**: no names, and any group
+  of 1–4 shows as "fewer than 5".
+- Tiles compare this season with the last three **on the same date**. Click the
+  stage tabs (Inquiries, Applications, …) to change the pace chart.
+- **Please sanity-check the numbers against your own Finalsite reports.** In
+  particular:
+  - Does the fall 2027 class really have this few inquiries so far, or are this
+    year's families filed under another school year?
+  - Do the past seasons' totals look right?
+  - "Admitted" counts families whose status for that year was *enrollment in
+    progress, enrolled, not enrolling* or *parent declined*, dated by that
+    season's Acceptance Friday. *Financial aid waitlisting* is **not** counted
+    as admitted yet. Tell seno if it should be.
+- **"How we'll know if pathways help"** at the bottom deliberately claims no
+  result yet.
 
 ## 3. What a family sees: `/apply` and a family pathway
 
-1. Open **https://formation-pathways.vercel.app/apply** and fill in the
-   questionnaire as an imaginary 8th grader. Try the *"Not sure where to
-   start?"* help under a question.
+1. Open **https://formation-pathways.vercel.app/apply** and fill it in as an
+   imaginary 8th grader. Try *"Not sure where to start?"* under a question.
 2. Open the finished example:
    **https://formation-pathways.vercel.app/applicant/emma-r-8f3k2a**
-   - Emma (fictional) has three possible pathways at Pacifica.
-   - Click **Share this possibility**, choose which details to include, check
-     the preview, then **Create link**. The `/share/…` page it opens is what a
-     family could send to a grandparent. It works without signing in.
-   - Download the image card too.
+   - Pick one of Emma's three pathways and scroll. **The road draws itself**:
+     milestones appear one by one, branch into where it could lead, and a
+     "glimpse" card pictures an ordinary day inside that pathway.
+   - Click **Share this possibility**, choose the details, check the preview,
+     then **Create link**. The `/share/…` page is what a family could send a
+     grandparent. Download the image card too.
 
 ## 4. Behind the scenes in admissions: `/admissions`
 
 Open **https://formation-pathways.vercel.app/admissions**.
 
-1. Open **Marcus Bell** (awaiting review). Read his pathways, type your name as
-   reviewer and click **Approve & get shareable link**. A person approves, not
-   the AI.
+1. Open **Marcus Bell** (awaiting review), read his pathways, type your name and
+   click **Approve & get shareable link**. A person approves, not the AI.
 2. On his page, the **Spark survey** panel: **Create link**, then open it. It's
-   a short interest survey an applicant fills in without signing in.
+   the short interest survey an applicant fills in without signing in.
 3. Back on `/admissions`, open **Inquiries and prior-school outreach**. The
-   drafted emails should link to `https://formation-pathways.vercel.app/from/…`.
-   Open one of those pages; it shows fictional stories from a feeder school.
+   drafted emails link to `https://formation-pathways.vercel.app/from/…`. Open
+   one to see fictional stories from a feeder school.
 
-## 5. One student's whole story: `/pilot`
+## 5. One student's whole story: `/pilot` (sample students only)
 
-Open **https://formation-pathways.vercel.app/pilot**.
+Open **https://formation-pathways.vercel.app/pilot**, then a student marked
+**Sample**. **Iris** is a good choice.
 
-- The **leadership gate** reads LOCKED. While it's locked, the database itself
-  refuses to hold any real student.
-- Open a sample student, for example **Iris**. You'll see where she's been
-  (application), where she is now (classes) and what staff have noticed.
-- Click **Draft who they are today + 3 pathways**. You get a short portrait
-  plus three pathways, watermarked **DRAFT**. Click **I've reviewed this. Sign
-  as approved** and the watermark goes away, with your name on it. Nothing here
-  ever goes to a family.
+- **Where they are now:** grade, class of, advisor, and their classes by year
+  as chips (Academics, Arts, Athletics). No grades, anywhere.
+- **What lights them up:** see step 6.
+- **Draft who they are today + 3 pathways:** the AI drafts a short portrait (for
+  staff only) and three pathways, watermarked **DRAFT**. Click **Edit the
+  pathways before signing** and change anything, including the milestones and
+  the glimpse. Then **I've reviewed this. Sign as approved**.
+- **Open it with Iris →** opens the student-and-family view of the *signed*
+  pathways, with the same road animation as Emma's. Tap **This one excites me**
+  and add a sentence: it's saved to her Pathway under your name.
 
-As admissions you can read and draft. Imports, consent records and staff
-approvals are admin-only, so you won't see those controls.
+You can read, draft and sign. Imports, consent records and staff approvals are
+admin-only, so you won't see those controls.
 
-## 6. The classroom side: `/`
+## 6. Spark: what really lights a student up
+
+Applications show the formal version of a student. Spark finds the real one.
+
+1. On a sample student's page, click **Start a Spark conversation ✦**.
+2. A night sky opens. Answer a few questions **out loud** (tap the gold mic) or
+   by typing. Each answer becomes a star.
+3. Tap the floating interests: once if you love it, **twice if you're
+   obsessed**. Then a few quick "this or that" choices.
+4. Optional: drop in a YouTube `watch-history.json` from Google Takeout. It's
+   read on your device only and never uploaded, and you pick which channels to
+   keep. Skipping is fine.
+5. Watch the stars join into a constellation, then **Save my sparks**.
+6. Back on the student's page, **Draft again from latest data**: the new
+   pathways grow from those sparks, and milestones can say "grew from your
+   spark: …".
+
+Try it on your phone too, and tell seno how it feels on a small screen.
+
+## 7. The classroom side: `/`
 
 Open **https://formation-pathways.vercel.app** (the teacher roster).
 
-- Nothing on the roster is a score or a red flag. It's sorted by who hasn't
-  been noticed in a while.
+- Nothing on the roster is a score or a red flag. It's sorted by who hasn't been
+  noticed in a while.
 - Click **Capture** on a student, type a sentence about something good you saw,
   **Review & tag**, then save.
-- Open a student and draft a **Pathway Portrait**: a warm letter to parents,
-  DRAFT until someone signs it. The **Admissions story** next to it is the same
-  evidence, anonymized for admissions materials.
+- Open a student and draft a **Pathway Portrait** (a warm letter to parents,
+  DRAFT until signed) or an **Admissions story** (the same evidence,
+  anonymized).
 
-## 7. Capture from your phone: `/capture`
+## 8. Capture from your phone: `/capture`
 
 1. On your phone, open **https://formation-pathways.vercel.app/capture** and
-   sign in with the 6-digit code.
+   sign in with **Continue with Google**.
 2. Add it to your home screen: Safari *Share → Add to Home Screen*, or Chrome
    *Install app*.
 3. Tap the mic and say something like *"Iris stayed after chapel to help stack
-   chairs"*, tap **Done**, then **Save**. If the mic misbehaves, use your
-   keyboard's dictation button or type it. Only the six sample students can be
-   chosen.
+   chairs"*, tap **Done**, then **Save**. Choose a **sample** student only.
 
 ## Things that are normal right now
 
-- **The AI writing is canned.** No AI key is connected yet, so every draft is
-  pre-written sample text and can look the same across students. The flow is
-  real; the wording will improve once the AI is switched on.
-- **What you create in steps 3, 4 and 6 is kept while you're signed in.** A
-  share link opened by someone who *isn't* signed in can occasionally show "not
-  found", so test share links from your own signed-in browser.
-- **Phone layout** of `/season` and the share window hasn't been checked yet.
-  Tell us if it looks wrong.
+- **The AI is on for the fictional and sample students.** Every draft is
+  written fresh, so wording varies. Every AI draft stays a DRAFT until a named
+  adult edits and signs it.
+- **What you create in steps 3–5 is kept while you're signed in.** A share link
+  opened by someone who *isn't* signed in can occasionally show "not found", so
+  test share links from your own signed-in browser.
 - The first click on a page after a quiet spell can take a few seconds.
 
 ## Sending feedback
