@@ -1,98 +1,135 @@
-# October 5 demo: setup, test checklist, run of show
+# October 5 board demo: run of show
 
-Everything shown is fictional or sample data. The student pilot stays LOCKED.
+About 15 minutes, on the live site **https://formation-pathways.vercel.app**,
+alongside the Ruakh 2.0 deck (slides 4–7 are the demo). Present from your
+**signed-in** laptop and phone.
 
-## Where it runs
+**Two rules on stage:**
+- **Never open a real pilot student on screen.** The `/pilot` roster lists
+  real names, so go straight to the sample student by bookmark (below) and
+  don't show the roster.
+- **Only sample or fictional data in front of the board:** Emma, Marcus, and
+  students marked **Sample** (Iris is the demo student).
 
-| | Local (`npm run dev`) | Vercel (production URL) |
-|---|---|---|
-| Sign-in | Only for `/season`, `/pilot`, `/capture` | **Every page** except `/share/*`, `/from/*`, `/spark/*` (school account) |
-| `/season`, `/pilot`, `/capture` (Supabase) | Persists | Persists |
-| Fictional demo (`/`, `/admissions`, `/applicant/*`, shares, inquiries) | Persists in `data/formation.db` | Persists for anyone **signed in**: every write saves a copy of the demo database to Supabase (`demo_snapshots`), and every instance loads the newest copy. A visitor who isn't signed in sees only that server's copy. Needs migration `20261001180000_demo_snapshots.sql` applied. |
-| Phone capture | No (phone can't reach localhost; the mic needs HTTPS) | Yes |
+## A. Tonight (about 45 minutes)
 
-On Vercel, what you create in the fictional demo (a share link, an approval, a
-captured moment on `/`) now persists for any signed-in browser (see
-`lib/demo-persist.ts`). Someone who isn't signed in, such as an audience member
-on their own phone, can still hit a server that hasn't caught up and get a 404.
-So keep presenting from your signed-in laptop or phone, and don't hand the
-audience a share link. To reset the demo, delete the row in the Supabase SQL
-editor (`delete from demo_snapshots;`), and the next visit re-seeds.
+1. **Decide `/season`: live or sample.**
+   - **Live** only if the admissions director has confirmed the numbers,
+     especially the low fall 2027 inquiry count.
+   - Otherwise switch to sample: in the Supabase SQL editor run
+     `delete from admissions_funnel_counts where not is_sample;`. The page then
+     shows "Sample figures (fictional)". You can re-import live after the
+     meeting.
+2. **Fresh fictional demo:** run `delete from demo_snapshots;`. This resets
+   Emma and Marcus (hand-written journeys) and clears old share links and
+   approvals, so Marcus is "awaiting review" again.
+3. **Sample class history:** while Blackbaud isn't connected, open `/pilot` and
+   click **Import from Blackbaud** once. Then close that tab: it lists real
+   students.
+4. **Prepare Iris** (Sample) and **bookmark her page**:
+   `/pilot/people/<Iris's id>` (copy it from the address bar).
+   - **Start a Spark conversation ✦**: a few answers and taps → **Save my
+     sparks**.
+   - **Draft who they are today + 3 pathways**. The AI takes 10–20 seconds;
+     read it. **Edit** anything off, then **Sign**.
+   - Click **Open it with Iris →** and bookmark that page too
+     (`/pathway/<id>`).
+5. **Bookmarks bar, in order:** `/season` · `/applicant/emma-r-8f3k2a` ·
+   `/admissions` · Iris's page · Iris's pathway · `/pathway/<id>/spark`.
+6. **Phone:** sign in (Continue with Google), open `/capture`, add it to the
+   home screen, and do one test capture for Iris.
+7. **Deck:** share it with anyone who needs it (it's private). On slide 4's
+   notes, update the bracketed "sample figures [or: real numbers…]" line to tonight's choice.
+8. **Rehearse once, out loud, with a timer.**
 
-## A. Setup (the day before)
+## B. Tomorrow, 30 minutes before
 
-1. `git checkout main && git pull`
-2. Local only: reset the demo data with `rm data/formation.db*`, then `npm run dev`.
-3. **Sign in** (`/login`, school email, 6-digit code) the day before, on the laptop
-   *and* the phone you'll use. Supabase's built-in email sends only a few messages
-   an hour. If no code arrives, add `{{ .Token }}` to the *Magic Link* and
-   *Confirm signup* templates (Supabase → Authentication → Emails).
-4. `/season` → Data source → **Load sample figures**. The badge reads
-   "Sample figures (fictional)".
-5. `/pilot`: six sample students, gate **LOCKED**. Run the three sample imports once
-   if the import log is empty.
-6. Phone (Vercel only): open `/capture` in Safari/Chrome → *Add to Home Screen*.
+- Open every bookmark once to warm the servers (the first click after a
+  quiet spell is slow).
+- Laptop: close every other tab (especially `/pilot`), turn on Do Not Disturb,
+  and set zoom to about 110% for the room.
+- Wi-Fi: have a phone hotspot ready. Everything needs the network.
+- Phone: Do Not Disturb, brightness up, `/capture` on the home screen.
 
-## B. Automated checks
+## C. Run of show (about 15 minutes)
 
-```
-npm run test:db     # 66 passed
-npm run test:share  # all pass
-npm run lint        # 0 errors
-npm run build       # clean
-```
+**1. The season (2 min): slide 4 → `/season`**
+- "Our admissions season against the last three, on the same date."
+  Tiles → **Applications** tab on the pace chart → the yield table.
+- **Say which it is:** "These are live whole-school Finalsite totals, with no
+  names, and groups under five hidden" *or* "These are sample figures."
+- Scroll to **Data source**: "Finalsite is connected, read-only, totals only,
+  approved by admissions."
 
-## C. Test checklist
+**2. A family's first look (3 min): slide 5 → Emma**
+- Pick a pathway. **Let the road draw itself**: milestones, the branches
+  beyond graduation, the glimpse.
+- "An invitation, not a prediction."
+- **Share this possibility** → choose details → preview → **Create link** →
+  the public page and card. "The family decides what anyone else sees."
 
-- [ ] **`/season`**: tiles show changes vs. last season on this date; Admitted and
-      Enrolled read "Decisions go out in March" / "Deposits come in by April";
-      stage tabs switch the pace chart; hover shows the tooltip; the table fills;
-      the approval panel says LOCKED; **Import live counts** is disabled.
-- [ ] **`/apply`**: questionnaire loads; "Not sure where to start?" help appears
-      under a question.
-- [ ] **`/applicant/emma-r-8f3k2a`**: three pathways; **Share this possibility** →
-      choose details → confirm preview → create link → the `/share/…` page opens;
-      download a feed card.
-- [ ] **`/admissions`**: Marcus Bell (submitted) can be reviewed and approved; the
-      Spark panel on his page makes a `/spark/…` link that opens.
-- [ ] **`/admissions/inquiries`** → **`/from/paul-revere`**: drafts copy out; public
-      page shows the fictional stories.
-- [ ] **`/pilot/people/[id]`**: **Draft** gives a portrait plus three pathways with a
-      DRAFT watermark; signing removes it.
-- [ ] **`/capture`**: say or type "Iris stayed after chapel to…" → Done → Save. On
-      Vercel, do it from the phone too.
-- [ ] **`/`** and **`/courses/[id]`**: roster, Capture, Pathway Portrait,
-      🎲 Simulate Canvas activity.
-- [ ] Wi-Fi off (local only): the fictional demo's AI steps fall back to canned
-      text. `/season`, `/pilot` and `/capture` need Supabase, so they need a network.
+**3. Behind the scenes (2 min): slide 6 → `/admissions`**
+- **Marcus** → type your name → **Approve**: "A person approves, never the AI."
+- **Inquiries and prior-school outreach**: one drafted email and its feeder
+  page.
 
-## D. Run of show (about 15 minutes)
+**4. One student, whole story (6 min): slide 7 → Iris's bookmark**
+- **Where she is now:** facts and classes by year, from Blackbaud, with no
+  grades.
+- **What lights her up:** "Applications show the formal version of a student."
+  Open **Spark** (bookmark), answer one question **out loud** (type if the room
+  is loud), tap two interests (one twice), one this-or-that, and show the
+  reveal: *"This is Iris, lit up."* Don't save; it's already done.
+- Back on her page: the **signed** draft. "AI drafts, a named adult edits and
+  signs." Point at the "grew from your spark" thread.
+- **Open it with Iris →** pick a pathway → **This one excites me**. "This is
+  the conversation a teacher has *with* her. The AI never talks to a student."
+- **Send a link home ✉** (just point at it): "Families can do Spark together at
+  home: a one-time, write-only link."
+- **Phone:** `/capture` → "Iris stayed after chapel to help stack chairs" →
+  Done → Save. "Any adult, ten seconds."
 
-1. **`/season` (3 min).** "Our admissions season against the last three, on the same
-   date." Tiles → pace chart on **Applications** → application rate → table.
-   **Say these are sample figures.** Scroll to Data source: "The live Finalsite
-   connection is built. It's waiting on your approval, not on engineering."
-2. **The family experience (4 min).** **Walk through it with a fictional family** →
-   Emma's three pathways → Share this possibility → preview → create link → public
-   page and card. "An invitation, not a prediction."
-3. **Admissions behind the scenes (3 min).** `/admissions` → approve Marcus (a person
-   signs, not the AI) → his Spark link → `/admissions/inquiries` → outreach page.
-4. **One database, whole lifecycle (3 min).** `/pilot`: the gate is LOCKED and the
-   database refuses real students. Open a sample student → Draft → sign off. Then
-   `/capture`, from the phone on Vercel.
-5. **Close on measurement (2 min).** `/season` → "How we'll know if pathways help."
-   The asks: approval for live counts, the pathway pilot and family consent, parent
-   access to their own page, AI vendor terms.
+**5. Close (2 min): deck**
+- The guardrails, in one breath:
+  - consent per family and per use, enforced by the database
+  - no scores on students
+  - real students only in a small, signed-off pilot
+  - AI for real students switched off until vendor terms are confirmed
+- **How we'll know:** "The first yield read comes in April." Never say pathways
+  raised applications or yield; there's no data yet, and the page says so.
+- **The asks:**
+  1. Confirm the AI vendor terms for student data (then real-student drafting
+     can be switched on).
+  2. Move hosting to a school-owned account, with a security review.
+  3. Widen the pilot: family consent covering student voice and AI.
+  4. Parent access to their own child's pathway page.
 
-Say: "Here's how we'll measure it; the first yield read comes in April."
-Don't say pathways raised applications or yield. There's no data for that yet,
-and the page says so.
+## D. If something goes wrong
 
-## E. Things that can catch you out
+| What | Do |
+|---|---|
+| A page is slow or spins | Keep talking; give it 10 seconds, then reload. It's a cold start. |
+| AI draft is slow or odd | Don't draft live: Iris's draft is already signed. |
+| Mic doesn't hear you | Type the answer. "It works either way." |
+| A share link 404s | Open it in your signed-in browser, never an audience phone. |
+| Wi-Fi drops | Phone hotspot. If it's still down, stay in the deck: slides 4–7 describe each step. |
+| A real student's name appears | Move on calmly. Don't open the record. |
 
-- The sample shows inquiries 11% behind last season. It's fictional; say so, or
-  edit `fixtures/sample/finalsite-funnel.json` and load the sample figures again.
-- Phone width is untested for `/season` and the share modal. Check before showing
-  either on a phone.
-- On Vercel, open each page once before you present, so the first click isn't a
-  cold start.
+## E. Things not to say
+
+- That pathways raised applications, yield or anything else. There's no data
+  yet.
+- Anything about a real student, even in passing.
+- That the AI writes to families or students. It drafts for staff, and a named
+  adult signs.
+
+## Reference: where things persist
+
+| | Vercel (production) |
+|---|---|
+| Sign-in | Every page except `/share/*`, `/from/*`, `/spark/*` |
+| `/season`, `/pilot`, `/capture`, `/pathway` | Supabase (system of record) |
+| Fictional demo (`/`, `/admissions`, `/applicant/*`, shares) | Snapshot in `demo_snapshots`, shared by every signed-in browser; reset with `delete from demo_snapshots;` |
+
+Automated checks before any change: `npm run test:db`, `npm run test:share`,
+`npm run lint`, `npm run build`.

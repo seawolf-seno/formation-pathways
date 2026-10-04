@@ -25,7 +25,7 @@ adults behind the scenes; students stay present, in person, with people.
   `docs/system-of-record.md`, which is the source of truth for setup, guardrails and gaps.
   **Applied to the live Supabase project 2026-09-23** (both migrations; advisors clean), with
   seno as the only `staff` admin and the six fictional sample students loaded. End-to-end
-  tested in the browser on sample data only; the leadership gate is still LOCKED. Deployed
+  tested in the browser on sample data first; the leadership gate was opened for the consented pilot by 2026-10-01. Deployed
   over HTTPS 2026-09-28 (see "Live deployment"). Leadership sign-off, consent form and
   AI-vendor terms are still pending.
   Merged via PR #5.
@@ -95,23 +95,30 @@ adults behind the scenes; students stay present, in person, with people.
 - **Google sign-in (PR #24)**: *Continue with Google* built, hidden until `GOOGLE_SIGNIN=on`.
   **Waiting on IT** for an Internal OAuth client (request text in `docs/system-of-record.md`,
   "Google sign-in"). Staff phone guide: `docs/staff-capture-guide.md`.
-- **Next concrete actions** (waiting on three people; see the checklist on the Pacifica OS
-  dashboard):
-  - Now, no one else needed: custom SMTP (Gmail SMTP + app password, `docs/system-of-record.md`
-    Setup step 2) so staff can sign in before Google is live; record the admissions approval on
-    `/season`; rehearse the `docs/oct-5-demo.md` checklist on the live URL; ask leadership for a
-    named beta sign-off; check the parents' consent forms cover each scope (and any admissions
-    use); collect each beta student's Blackbaud/Canvas/Finalsite ids.
-  - When admissions answers: set `FINALSITE_ADMITTED_STATUSES` + `FINALSITE_DECISION_DATES`,
-    redeploy, *Check connection*, decide live vs. sample for Oct 5, import.
-  - When the Blackbaud admin connects the app: *Connect Blackbaud* → *Check connection* with
-    seno's staff id → fix `mapBlackbaudUser` from the field names.
-  - When IT sends the Google client: enable the Google provider in Supabase, `GOOGLE_SIGNIN=on`,
-    redeploy, test on a phone.
-  - **Oct 5 board demo.** Then the real-student beta (`docs/system-of-record.md`, "Starting the
-    real-student beta"). Don't open the gate before the demo: real names would show on the
-    `/pilot` roster on stage.
-  - Later: alumni consent-reset design (sketched on the Systems Map).
+- **State as of 2026-10-04 (PRs #26–39)**: leadership gate **OPEN**, with a small consented
+  real-student pilot (seno's students; real names show on the `/pilot` roster). Blackbaud
+  connected (extended user record + `course_history` class history; the import needs
+  Academic Group Manager / Schedule Manager for schedules). Finalsite per-student import via
+  API with a field allowlist (`STUDENT_RESPONSE_FIELDS` / `STUDENT_INTEREST_FIELDS`). Google
+  sign-in and email codes both work. `ANTHROPIC_API_KEY` is set: AI runs for the fictional demo
+  and sample students; **real-student AI needs `AI_REAL_STUDENTS=on`** (off until the Anthropic
+  terms for student data are confirmed) plus `ai_drafting` consent. Live season counts are
+  imported (`/season` shows live); the low fall-2027 inquiry count is unconfirmed by admissions.
+  Built: demo persistence (`demo_snapshots`), animated pathway journeys + glimpse, edit before
+  signing, signed-pathway view `/pathway/[id]`, **Spark** (`/pathway/[id]/spark`, new
+  `student_voice` consent, `student_sparks`) and at-home one-time family links
+  (`/spark/family/[token]`, the only anonymous write path). Agents still never write to the
+  live DB or query per-student tables.
+- **Next concrete actions**:
+  1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
+     open a real student on screen).
+  2. Admissions director's self-test (`docs/admissions-tester-guide.md`); her answers on the
+     fall-2027 counts and whether `financial_aid_waitlisting` counts as admitted.
+  3. After leadership confirms Anthropic terms: `AI_REAL_STUDENTS=on`, then Spark → Draft →
+     Edit → Sign → Open it with each pilot student; tune prompts from what they say.
+  4. Canvas for the pilot (`CANVAS_*` env + Canvas user ids); ask Finalsite to narrow the API
+     credential; move hosting to a school-owned Vercel team with a security review.
+  5. Later: alumni consent-reset design (sketched on the Systems Map).
 - Tracked live at https://claude.ai/artifact/3L9fUkHmf4q6d378289uP6 (Formation Pathways
   section) and narrated architecturally at
   https://claude.ai/artifact/GWGzrdfMSr8vfWsRycGM1T — keep both current alongside this file
