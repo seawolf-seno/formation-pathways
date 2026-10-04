@@ -1,6 +1,7 @@
 "use server";
 
 import fs from "fs";
+import { createHash, randomBytes } from "crypto";
 import path from "path";
 import { requestOrigin } from "@/lib/origin";
 import { redirect } from "next/navigation";
@@ -754,6 +755,65 @@ export async function saveStudentSparksAction(input: { personId: string; sparks:
       channels: checked.sparks.channels.length,
     });
     revalidatePath(`/pilot/people/${input.personId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+const SPARK_LINK_DAYS = 7;
+
+/** Make a one-time, write-only link a family can open at home to do Spark
+ *  together. Only the token's hash is stored, so the URL is returned once
+ *  and can't be shown again. Needs student_voice consent (DB trigger). */
+export async function createSparkLinkAction(personId: string): Promise<Result<{ url: string; expiresAt: string }>> {
+  try {
+    const staff = await requireStaff();
+    const supabase = await getSorClient();
+    const { data: person } = await supabase
+      .from("people")
+      .select("first_name, preferred_name")
+      .eq("id", personId)
+      .maybeSingle();
+    if (!person) throw new Error("Student not found.");
+    const token = randomBytes(32).toString("base64url");
+    const expiresAt = new Date(Date.now() + SPARK_LINK_DAYS * 86_400_000).toISOString();
+    const { error } = await supabase.from("spark_links").insert({
+      person_id: personId,
+      token_hash: createHash("sha256").update(token, "utf8").digest("hex"),
+      first_name: (person.preferred_name || person.first_name).slice(0, 60),
+      created_by: staff.user_id,
+      expires_at: expiresAt,
+    });
+    if (error) {
+      return {
+        ok: false,
+        error: /student_voice/.test(error.message)
+          ? "There's no student-voice consent on file for this student, so a link can't be sent."
+          : error.message,
+      };
+    }
+    await logAccess(staff, "spark_link_create", personId, { expiresAt });
+    return { ok: true, url: `${await requestOrigin()}/spark/family/${token}`, expiresAt };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** The family's submit from /spark/family/[token]. No sign-in: the database
+ *  function checks the token (hash), expiry, single use and consent, and
+ *  saves the sparks as the staff member who sent the link. */
+export async function submitFamilySparksAction(input: { token: string; sparks: unknown }): Promise<Result> {
+  try {
+    const checked = validateStudentSparks(input.sparks);
+    if (!checked.ok) return { ok: false, error: checked.error };
+    if (!/^[A-Za-z0-9_-]{20,100}$/.test(input.token)) return { ok: false, error: "This link isn't valid." };
+    const supabase = await getSorClient();
+    const { data, error } = await supabase.rpc("spark_link_submit", { p_token: input.token, p_sparks: checked.sparks });
+    if (error) return { ok: false, error: "Something went wrong saving your sparks. Please try again." };
+    if (data !== true) {
+      return { ok: false, error: "This link has expired or was already used. Ask the school for a new one." };
+    }
     return { ok: true };
   } catch (e) {
     return fail(e);

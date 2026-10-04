@@ -115,8 +115,21 @@ show "grew from your spark: …" on the journey. Sending sparks to Claude
 follows the same AI rules as everything else (`ai_drafting` +
 `AI_REAL_STUDENTS`).
 
-An at-home, write-only link for families is a planned follow-up. It needs an
-anonymous write path designed on its own.
+**At home: Send a link home ✉.** On the student's page, staff can make a
+one-time link (`/spark/family/[token]`) for the family to do Spark together
+on their own device, with no sign-in. It is the system of record's only
+anonymous write path, and it's deliberately narrow:
+
+- Only the token's SHA-256 hash is stored, so the URL is shown once.
+- It expires after 7 days and works once.
+- It's write-only: the page learns the student's first name and nothing else.
+- Consent is checked when the link is made and again when it's used.
+- Sparks arrive as `source = family_link`, attributed to the adult who sent
+  the link, and the submission is logged.
+
+The browser calls two invoker functions that wrap SECURITY DEFINER functions
+in the private schema (migration `20261004150000_spark_family_links.sql`;
+19 RLS cases, including calls made as `anon`).
 
 **AI for real students is a separate switch.** `ANTHROPIC_API_KEY` alone runs
 AI for the fictional demo and the six sample students only. A real student's

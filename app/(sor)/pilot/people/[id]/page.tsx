@@ -4,7 +4,7 @@ import { getPersonProfile, logAccess, requireStaff } from "@/lib/sor/queries";
 import { displayName } from "@/lib/sor/types";
 import { PathwaysDisplay } from "@/components/PathwaysDisplay";
 import { TagChip } from "@/components/TagChips";
-import { ApproveButton, ConsentPanel, DraftButton, EditPathwaysPanel, ExternalIdsPanel, WithdrawButton } from "@/components/sor/PersonControls";
+import { ApproveButton, ConsentPanel, DraftButton, EditPathwaysPanel, ExternalIdsPanel, SparkLinkButton, WithdrawButton } from "@/components/sor/PersonControls";
 
 /** A small labeled fact chip: grade, class year, advisor. */
 function Fact({ label, value }: { label: string; value: string }) {
@@ -134,18 +134,24 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                   <p className="text-xs text-[var(--color-ink-muted)]">Leans toward: {sparks.sparks.leanings.map((l) => l.choice).join(" · ")}</p>
                 )}
                 <p className="text-xs text-[var(--color-ink-muted)]">
-                  From a Spark conversation on {sparks.created_at.slice(0, 10)}. New drafts grow from these first.{" "}
+                  {sparks.source === "family_link" ? "Shared from home" : "From a Spark conversation"} on {sparks.created_at.slice(0, 10)}. New drafts grow from these first.{" "}
                   {voiceConsent && <Link href={`/pathway/${person.id}/spark`} className="font-semibold underline">Start another →</Link>}
                 </p>
+                {voiceConsent && (
+                  <SparkLinkButton personId={person.id} firstName={person.preferred_name || person.first_name} />
+                )}
               </div>
             ) : voiceConsent ? (
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm text-[var(--color-ink-muted)]">
                   Applications show the formal version of a student. Sit with {person.preferred_name || person.first_name} and let them light up what they really love.
                 </p>
-                <Link href={`/pathway/${person.id}/spark`} className="rounded-lg bg-[var(--color-navy)] px-3 py-2 text-sm font-medium text-white">
-                  Start a Spark conversation ✦
-                </Link>
+                <div className="flex flex-wrap gap-2">
+                  <Link href={`/pathway/${person.id}/spark`} className="rounded-lg bg-[var(--color-navy)] px-3 py-2 text-sm font-medium text-white">
+                    Start a Spark conversation ✦
+                  </Link>
+                  <SparkLinkButton personId={person.id} firstName={person.preferred_name || person.first_name} />
+                </div>
               </div>
             ) : (
               <Empty>Needs student-voice consent (Consent box) before a Spark conversation.</Empty>
