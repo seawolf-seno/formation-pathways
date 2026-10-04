@@ -74,9 +74,42 @@ await expect("teacher saves a student's sparks as themselves", "teach", spk("tea
 await expect("nobody saves sparks as someone else", "teach", `insert into student_sparks (person_id, sparks, created_by) values ('11111111-1111-1111-1111-111111111111', '{}', '${ids.admin}')`, false);
 await expect("admissions reads sparks", "adm", `select * from student_sparks`, true, r => r.rows.length === 1);
 await expect("non-staff cannot read sparks", "stranger", `select * from student_sparks`, true, r => r.rows.length === 0);
+// At-home Spark links: the one anonymous write path. Write-only, once, expiring.
+async function asAnon(sql) {
+  await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false); set role anon;`);
+  try { return await db.query(sql); } finally { await db.exec("reset role"); }
+}
+async function expectAnon(name, sql, ok, check) {
+  let r, err;
+  try { r = await asAnon(sql); } catch (e) { err = e; }
+  const good = ok ? !err && (!check || check(r)) : !!err || (check && check(r));
+  if (good) pass++; else fail++;
+  console.log(`${good ? "PASS" : "FAIL"}  ${name}${err ? "  (" + err.message.slice(0, 90) + ")" : ""}`);
+}
+const hash = (t) => `encode(sha256(convert_to('${t}', 'UTF8')), 'hex')`;
+const link = (who, t, extra = "") => `insert into spark_links (person_id, token_hash, first_name, created_by${extra ? ", expires_at" : ""}) values ('11111111-1111-1111-1111-111111111111', ${hash(t)}, 'Real', '${ids[who]}'${extra ? `, ${extra}` : ""}) returning id`;
+await expect("staff makes an at-home link as themselves", "teach", link("teach", "tok-good"), true, r => r.rows.length === 1);
+await expect("nobody makes a link as someone else", "teach", link("admin", "tok-x"), false);
+await expect("non-staff cannot make a link", "stranger", link("stranger", "tok-y"), false);
+await expect("an expired link can be stored", "admin", link("admin", "tok-old", "now() - interval '1 day'"), true);
+await expectAnon("anon gets only the first name for a good link", `select * from spark_link_greeting('tok-good')`, true, r => r.rows.length === 1 && r.rows[0].first_name === "Real" && Object.keys(r.rows[0]).length === 2);
+await expectAnon("anon gets nothing for a wrong token", `select * from spark_link_greeting('tok-guess')`, true, r => r.rows.length === 0);
+await expectAnon("anon gets nothing for an expired link", `select * from spark_link_greeting('tok-old')`, true, r => r.rows.length === 0);
+await expectAnon("anon cannot read the links table", `select * from spark_links`, false, r => r.rows.length === 0);
+await expectAnon("anon cannot read sparks", `select * from student_sparks`, false, r => r.rows.length === 0);
+await expectAnon("anon cannot write sparks directly", `insert into student_sparks (person_id, sparks, created_by) values ('11111111-1111-1111-1111-111111111111', '{}', '${ids.teach}')`, false);
+await expectAnon("anon cannot call other private helpers", `select private.has_role('admin')`, false);
+await expectAnon("a non-object payload is refused", `select spark_link_submit('tok-good', '[1,2]'::jsonb) as ok`, true, r => r.rows[0].ok === false);
+await expectAnon("the family submits sparks once", `select spark_link_submit('tok-good', '{"answers":[]}'::jsonb) as ok`, true, r => r.rows[0].ok === true);
+await expectAnon("the same link can't be used twice", `select spark_link_submit('tok-good', '{"answers":[]}'::jsonb) as ok`, true, r => r.rows[0].ok === false);
+await expectAnon("an expired link can't submit", `select spark_link_submit('tok-old', '{"answers":[]}'::jsonb) as ok`, true, r => r.rows[0].ok === false);
+await expect("family sparks arrive attributed to the sender", "adm", `select created_by, source from student_sparks where source = 'family_link'`, true, r => r.rows.length === 1 && r.rows[0].created_by === ids.teach);
+await expect("the submission is logged", "admin", `select count(*)::int n from access_log where action = 'spark_link_submit'`, true, r => r.rows[0].n === 1);
+await expect("admin revokes student_voice again", "admin", `update consents set revoked_at = now() where scope = 'student_voice' and revoked_at is null returning *`, true, r => r.rows.length === 1);
+await expect("no new link without student_voice consent", "teach", link("teach", "tok-new"), false);
 await expect("withdraw (delete) cascades, log survives", "admin", `delete from people where id='11111111-1111-1111-1111-111111111111' returning id`, true, r => r.rows.length === 1);
 const left = await db.query("select (select count(*) from enrollments)::int e, (select count(*) from observations)::int o, (select count(*) from access_log)::int l");
-const ok = left.rows[0].e === 0 && left.rows[0].o === 0 && left.rows[0].l === 1; if (ok) pass++; else fail++;
+const ok = left.rows[0].e === 0 && left.rows[0].o === 0 && left.rows[0].l >= 1; /* log entries outlive the person */ if (ok) pass++; else fail++;
 console.log(`${ok ? "PASS" : "FAIL"}  cascade removed data, access log kept`, left.rows[0]);
 await expect("admissions cannot add people", "adm", `insert into people (first_name,last_name,stage,is_sample) values ('A','B','applicant',true)`, false);
 await expect("admin can still update staff", "admin", `update staff set display_name='Adm2' where user_id='${ids.adm}' returning *`, true, r => r.rows.length === 1);

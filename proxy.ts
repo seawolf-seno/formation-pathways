@@ -30,11 +30,14 @@ export async function proxy(request: NextRequest) {
     return response;
   }
   if (path.startsWith("/spark/")) {
-    // The one deliberate public WRITE surface: an applicant submits their
-    // Spark survey with no school sign-in. submitSparkResponseAction (see
-    // lib/actions.ts) is narrowly scoped by spark_token to a single
-    // applicant's spark_response column only — it cannot touch essays,
-    // status, or generated pathways. See docs/interest-survey.md.
+    // The deliberate public WRITE surfaces, both with no school sign-in:
+    // - /spark/[token]: an applicant's Spark survey (fictional demo).
+    //   submitSparkResponseAction (lib/actions.ts) is scoped by spark_token to
+    //   one applicant's spark_response only. See docs/interest-survey.md.
+    // - /spark/family/[token]: at-home Spark for a pilot student. The
+    //   database functions spark_link_greeting/submit check the token hash,
+    //   expiry, single use and student_voice consent; write-only. See
+    //   supabase/migrations/20261004150000_spark_family_links.sql.
     const response = NextResponse.next();
     response.headers.set("Cache-Control", "no-store");
     response.headers.set("Referrer-Policy", "no-referrer");

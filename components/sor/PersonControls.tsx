@@ -6,6 +6,7 @@ import {
   draftPathwaysAction,
   recordConsentAction,
   revokeConsentAction,
+  createSparkLinkAction,
   setExternalIdsAction,
   updateDraftPathwaysAction,
   withdrawParticipantAction,
@@ -341,6 +342,56 @@ export function EditPathwaysPanel({
         <button disabled={pending} className={quiet} onClick={() => setOpen(false)}>Cancel</button>
       </div>
       {error && <p className="text-sm text-red-700">{error}</p>}
+    </div>
+  );
+}
+
+/** Make a one-time, write-only link so the family can do Spark at home.
+ *  The URL is shown once (only its hash is stored). */
+export function SparkLinkButton({ personId, firstName }: { personId: string; firstName: string }) {
+  const [link, setLink] = useState<{ url: string; expiresAt: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  if (link) {
+    return (
+      <div className="space-y-2 rounded-xl border border-[var(--color-gold)] bg-[var(--color-gold-light)] p-3 text-sm">
+        <p className="text-[var(--color-navy-ink)]">
+          Send this to {firstName}&apos;s family. It works <b>once</b>, until{" "}
+          {new Date(link.expiresAt).toLocaleDateString([], { month: "short", day: "numeric" })}, and only lets them add sparks.
+          Copy it now: it can&apos;t be shown again.
+        </p>
+        <div className="flex gap-2">
+          <input readOnly value={link.url} onFocus={(e) => e.currentTarget.select()} className={`${input} font-mono text-xs`} />
+          <button
+            className={button}
+            onClick={async () => {
+              await navigator.clipboard.writeText(link.url);
+              setCopied(true);
+            }}
+          >
+            {copied ? "Copied" : "Copy"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div>
+      <button
+        disabled={pending}
+        className={quiet}
+        onClick={() =>
+          start(async () => {
+            const res = await createSparkLinkAction(personId);
+            if (res.ok) setLink({ url: res.url, expiresAt: res.expiresAt });
+            else setError(res.error);
+          })
+        }
+      >
+        {pending ? "Making a link…" : "Send a link home ✉"}
+      </button>
+      {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
     </div>
   );
 }

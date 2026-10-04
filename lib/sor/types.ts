@@ -183,7 +183,7 @@ export interface PersonProfile {
   courses: CourseEnrollment[];
   classHistory: ClassHistoryRow[];
   /** The most recent Spark conversation, if any. */
-  sparks: { sparks: import("./sparks").StudentSparks; created_at: string } | null;
+  sparks: { sparks: import("./sparks").StudentSparks; created_at: string; source: "in_person" | "family_link" } | null;
   evidence: AcademicEvidence[];
   observations: SorObservation[];
   drafts: PathwayDraft[];

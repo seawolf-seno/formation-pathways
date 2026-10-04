@@ -134,7 +134,7 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
       // Latest Spark conversation; empty until its migration is applied.
       supabase
         .from("student_sparks")
-        .select("sparks, created_at")
+        .select("sparks, created_at, source")
         .eq("person_id", id)
         .order("created_at", { ascending: false })
         .limit(1)

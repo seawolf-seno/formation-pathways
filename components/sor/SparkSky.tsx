@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useDictation } from "@/components/useDictation";
-import { saveStudentSparksAction } from "@/lib/sor/actions";
+import { saveStudentSparksAction, submitFamilySparksAction } from "@/lib/sor/actions";
 import type { StudentSparks } from "@/lib/sor/sparks";
 import type { SparkChoicePair, SparkOption } from "@/lib/spark";
 import { topChannels, type ChannelCount } from "@/lib/youtube-takeout";
@@ -94,14 +94,15 @@ const short = (s: string, n = 30) => (s.length > n ? `${s.slice(0, n - 1).trimEn
  * end. No scores, points or badges (product principle #6); nothing is graded.
  */
 export function SparkSky({
-  personId,
+  target,
   firstName,
   questions,
   interests,
   pairs,
   isSample,
 }: {
-  personId: string;
+  /** In person on a staff device, or at home through a one-time family link. */
+  target: { kind: "staff"; personId: string } | { kind: "family"; token: string };
   firstName: string;
   questions: string[];
   interests: SparkOption[];
@@ -197,20 +198,22 @@ export function SparkSky({
   function save() {
     setError(null);
     start(async () => {
-      const res = await saveStudentSparksAction({
-        personId,
-        sparks: {
-          answers,
-          picks: [...picks.entries()].map(([label, obsessed]) => ({ label, obsessed })),
-          leanings,
-          channels: [...channels],
-        },
-      });
+      const sparks = {
+        answers,
+        picks: [...picks.entries()].map(([label, obsessed]) => ({ label, obsessed })),
+        leanings,
+        channels: [...channels],
+      };
+      const res =
+        target.kind === "staff"
+          ? await saveStudentSparksAction({ personId: target.personId, sparks })
+          : await submitFamilySparksAction({ token: target.token, sparks });
       if (res.ok) setSaved(true);
       else setError(res.error);
     });
   }
 
+  const staffPage = target.kind === "staff" ? `/pilot/people/${target.personId}` : null;
   const positions = useMemo(() => layoutStars(stars), [stars]);
   const edges = useMemo(
     () => constellationEdges(stars.map((s) => ({ id: s.id, ...positions.get(s.id)! }))),
@@ -255,7 +258,9 @@ export function SparkSky({
       <section className="spark-stage" aria-live="polite">
         {step === "intro" && (
           <div className="spark-card">
-            <p className="spark-eyebrow">{isSample ? "Fictional student · Sample" : "Just for you"}</p>
+            <p className="spark-eyebrow">
+              {isSample ? "Fictional student · Sample" : target.kind === "family" ? "From Pacifica Christian · just for you" : "Just for you"}
+            </p>
             <h1>
               Let&apos;s find your sparks, <em>{firstName}.</em>
             </h1>
@@ -408,10 +413,15 @@ export function SparkSky({
               {stars.length} spark{stars.length === 1 ? "" : "s"}. Your next pathways start here, written by people who know
               you and read by you first.
             </p>
-            {saved ? (
+            {saved && !staffPage ? (
+              <p className="spark-sub">
+                Thank you, {firstName}. Your sparks are on their way to the people who know you at Pacifica. Next time you
+                talk, they&apos;ll be part of the conversation. You can close this page.
+              </p>
+            ) : saved ? (
               <div className="spark-row">
                 <span className="spark-sub">Saved. Nothing goes anywhere without a conversation first.</span>
-                <Link className="spark-go" href={`/pilot/people/${personId}`}>
+                <Link className="spark-go" href={staffPage ?? "/pilot"}>
                   Back to {firstName}&apos;s page →
                 </Link>
               </div>

@@ -45,7 +45,7 @@ export default async function SparkPage({ params }: { params: Promise<{ personId
   const questions = readPrompt("student-spark-questions.txt").split("\n").map((q) => q.trim()).filter(Boolean);
   return (
     <SparkSky
-      personId={personId}
+      target={{ kind: "staff", personId }}
       firstName={firstName}
       questions={questions}
       interests={parseVocabLines(readPrompt("spark-interests.txt"))}

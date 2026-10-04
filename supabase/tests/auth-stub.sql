@@ -7,3 +7,6 @@ create role anon;
 grant usage on schema public, auth to authenticated;
 alter default privileges in schema public grant all on tables to authenticated;
 alter default privileges in schema public grant all on sequences to authenticated;
+
+-- Like Supabase: anon can reach the public schema (RLS still applies).
+grant usage on schema public to anon;
