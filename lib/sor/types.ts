@@ -3,7 +3,7 @@ import type { FormationTag, GeneratedPathway } from "@/lib/types";
 export type LifecycleStage = "applicant" | "admitted" | "enrolled" | "alumni" | "withdrawn";
 export type SourceSystem = "finalsite" | "blackbaud" | "canvas";
 export type StaffRole = "admin" | "admissions" | "teacher" | "staff";
-export type ConsentScope = "import_records" | "ai_drafting" | "staff_observations";
+export type ConsentScope = "import_records" | "ai_drafting" | "staff_observations" | "student_voice";
 
 export const CONSENT_SCOPES: { scope: ConsentScope; label: string; detail: string }[] = [
   {
@@ -15,6 +15,11 @@ export const CONSENT_SCOPES: { scope: ConsentScope; label: string; detail: strin
     scope: "staff_observations",
     label: "Staff observations",
     detail: "Let Pacifica staff record short observations about this student.",
+  },
+  {
+    scope: "student_voice",
+    label: "Student voice",
+    detail: "Let the student share what lights them up (their own words and picks) in a Spark conversation with staff.",
   },
   {
     scope: "ai_drafting",
@@ -177,6 +182,8 @@ export interface PersonProfile {
   enrollment: Enrollment | null;
   courses: CourseEnrollment[];
   classHistory: ClassHistoryRow[];
+  /** The most recent Spark conversation, if any. */
+  sparks: { sparks: import("./sparks").StudentSparks; created_at: string } | null;
   evidence: AcademicEvidence[];
   observations: SorObservation[];
   drafts: PathwayDraft[];

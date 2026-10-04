@@ -87,6 +87,9 @@ export interface PathwayMilestone {
   when: string;
   title: string;
   detail: string;
+  /** Optional: the student's own spark this step grows from, in their words
+   *  (from a Spark conversation), shown as "grew from your spark". */
+  spark?: string;
 }
 
 export interface GeneratedPathway {

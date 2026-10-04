@@ -201,12 +201,12 @@ type EditablePathway = {
   mentorArchetype: string;
   stretchChallenge: string;
   fourYearHorizon: string[];
-  milestones?: { when: string; title: string; detail: string }[];
+  milestones?: { when: string; title: string; detail: string; spark?: string }[];
   glimpse?: string;
 };
 type TextKey = "name" | "firstSemester" | "mentorArchetype" | "stretchChallenge" | "horizon" | "glimpse";
-type Milestone = { when: string; title: string; detail: string };
-const EMPTY_STEPS: Milestone[] = Array.from({ length: 4 }, () => ({ when: "", title: "", detail: "" }));
+type Milestone = { when: string; title: string; detail: string; spark?: string };
+const EMPTY_STEPS: Milestone[] = Array.from({ length: 4 }, () => ({ when: "", title: "", detail: "", spark: "" }));
 
 /** Edit an unsigned draft's three pathways before signing it. */
 export function EditPathwaysPanel({
@@ -319,6 +319,13 @@ export function EditPathwaysPanel({
                   placeholder="One sentence"
                   aria-label={`Step ${s + 1}: detail`}
                   className={`${area} sm:col-span-2`}
+                />
+                <input
+                  value={st.spark ?? ""}
+                  onChange={(e) => setStep(i, s, "spark", e.target.value)}
+                  placeholder="Grew from their spark (optional, their words)"
+                  aria-label={`Step ${s + 1}: grew from spark`}
+                  className={`${input} sm:col-span-2`}
                 />
               </div>
             ))}

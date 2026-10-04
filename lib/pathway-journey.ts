@@ -10,7 +10,7 @@
 // predictions: nothing here invents a fact.
 import type { GeneratedPathway, PathwayMilestone } from "./types";
 
-export const MILESTONE_LIMITS = { min: 3, max: 5, when: 40, title: 80, detail: 400 } as const;
+export const MILESTONE_LIMITS = { min: 3, max: 5, when: 40, title: 80, detail: 400, spark: 60 } as const;
 export const GLIMPSE_MAX = 600;
 
 const clip = (v: unknown, max: number) => (typeof v === "string" ? v.trim().replace(/\s+/g, " ").slice(0, max) : "");
@@ -21,11 +21,15 @@ export function sanitizeMilestones(value: unknown): PathwayMilestone[] | undefin
   if (!Array.isArray(value)) return undefined;
   const out = value
     .filter((m): m is Record<string, unknown> => typeof m === "object" && m !== null)
-    .map((m) => ({
-      when: clip(m.when, MILESTONE_LIMITS.when),
-      title: clip(m.title, MILESTONE_LIMITS.title),
-      detail: clip(m.detail, MILESTONE_LIMITS.detail),
-    }))
+    .map((m) => {
+      const spark = clip(m.spark, MILESTONE_LIMITS.spark);
+      return {
+        when: clip(m.when, MILESTONE_LIMITS.when),
+        title: clip(m.title, MILESTONE_LIMITS.title),
+        detail: clip(m.detail, MILESTONE_LIMITS.detail),
+        ...(spark ? { spark } : {}),
+      };
+    })
     .filter((m) => m.when && m.title && m.detail)
     .slice(0, MILESTONE_LIMITS.max);
   return out.length >= MILESTONE_LIMITS.min ? out : undefined;

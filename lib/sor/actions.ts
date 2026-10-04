@@ -18,6 +18,7 @@ import { checkFinalsiteConnection } from "./importers/finalsite-api";
 import { checkBlackbaudUser } from "./importers/blackbaud";
 import { blackbaudConnection, TOKEN_COOKIE } from "./blackbaud-auth";
 import { cookies } from "next/headers";
+import { sparksForPrompt, validateStudentSparks } from "./sparks";
 import {
   displayName,
   type ConsentScope,
@@ -639,6 +640,9 @@ function toRuakhInput(profile: PersonProfile): RuakhInput {
       tags: o.tags,
       date: o.created_at.slice(0, 10),
     })),
+    // What lights them up, in their own words: needs student_voice consent to
+    // exist at all, and reaches Claude only under the same AI rules as the rest.
+    studentSparks: profile.sparks ? sparksForPrompt(profile.sparks.sparks) : null,
   };
 }
 
@@ -718,6 +722,37 @@ export async function updateDraftPathwaysAction(input: {
     if (error) return fail(error);
     if (!data?.length) throw new Error("Only an unsigned draft can be edited. Draft again to change a signed one.");
     await logAccess(staff, "edit_draft", input.personId, { draftId: input.draftId });
+    revalidatePath(`/pilot/people/${input.personId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Save a Spark conversation (what lights the student up), as the adult who's
+ *  signed in. The database refuses it without student_voice consent. */
+export async function saveStudentSparksAction(input: { personId: string; sparks: unknown }): Promise<Result> {
+  try {
+    const staff = await requireStaff();
+    const checked = validateStudentSparks(input.sparks);
+    if (!checked.ok) return { ok: false, error: checked.error };
+    const supabase = await getSorClient();
+    const { error } = await supabase
+      .from("student_sparks")
+      .insert({ person_id: input.personId, sparks: checked.sparks, created_by: staff.user_id });
+    if (error) {
+      return {
+        ok: false,
+        error: /student_voice/.test(error.message)
+          ? "There's no student-voice consent on file for this student, so their sparks can't be saved."
+          : error.message,
+      };
+    }
+    await logAccess(staff, "student_sparks", input.personId, {
+      answers: checked.sparks.answers.length,
+      picks: checked.sparks.picks.length,
+      channels: checked.sparks.channels.length,
+    });
     revalidatePath(`/pilot/people/${input.personId}`);
     return { ok: true };
   } catch (e) {

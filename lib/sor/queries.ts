@@ -102,7 +102,7 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
   const supabase = await getSorClient();
   const { data: person } = await supabase.from("people").select("*").eq("id", id).maybeSingle();
   if (!person) return null;
-  const [externalIds, consents, admissions, enrollment, courses, evidence, observations, drafts, classHistory] =
+  const [externalIds, consents, admissions, enrollment, courses, evidence, observations, drafts, classHistory, sparks] =
     await Promise.all([
       supabase.from("external_ids").select("*").eq("person_id", id),
       supabase.from("consents").select("*").eq("person_id", id).order("created_at"),
@@ -131,6 +131,14 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
         .eq("person_id", id)
         .order("school_year", { ascending: false })
         .order("course_title"),
+      // Latest Spark conversation; empty until its migration is applied.
+      supabase
+        .from("student_sparks")
+        .select("sparks, created_at")
+        .eq("person_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
   return {
     person: person as Person,
@@ -143,6 +151,7 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
     observations: observations.data ?? [],
     drafts: drafts.data ?? [],
     classHistory: classHistory.data ?? [],
+    sparks: sparks.data ?? null,
   } as PersonProfile;
 }
 
