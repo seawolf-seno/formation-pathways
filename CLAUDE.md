@@ -111,7 +111,8 @@ adults behind the scenes; students stay present, in person, with people.
   live DB or query per-student tables.
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
-     open a real student on screen).
+     open a real student on screen). The deck (overview → live demo → what we build next → ask)
+     is a claude.ai artifact, documented in `docs/board-deck.md`.
   2. Admissions director's self-test (`docs/admissions-tester-guide.md`); her answers on the
      fall-2027 counts and whether `financial_aid_waitlisting` counts as admitted.
   3. After leadership confirms Anthropic terms: `AI_REAL_STUDENTS=on`, then Spark → Draft →
