@@ -146,14 +146,19 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
         .eq("person_id", id)
         .order("school_year", { ascending: false })
         .order("course_title"),
-      // Every Spark session, newest first (drafting merges them all).
+      // Every Spark session, newest first (drafting merges them all). "*", not
+      // a column list: `source` arrives with the family-links migration, and
+      // naming a missing column fails the whole read, which once made saved
+      // sparks look like "no Spark yet".
       supabase
         .from("student_sparks")
-        .select("sparks, created_at, source")
+        .select("*")
         .eq("person_id", id)
         .order("created_at", { ascending: false })
         .limit(20),
     ]);
+  // A failed read must never pass for "nothing there": say so in the logs.
+  if (sparks.error) console.error("student_sparks read failed:", sparks.error.message);
   return {
     person: person as Person,
     externalIds: externalIds.data ?? [],
@@ -165,7 +170,11 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
     observations: observations.data ?? [],
     drafts: drafts.data ?? [],
     classHistory: classHistory.data ?? [],
-    sparks: sparks.data ?? [],
+    sparks: (sparks.data ?? []).map((row) => ({
+      sparks: row.sparks,
+      created_at: row.created_at,
+      source: row.source === "family_link" ? "family_link" : "in_person",
+    })),
   } as PersonProfile;
 }
 

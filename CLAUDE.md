@@ -135,6 +135,10 @@ adults behind the scenes; students stay present, in person, with people.
   later draft), counts only, pilot vs. fictional samples. `?format=classic` = the old single
   flow; family links still use it. Content: `prompts/spark-starters.txt`, `prompts/spark-cards.txt`.
   Spark (all modes) now saves on reaching the end; an expired sign-in shows a plain message.
+- **Live DB is missing `20261004150000_spark_family_links.sql` (found 2026-10-06)**: no
+  `spark_links`, no `student_sparks.source`. In-person Spark saves fine; the person page used to
+  hide saved sparks because it selected `source` (fixed: it reads `*`). **Family at-home links
+  don't work until seno applies that migration** (SQL editor or `supabase db push`).
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)
