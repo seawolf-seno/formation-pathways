@@ -104,7 +104,19 @@ export interface GeneratedPathway {
   /** Optional: 2–3 sentences, second person, a concrete moment ("Picture a
    *  Thursday in spring of junior year…"). An invitation, not a prediction. */
   glimpse?: string;
+  /** Optional: the one distinctive detail this pathway grows from, in the
+   *  student's own words (a prior school, a project, a hobby, one sentence). */
+  hook?: string;
+  /** Optional: one sentence on why this pathway is timely, from a dated
+   *  public podcast item (lib/world-signals.ts). Never a promise or contact. */
+  whyNow?: string;
+  /** Where whyNow came from, e.g. "TBPN · Oct 5, 2026". Required with whyNow. */
+  whyNowSource?: string;
 }
+
+/** How many pathways a draft offers. Many, so staff can keep the ones that
+ *  are unmistakably this student's; editing can trim down to the minimum. */
+export const PATHWAY_COUNT = { draft: 6, min: 3 } as const;
 
 import type { SparkResponse } from "./spark";
 

@@ -12,6 +12,9 @@ import type { GeneratedPathway, PathwayMilestone } from "./types";
 
 export const MILESTONE_LIMITS = { min: 3, max: 5, when: 40, title: 80, detail: 400, spark: 60 } as const;
 export const GLIMPSE_MAX = 600;
+export const HOOK_MAX = 160;
+export const WHY_NOW_MAX = 400;
+export const WHY_NOW_SOURCE_MAX = 80;
 
 const clip = (v: unknown, max: number) => (typeof v === "string" ? v.trim().replace(/\s+/g, " ").slice(0, max) : "");
 
@@ -40,7 +43,19 @@ export function sanitizeGlimpse(value: unknown): string | undefined {
   return g || undefined;
 }
 
-/** A pathway with its optional journey fields cleaned (or dropped). */
+/** The optional "what makes it theirs" fields: a hook in the student's words,
+ *  and a why-now that only stands with its source (no unsourced world claims). */
+export function sanitizeUniqueness(raw: Record<string, unknown>): Pick<GeneratedPathway, "hook" | "whyNow" | "whyNowSource"> {
+  const hook = clip(raw.hook, HOOK_MAX);
+  const whyNow = clip(raw.whyNow, WHY_NOW_MAX);
+  const whyNowSource = clip(raw.whyNowSource, WHY_NOW_SOURCE_MAX);
+  return {
+    ...(hook ? { hook } : {}),
+    ...(whyNow && whyNowSource ? { whyNow, whyNowSource } : {}),
+  };
+}
+
+/** A pathway with its optional journey and uniqueness fields cleaned (or dropped). */
 export function withJourneyFields<T extends GeneratedPathway>(p: T): GeneratedPathway {
   const raw = p as unknown as Record<string, unknown>;
   const milestones = sanitizeMilestones(raw.milestones);
@@ -53,7 +68,14 @@ export function withJourneyFields<T extends GeneratedPathway>(p: T): GeneratedPa
     fourYearHorizon: p.fourYearHorizon,
     ...(milestones ? { milestones } : {}),
     ...(glimpse ? { glimpse } : {}),
+    ...sanitizeUniqueness(raw),
   };
+}
+
+const COUNT_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight"];
+/** "Six" for page copy like "Six invitations. No fixed track." */
+export function countWord(n: number): string {
+  return COUNT_WORDS[n] ?? String(n);
 }
 
 /** Applicants start in ninth grade; current students start from where they are. */

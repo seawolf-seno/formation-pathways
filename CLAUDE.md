@@ -109,6 +109,17 @@ adults behind the scenes; students stay present, in person, with people.
   `student_voice` consent, `student_sparks`) and at-home one-time family links
   (`/spark/family/[token]`, the only anonymous write path). Agents still never write to the
   live DB or query per-student tables.
+- **Unique pathways (2026-10-06, branch `seno/unique-pathways`)**: testing found pathways
+  too generic (current students all take the same classes). Both generators now draft **six**
+  pathways (staff remove down to three before signing) under `prompts/unique-pathways.txt`:
+  find what only this student has (prior school, a project, a hobby, one sentence), courses are
+  backdrop, a swap test, banned generic names. Each pathway carries a `hook` (their words) and,
+  where it genuinely fits, `whyNow` + `whyNowSource` from **world signals**
+  (`lib/world-signals.ts`): the head of public podcast feeds (TBPN, as in TeenAlpha, plus How I
+  Built This, 99% Invisible, Short Wave, Radiolab), last 45 days, unsuitable topics filtered,
+  cached 6h per instance, snapshot fallback `fixtures/world-signals.json`
+  (`npm run world:refresh`; `WORLD_SIGNALS=off` = snapshot only). No student data leaves for
+  this. Not yet quality-tested against real Claude output (no local key).
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)

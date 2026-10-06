@@ -202,6 +202,26 @@
   border-top: 2px solid var(--j-sky);
   padding-top: 12px;
 }
+/* What makes it theirs: the hook it grows from, and why it matters right now. */
+.journey-origin {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 12px;
+  opacity: 0;
+  animation: journey-rise 600ms ease forwards;
+  animation-delay: 60ms;
+}
+.journey-origin > div {
+  border-left: 2px solid var(--j-gold-soft);
+  padding-left: 12px;
+}
+.journey-origin cite {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-size: 12px;
+  opacity: 0.7;
+}
 
 @keyframes journey-rise {
   to {
@@ -265,6 +285,7 @@
 .journey--still .journey-road,
 .journey--still .journey-glimpse,
 .journey--still .journey-companions,
+.journey--still .journey-origin,
 .journey--still .journey-seg path,
 .journey--still .journey-branches path {
   animation: none;
@@ -279,6 +300,7 @@
   .journey .journey-road,
   .journey .journey-glimpse,
   .journey .journey-companions,
+  .journey .journey-origin,
   .journey .journey-seg path,
   .journey .journey-branches path {
     animation: none;
@@ -294,6 +316,7 @@
   .journey .journey-road,
   .journey .journey-glimpse,
   .journey .journey-companions,
+  .journey .journey-origin,
   .journey .journey-seg path,
   .journey .journey-branches path {
     animation: none;

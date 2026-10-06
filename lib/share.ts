@@ -56,7 +56,7 @@ export function buildPublicShareContent(
   selection: ShareSelection
 ): PublicShareContent {
   const pathway = pathways[selection.pathwayIndex];
-  if (!pathway) throw new Error("Choose one of the three Pathways to share");
+  if (!pathway) throw new Error("Choose one of the Pathways to share");
 
   const sentences = splitSentences(pathway.firstSemester);
   const highlight = sentences[selection.highlightIndex];

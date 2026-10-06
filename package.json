@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test:db": "node supabase/tests/rls.test.mjs",
-    "test:share": "node --test tests/*.test.mjs"
+    "test:share": "node --test tests/*.test.mjs",
+    "world:refresh": "node scripts/refresh-world-signals.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

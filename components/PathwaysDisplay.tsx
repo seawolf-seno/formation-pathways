@@ -17,6 +17,11 @@ export function PathwaysDisplay({
           <h3 className="font-display text-xl text-[var(--color-navy-ink)]">
             {pathway.name}
           </h3>
+          {pathway.hook && (
+            <p className="mt-1 text-sm italic text-[var(--color-ink-muted)]">
+              Grows from: “{pathway.hook.replace(/^["“]|["”]$/g, "")}”
+            </p>
+          )}
           <p className="mt-3 text-sm leading-relaxed text-[var(--color-ink)]">
             {pathway.firstSemester}
           </p>
@@ -45,6 +50,17 @@ export function PathwaysDisplay({
             </blockquote>
           )}
           <dl className="mt-4 space-y-3 border-t border-[var(--color-border)] pt-4 text-sm">
+            {pathway.whyNow && pathway.whyNowSource && (
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
+                  Why now
+                </dt>
+                <dd className="mt-1 text-[var(--color-ink)]">
+                  {pathway.whyNow}{" "}
+                  <span className="text-xs text-[var(--color-ink-muted)]">({pathway.whyNowSource})</span>
+                </dd>
+              </div>
+            )}
             <div>
               <dt className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
                 Mentor

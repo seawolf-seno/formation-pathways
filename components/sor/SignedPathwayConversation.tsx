@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { PacificaLogo } from "@/components/PacificaLogo";
 import { PathwayJourney } from "@/components/PathwayJourney";
+import { countWord } from "@/lib/pathway-journey";
 import { recordPathwayChoiceAction } from "@/lib/sor/actions";
 import type { GeneratedPathway } from "@/lib/types";
 import "@/components/family-pathways.css";
@@ -79,8 +80,8 @@ export function SignedPathwayConversation({
             feels like <em>{firstName}.</em>
           </h1>
           <p className="family-intro">
-            The people who know you here noticed what you love and how you&apos;ve grown. Here are three ways that
-            could keep growing at Pacifica.
+            The people who know you here noticed what you love and how you&apos;ve grown. Here are{" "}
+            {countWord(pathways.length).toLowerCase()} ways that could keep growing at Pacifica.
           </p>
           <a className="family-text-link" href="#pathway-choices">
             Explore your possibilities <span aria-hidden="true">↓</span>
@@ -91,7 +92,7 @@ export function SignedPathwayConversation({
         <div className="family-section-heading">
           <div>
             <p className="family-eyebrow">Your possibilities</p>
-            <h2 id="possibilities-title">Three invitations. No fixed track.</h2>
+            <h2 id="possibilities-title">{countWord(pathways.length)} invitations. No fixed track.</h2>
           </div>
           <p>Start with the one that makes you curious.</p>
         </div>
