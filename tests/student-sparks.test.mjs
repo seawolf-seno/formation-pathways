@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { sparksForPrompt, validateStudentSparks } from "../lib/sor/sparks.ts";
+import { mergeSparks, sparkUses, sparksForPrompt, validateStudentSparks } from "../lib/sor/sparks.ts";
 
 test("sparks are cleaned, capped and need at least one spark", () => {
   assert.equal(validateStudentSparks({}).ok, false);
@@ -31,4 +31,62 @@ test("sparks read as first-person evidence for the prompt", () => {
   assert.match(text, /obsessed with: Music/);
   assert.match(text, /Figure it out as you go \(over Plan every step\)/);
   assert.match(text, /Mark Rober/);
+});
+
+const inPerson = {
+  created_at: "2026-10-02T15:00:00Z",
+  source: "in_person",
+  sparks: {
+    answers: [{ prompt: "What do you research at 2am?", text: "How old hand tools were made, and restoring old tools from estate sales.", via: "voice" }],
+    picks: [{ label: "Woodworking", obsessed: false }, { label: "Music", obsessed: true }],
+    leanings: [{ a: "Build", b: "Perform", choice: "Build" }],
+    channels: ["Rex Krueger"],
+  },
+};
+const atHome = {
+  created_at: "2026-10-04T20:00:00Z",
+  source: "family_link",
+  sparks: {
+    answers: [{ prompt: "What do you practice when it's boring?", text: "Bass scales.", via: "text" }],
+    picks: [{ label: "Woodworking", obsessed: true }],
+    leanings: [{ a: "Perform", b: "Build", choice: "Perform" }],
+    channels: ["Rex Krueger", "Scott's Bass Lessons"],
+  },
+};
+
+test("mergeSparks: home answers add to in-person ones; obsessed anywhere stays; newest lean wins", () => {
+  const m = mergeSparks([atHome, inPerson]);
+  assert.equal(m.answers.length, 2);
+  assert.deepEqual(m.picks, [{ label: "Woodworking", obsessed: true }, { label: "Music", obsessed: true }]);
+  assert.deepEqual(m.leanings, [{ a: "Perform", b: "Build", choice: "Perform" }]);
+  assert.deepEqual(m.channels, ["Rex Krueger", "Scott's Bass Lessons"]);
+  assert.equal(mergeSparks([]), null);
+});
+
+test("sparkUses: finds the hook and the ✦ steps that grew from a student's words, and nothing else", () => {
+  const pathways = [
+    {
+      name: "Second Life for Old Tools",
+      firstSemester: "Makers Space.",
+      mentorArchetype: "x",
+      stretchChallenge: "x",
+      fourYearHorizon: [],
+      hook: "restoring old tools from estate sales",
+      milestones: [
+        { when: "This spring", title: "A bench of your own", detail: "Makers Space.", spark: "restoring old tools" },
+        { when: "Next fall", title: "Teach it", detail: "STEM Scholars.", spark: "woodworking" },
+      ],
+    },
+    { name: "The Low End", firstSemester: "Join the jazz band and play bass.", mentorArchetype: "x", stretchChallenge: "x", fourYearHorizon: [], hook: "bass scales when it's boring" },
+  ];
+  assert.deepEqual(sparkUses(inPerson.sparks.answers[0].text, pathways), [
+    { pathway: "Second Life for Old Tools", where: "grows from it" },
+    { pathway: "Second Life for Old Tools", where: "This spring: A bench of your own" },
+  ]);
+  assert.deepEqual(sparkUses("Woodworking", pathways, { short: true }), [
+    { pathway: "Second Life for Old Tools", where: "Next fall: Teach it" },
+  ]);
+  assert.deepEqual(sparkUses("Bass scales.", pathways), [{ pathway: "The Low End", where: "grows from it" }]);
+  assert.deepEqual(sparkUses("Rex Krueger", pathways, { short: true }), []);
+  assert.deepEqual(sparkUses("Music", pathways, { short: true }), []);
 });
