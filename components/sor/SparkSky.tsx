@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useDictation } from "@/components/useDictation";
 import { saveStudentSparksAction, submitFamilySparksAction } from "@/lib/sor/actions";
@@ -193,6 +193,23 @@ export function SparkSky({
     } catch (e) {
       setFileError(e instanceof Error ? e.message : "Couldn't read that file.");
     }
+  }
+
+  // Leaving with unsaved sparks loses them, so say so before the tab closes.
+  const unsaved = !saved && (answers.length > 0 || picks.size > 0);
+  useEffect(() => {
+    if (!unsaved) return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [unsaved]);
+
+  /** The sky is the end of the conversation, so it saves on arrival: closing
+   *  the tab after seeing it must not lose everything. The button below stays
+   *  only as a retry if saving failed. */
+  function reveal() {
+    setStep("reveal");
+    if (!saved && !pending && stars.length > 0) save();
   }
 
   function save() {
@@ -396,7 +413,7 @@ export function SparkSky({
             {fileError && <p className="spark-error">{fileError}</p>}
             <div className="spark-row">
               <span />
-              <button className="spark-go" onClick={() => setStep("reveal")}>
+              <button className="spark-go" onClick={reveal}>
                 {channelOptions ? "Show me my sky ✦" : "Skip, show me my sky ✦"}
               </button>
             </div>
@@ -425,11 +442,13 @@ export function SparkSky({
                   Back to {firstName}&apos;s page →
                 </Link>
               </div>
+            ) : pending ? (
+              <p className="spark-sub">Saving…</p>
             ) : (
               <div className="spark-row">
                 <button className="spark-quiet" onClick={() => setStep("pull")}>Add more</button>
-                <button className="spark-go" onClick={save} disabled={pending || stars.length === 0}>
-                  {pending ? "Saving…" : "Save my sparks ✦"}
+                <button className="spark-go" onClick={save} disabled={stars.length === 0}>
+                  {error ? "Try saving again ✦" : "Save my sparks ✦"}
                 </button>
               </div>
             )}

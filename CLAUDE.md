@@ -120,6 +120,12 @@ adults behind the scenes; students stay present, in person, with people.
   cached 6h per instance, snapshot fallback `fixtures/world-signals.json`
   (`npm run world:refresh`; `WORLD_SIGNALS=off` = snapshot only). No student data leaves for
   this. Not yet quality-tested against real Claude output (no local key).
+- **Spark results for staff (2026-10-06, branch `seno/spark-results`, stacked on #42)**: the
+  person page opens with Spark (status pill in the header, every session, said-aloud/typed,
+  both sides of each this-or-that, and "→ pathway · step" under each spark from the latest
+  draft's hooks/✦ steps, or "not in a pathway"); `/pilot` roster shows Spark status per student.
+  Drafting now merges all sessions (`mergeSparks`), not just the latest. RLS unchanged: teachers
+  read sparks but not drafts (so no "used in" for them); plain `staff` read neither.
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)

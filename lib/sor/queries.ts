@@ -67,24 +67,39 @@ export async function getPilotSettings(): Promise<PilotSettings> {
 export interface RosterEntry extends Person {
   consents: Consent[];
   observation_count: number;
+  /** Spark sessions saved, and the newest one's date (null: none, or this
+   *  role can't read sparks). */
+  spark_count: number;
+  last_spark_at: string | null;
+  /** Newest pathway draft's date; null for roles that can't read drafts. */
+  last_draft_at: string | null;
 }
 
 export async function getRoster(): Promise<RosterEntry[]> {
   const supabase = await getSorClient();
   const { data, error } = await supabase
     .from("people")
-    .select("*, consents(*), observations(count)")
+    // Sparks and drafts are filtered by RLS like everything else: a role
+    // that can't read them simply gets none back.
+    .select("*, consents(*), observations(count), student_sparks(created_at), pathway_drafts(created_at)")
     .order("last_name");
   if (error) throw error;
+  const newest = (rows: { created_at: string }[] | null | undefined) =>
+    (rows ?? []).reduce<string | null>((max, r) => (!max || r.created_at > max ? r.created_at : max), null);
   return (data ?? []).map((row) => {
-    const { observations, consents, ...person } = row as Person & {
+    const { observations, consents, student_sparks, pathway_drafts, ...person } = row as Person & {
       consents: Consent[];
       observations: { count: number }[];
+      student_sparks: { created_at: string }[] | null;
+      pathway_drafts: { created_at: string }[] | null;
     };
     return {
       ...person,
       consents: consents.filter((c) => !c.revoked_at),
       observation_count: observations?.[0]?.count ?? 0,
+      spark_count: student_sparks?.length ?? 0,
+      last_spark_at: newest(student_sparks),
+      last_draft_at: newest(pathway_drafts),
     };
   });
 }
@@ -131,14 +146,13 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
         .eq("person_id", id)
         .order("school_year", { ascending: false })
         .order("course_title"),
-      // Latest Spark conversation; empty until its migration is applied.
+      // Every Spark session, newest first (drafting merges them all).
       supabase
         .from("student_sparks")
         .select("sparks, created_at, source")
         .eq("person_id", id)
         .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+        .limit(20),
     ]);
   return {
     person: person as Person,
@@ -151,7 +165,7 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
     observations: observations.data ?? [],
     drafts: drafts.data ?? [],
     classHistory: classHistory.data ?? [],
-    sparks: sparks.data ?? null,
+    sparks: sparks.data ?? [],
   } as PersonProfile;
 }
 
