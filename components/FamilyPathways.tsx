@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import type { GeneratedPathway } from "@/lib/types";
 import { ShareStudio, type ExistingShare } from "./ShareStudio";
 import { PathwayJourney } from "./PathwayJourney";
+import { countWord } from "@/lib/pathway-journey";
 import "./family-pathways.css";
 
 export function FamilyPathways({
@@ -24,6 +25,7 @@ export function FamilyPathways({
   const firstName = name.trim().split(/\s+/)[0];
   const pathway = pathways[selected];
   if (!pathway) return null;
+  const count = countWord(pathways.length);
 
   function explore(index: number) {
     setSelected(index);
@@ -53,7 +55,7 @@ export function FamilyPathways({
           </h1>
           <p className="family-intro">
             What you love. What you wonder about. What you haven’t tried yet.
-            Here are three ways those things could grow at Pacifica.
+            Here are {count.toLowerCase()} ways those things could grow at Pacifica.
           </p>
           <a className="family-text-link" href="#pathway-choices">
             Explore your possibilities <span aria-hidden="true">↓</span>
@@ -88,7 +90,7 @@ export function FamilyPathways({
         <div className="family-section-heading">
           <div>
             <p className="family-eyebrow">Your possibilities</p>
-            <h2 id="possibilities-title">Three invitations. No fixed track.</h2>
+            <h2 id="possibilities-title">{count} invitations. No fixed track.</h2>
           </div>
           <p>Start with the one that makes you curious.</p>
         </div>

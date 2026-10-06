@@ -63,3 +63,15 @@ test("a milestone keeps the student's spark thread, trimmed and optional", async
   assert.ok(!("spark" in steps[1]));
   assert.ok(!("spark" in steps[2]));
 });
+
+test("hook and why-now are kept, trimmed, and a why-now never stands without its source", async () => {
+  const { sanitizeUniqueness, countWord } = await import("../lib/pathway-journey.ts");
+  assert.deepEqual(
+    withJourneyFields({ ...base, hook: "  the bike shop at my uncle's garage ", whyNow: "Founders are building on-device AI.", whyNowSource: "TBPN · Oct 5, 2026" }),
+    { ...base, hook: "the bike shop at my uncle's garage", whyNow: "Founders are building on-device AI.", whyNowSource: "TBPN · Oct 5, 2026" }
+  );
+  assert.deepEqual(sanitizeUniqueness({ whyNow: "An unsourced claim about the world." }), {});
+  assert.deepEqual(sanitizeUniqueness({ hook: "x".repeat(400) }).hook.length, 160);
+  assert.equal(countWord(6), "Six");
+  assert.equal(countWord(12), "12");
+});

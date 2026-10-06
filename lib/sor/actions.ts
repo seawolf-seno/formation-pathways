@@ -7,8 +7,8 @@ import { requestOrigin } from "@/lib/origin";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { draftObservation, draftRuakhPathways, type RuakhInput } from "@/lib/claude";
-import { FORMATION_TAGS, type FormationTag, type GeneratedPathway } from "@/lib/types";
-import { sanitizeGlimpse, sanitizeMilestones } from "@/lib/pathway-journey";
+import { FORMATION_TAGS, PATHWAY_COUNT, type FormationTag, type GeneratedPathway } from "@/lib/types";
+import { sanitizeGlimpse, sanitizeMilestones, sanitizeUniqueness } from "@/lib/pathway-journey";
 import { getSorClient } from "./supabase-server";
 import { getCaptureRoster, getPersonProfile, logAccess, requireStaff } from "./queries";
 import { matchPeople } from "./match";
@@ -694,7 +694,7 @@ export async function updateDraftPathwaysAction(input: {
   try {
     const staff = await requireRole("admin", "admissions");
     const clip = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
-    const pathways = input.pathways.slice(0, 3).map((p) => {
+    const pathways = input.pathways.slice(0, PATHWAY_COUNT.draft).map((p) => {
       // Fewer than three complete milestones, or an empty glimpse, means
       // "none": the journey visual then derives its steps.
       const milestones = sanitizeMilestones(p.milestones);
@@ -707,10 +707,15 @@ export async function updateDraftPathwaysAction(input: {
         fourYearHorizon: (Array.isArray(p.fourYearHorizon) ? p.fourYearHorizon : []).map((h) => clip(h, 300)).filter(Boolean).slice(0, 6),
         ...(milestones ? { milestones } : {}),
         ...(glimpse ? { glimpse } : {}),
+        // A why-now only stands with its source; clearing either drops both.
+        ...sanitizeUniqueness(p as unknown as Record<string, unknown>),
       };
     });
-    if (pathways.length !== 3 || pathways.some((p) => !p.name || !p.firstSemester)) {
-      throw new Error("Each of the three pathways needs a name and a first-semester description.");
+    if (pathways.length < PATHWAY_COUNT.min) {
+      throw new Error(`Keep at least ${PATHWAY_COUNT.min} pathways.`);
+    }
+    if (pathways.some((p) => !p.name || !p.firstSemester)) {
+      throw new Error("Each pathway needs a name and a first-semester description.");
     }
     const supabase = await getSorClient();
     const { data, error } = await supabase
@@ -842,7 +847,7 @@ export async function recordPathwayChoiceAction(input: {
       throw new Error("That pathway isn't signed, so it can't be chosen yet.");
     }
     const chosen = (draft.pathways as { name?: string }[])[input.pathwayIndex];
-    if (!chosen?.name) throw new Error("Choose one of the three pathways.");
+    if (!chosen?.name) throw new Error("Choose one of the pathways.");
     const { data: person } = await supabase
       .from("people")
       .select("first_name, preferred_name")

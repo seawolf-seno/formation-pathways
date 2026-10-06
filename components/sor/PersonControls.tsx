@@ -33,7 +33,7 @@ export function DraftButton({ personId, hasDraft, allowed }: { personId: string;
           })
         }
       >
-        {pending ? "Reading their story…" : hasDraft ? "Draft again from latest data" : "Draft who they are today + 3 pathways"}
+        {pending ? "Reading their story…" : hasDraft ? "Draft again from latest data" : "Draft who they are today + 6 pathways"}
       </button>
       {!allowed && <p className="mt-1 text-xs text-[var(--color-ink-muted)]">Needs AI-drafting consent.</p>}
       {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
@@ -204,12 +204,26 @@ type EditablePathway = {
   fourYearHorizon: string[];
   milestones?: { when: string; title: string; detail: string; spark?: string }[];
   glimpse?: string;
+  hook?: string;
+  whyNow?: string;
+  whyNowSource?: string;
 };
-type TextKey = "name" | "firstSemester" | "mentorArchetype" | "stretchChallenge" | "horizon" | "glimpse";
+type TextKey =
+  | "name"
+  | "firstSemester"
+  | "mentorArchetype"
+  | "stretchChallenge"
+  | "horizon"
+  | "glimpse"
+  | "hook"
+  | "whyNow"
+  | "whyNowSource";
+const MIN_PATHWAYS = 3; // PATHWAY_COUNT.min in lib/types.ts
 type Milestone = { when: string; title: string; detail: string; spark?: string };
 const EMPTY_STEPS: Milestone[] = Array.from({ length: 4 }, () => ({ when: "", title: "", detail: "", spark: "" }));
 
-/** Edit an unsigned draft's three pathways before signing it. */
+/** Edit an unsigned draft's pathways before signing it: reword them, or
+ *  remove the ones that aren't unmistakably this student's (down to three). */
 export function EditPathwaysPanel({
   draftId,
   personId,
@@ -228,6 +242,9 @@ export function EditPathwaysPanel({
       stretchChallenge: p.stretchChallenge,
       horizon: p.fourYearHorizon.join("\n"),
       glimpse: p.glimpse ?? "",
+      hook: p.hook ?? "",
+      whyNow: p.whyNow ?? "",
+      whyNowSource: p.whyNowSource ?? "",
       // Always four editable steps; blank ones are dropped on save.
       steps: [...(p.milestones ?? []), ...EMPTY_STEPS].slice(0, Math.max(4, p.milestones?.length ?? 0)),
     }))
@@ -272,10 +289,25 @@ export function EditPathwaysPanel({
     <div className="space-y-5 rounded-xl bg-white p-5 text-left">
       {rows.map((row, i) => (
         <fieldset key={i} className="space-y-2 border-t border-[var(--color-border)] pt-4 first:border-0 first:pt-0">
-          <legend className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Pathway {i + 1}</legend>
+          <legend className="flex w-full items-center justify-between gap-2">
+            <span className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Pathway {i + 1}</span>
+            <button
+              type="button"
+              disabled={pending || rows.length <= MIN_PATHWAYS}
+              onClick={() => setRows((r) => r.filter((_, j) => j !== i))}
+              className="text-xs text-[var(--color-ink-muted)] underline disabled:no-underline disabled:opacity-40"
+              title={rows.length <= MIN_PATHWAYS ? `Keep at least ${MIN_PATHWAYS}` : "Remove this pathway from the draft"}
+            >
+              Remove
+            </button>
+          </legend>
           <label className="block text-xs text-[var(--color-ink-muted)]">
             Name
             <input value={row.name} onChange={(e) => set(i, "name", e.target.value)} className={`${input} mt-1`} />
+          </label>
+          <label className="block text-xs text-[var(--color-ink-muted)]">
+            Grows from (the one detail that is only theirs, in their words)
+            <input value={row.hook} onChange={(e) => set(i, "hook", e.target.value)} className={`${input} mt-1`} />
           </label>
           <label className="block text-xs text-[var(--color-ink-muted)]">
             Next semester
@@ -335,6 +367,16 @@ export function EditPathwaysPanel({
             A glimpse (2–3 sentences, &quot;Picture a Thursday next spring…&quot;; an invitation, not a promise)
             <textarea value={row.glimpse} onChange={(e) => set(i, "glimpse", e.target.value)} rows={3} className={area} />
           </label>
+          <div className="grid gap-2 sm:grid-cols-[1fr_12rem]">
+            <label className="block text-xs text-[var(--color-ink-muted)]">
+              Why now (from this month&apos;s podcast show notes; clear it if it doesn&apos;t fit)
+              <textarea value={row.whyNow} onChange={(e) => set(i, "whyNow", e.target.value)} rows={2} className={area} />
+            </label>
+            <label className="block text-xs text-[var(--color-ink-muted)]">
+              Heard on (show · date)
+              <input value={row.whyNowSource} onChange={(e) => set(i, "whyNowSource", e.target.value)} className={`${input} mt-1`} />
+            </label>
+          </div>
         </fieldset>
       ))}
       <div className="flex gap-2">

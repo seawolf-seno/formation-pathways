@@ -246,8 +246,8 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             <section className="rounded-xl border-2 border-dashed border-[var(--color-gold)] bg-[var(--color-gold-light)] p-5">
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
-                  <h2 className="font-display text-xl text-[var(--color-navy-ink)]">Who {person.preferred_name || person.first_name} is today, and three roads to Ruakh 2.0</h2>
-                  <p className="text-xs text-[var(--color-ink-muted)]">Drafted from everything above. Staff only until a named adult edits and signs it; then the three pathways (never this portrait) can be opened with the student.</p>
+                  <h2 className="font-display text-xl text-[var(--color-navy-ink)]">Who {person.preferred_name || person.first_name} is today, and roads to Ruakh 2.0</h2>
+                  <p className="text-xs text-[var(--color-ink-muted)]">Drafted from everything above. Staff only until a named adult edits and signs it; then the pathways you keep (never this portrait) can be opened with the student. Six are drafted so you can remove the ones that aren't unmistakably theirs.</p>
                 </div>
                 <DraftButton personId={person.id} hasDraft={Boolean(latest)} allowed={aiConsent} />
               </div>

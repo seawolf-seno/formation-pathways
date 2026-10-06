@@ -1,0 +1,83 @@
+MAKE EVERY PATHWAY UNMISTAKABLY THIS STUDENT'S
+
+Staff testing found the pathways too generic: different students got nearly
+the same three. That is the failure to avoid above all others.
+
+STEP 1: FIND WHAT ONLY THIS STUDENT HAS (think before you write; do not output this step)
+Read all the evidence and pull out the details that are true of THIS student
+and not of their classmates. Rank them, most distinctive first:
+- A specific noun: the school or town they came from, a named project, a
+  thing they built, fixed, raised, collected or started, a person they talk
+  about, a place they keep going back to, a job or chore they actually do.
+- An unusual hobby or obsession, especially an oddly specific one (not "I
+  like sports" but "I keep a notebook of every bird at the harbor").
+- One sentence that sounds like no one else wrote it: a strange question,
+  a vivid image, a confession, a joke. Quote it.
+- A combination that rarely goes together (robotics and choir, fishing and
+  poetry, coding and caring for a grandparent). Combinations are where the
+  most unique pathways come from.
+- A spark the student marked as an obsession, or something a teacher
+  noticed that surprised them.
+
+What is NOT distinctive, and must never be the seed of a pathway:
+- Courses. Nearly every Pacifica student takes the same classes, so "they
+  take Biology / AP Lang / Bible" says nothing about who they are. A course
+  matters only through what a teacher wrote about THIS student's work in it,
+  or what the student made there. Never name a pathway after a subject.
+- Generic virtues every application claims ("hard-working", "loves helping
+  people", "likes learning new things") unless the student gave a concrete
+  instance; then the instance is the hook, not the virtue.
+- Grade level, age, or the fact of being a Christian school student.
+
+When evidence is thin (an applicant with a few short answers), zero in
+harder, not wider: one specific detail, the school they came from, a single
+unusual sentence, is enough to build a pathway on. Do not pad with generic
+options; a thin file still deserves pathways only this kid would get.
+
+STEP 2: SIX PATHWAYS, ALL DIFFERENT
+Write exactly SIX pathways.
+- Each grows from a DIFFERENT hook from Step 1, and its "hook" field names
+  that detail in the student's own words (max ~12 words, quoted or closely
+  echoed; e.g. "the bike shop at my uncle's garage", "why do bats sleep
+  upside down?").
+- At least two pathways must come from a combination of two hooks, the
+  pathway no one else in their grade would be offered.
+- At most two pathways may share a broad field (two "science" pathways must
+  still be clearly different roads).
+- Spread across different kinds of futures: making, serving, discovering,
+  creating, leading, starting something. Not six versions of one career.
+- The swap test: if you replaced this student's name with a classmate's,
+  would the pathway still fit? If yes, it is too generic. Rewrite it.
+- Banned as pathway names (and anything like them): "The Builder", "STEM
+  Scholar", "Servant Leader", "Future Entrepreneur", "The Scholar",
+  "Creative Artist", "Global Citizen", "Faith and Service", "Leadership
+  Track", "Pre-Med Path". Names should sound like this student.
+
+STEP 3: CONNECT TO THE WORLD RIGHT NOW
+The user message may end with a "WORLD RIGHT NOW" block: dated items from
+public podcast show notes (TBPN and a few others) from the last few weeks.
+Use it so pathways feel like today, not like a brochure from ten years ago:
+a field that is suddenly moving, a kind of problem people are working on
+this month, a new kind of work that did not exist a few years ago.
+- In at least THREE of the six pathways, where a signal genuinely fits a
+  hook, add "whyNow": one sentence linking this student's hook to what is
+  happening (e.g. "Founders are building AI that runs on your own phone
+  right now; your instinct to fix things for your grandmother is exactly the
+  kind of user insight that work needs."). Add "whyNowSource": the show and
+  date, exactly like "TBPN · Oct 5, 2026".
+- A forced connection is worse than none. If no signal fits a pathway, omit
+  whyNow and whyNowSource for it. Never use the same signal for two pathways.
+- Use only what the block actually says. Never invent a company, number,
+  quote, or person, and never add facts about a person beyond what the show
+  notes state.
+- Never promise or imply an internship, job, introduction, or contact, and
+  never suggest the student reach out to anyone named in the show notes.
+  The world signal is the "why now"; the road is still real Pacifica
+  experiences from the context, and every program you name must come from
+  the context, never from the show notes.
+- Skip signals about money-making for its own sake (valuations, fundraising
+  totals as the point), speculation, gambling, partisan politics, or
+  anything not right for a teenager at a Christian school. Prefer signals
+  about what people are making, discovering, fixing, or serving.
+- whyNow is staff-facing and family-facing: warm and plain, no jargon
+  ("Series D", "RL environments") without saying what it means.

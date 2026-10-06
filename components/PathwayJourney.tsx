@@ -76,6 +76,25 @@ export function PathwayJourney({
 
   return (
     <div ref={root} className={`journey${still ? " journey--still" : ""}${inView ? " is-in-view" : ""}`}>
+      {(pathway.hook || (pathway.whyNow && pathway.whyNowSource)) && (
+        <div className="journey-origin">
+          {pathway.hook && (
+            <div>
+              <p className="journey-when">Grows from</p>
+              <p className="journey-detail">
+                <em>“{pathway.hook.replace(/^["“]|["”]$/g, "")}”</em>
+              </p>
+            </div>
+          )}
+          {pathway.whyNow && pathway.whyNowSource && (
+            <div>
+              <p className="journey-when">Why now</p>
+              <p className="journey-detail">{pathway.whyNow}</p>
+              <cite>Heard on {pathway.whyNowSource}</cite>
+            </div>
+          )}
+        </div>
+      )}
       <ol className="journey-steps" aria-label={`${pathway.name}, step by step`}>
         {milestones.map((m, i) => (
           <li key={i} className="journey-step" style={step(i)}>

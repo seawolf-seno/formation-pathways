@@ -140,7 +140,7 @@ export function SeasonDashboard({ view, today, isAdmin }: { view: SeasonView | n
           <h2 className="font-display text-lg text-[var(--color-navy-ink)]">What a family experiences</h2>
           <ol className="mt-3 space-y-2 text-sm text-[var(--color-ink)]">
             <li><span className="font-medium">1. Tell us about your child.</span> A short questionnaire, in the family&apos;s own words.</li>
-            <li><span className="font-medium">2. Three possible pathways.</span> Named, specific stories of who they could become at Pacifica, each approved by an admissions staff member before the family sees it.</li>
+            <li><span className="font-medium">2. Several possible pathways.</span> Named, specific stories of who they could become at Pacifica, each approved by an admissions staff member before the family sees it.</li>
             <li><span className="font-medium">3. Share an invitation.</span> The family picks one pathway and what to show, then shares a link or image. It&apos;s an invitation, not a prediction.</li>
           </ol>
           <Link
