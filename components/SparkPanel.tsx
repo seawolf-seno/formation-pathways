@@ -69,11 +69,22 @@ export function SparkPanel({ applicant }: { applicant: Applicant }) {
               </span>
             ))}
           </div>
+          {response.choices.length > 0 && (
+            <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
+              This or that: {response.choices.map((c, i) => (
+                <span key={i} className="mr-1 inline-block rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[var(--color-ink)]">
+                  {c}
+                </span>
+              ))}
+            </p>
+          )}
           {response.note && (
             <p className="mt-2 italic text-[var(--color-ink)]">&ldquo;{response.note}&rdquo;</p>
           )}
           <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
-            Regenerating Pathways below will use this, especially where an essay is still blank.
+            How it&apos;s used: regenerating Pathways sends these taps, picks and note to the draft
+            as the applicant&apos;s own interests (never as an essay), leaning on them most where an
+            essay is still blank. Each pathway&apos;s &ldquo;Grows from&rdquo; line shows what it came from.
           </p>
         </div>
       ) : (

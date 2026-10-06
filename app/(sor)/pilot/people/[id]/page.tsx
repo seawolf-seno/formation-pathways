@@ -4,6 +4,7 @@ import { getPersonProfile, logAccess, requireStaff } from "@/lib/sor/queries";
 import { displayName } from "@/lib/sor/types";
 import { PathwaysDisplay } from "@/components/PathwaysDisplay";
 import { TagChip } from "@/components/TagChips";
+import { SparkResults } from "@/components/sor/SparkResults";
 import { ApproveButton, ConsentPanel, DraftButton, EditPathwaysPanel, ExternalIdsPanel, SparkLinkButton, WithdrawButton } from "@/components/sor/PersonControls";
 
 /** A small labeled fact chip: grade, class year, advisor. */
@@ -52,6 +53,8 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   const name = displayName(person);
   const isAdmin = staff.role === "admin";
   const canDraft = staff.role === "admin" || staff.role === "admissions";
+  // RLS: student_sparks is readable by admin, admissions and teacher only.
+  const canReadSparks = canDraft || staff.role === "teacher";
   const aiConsent = person.is_sample || consents.some((c) => c.scope === "ai_drafting" && !c.revoked_at);
   const latest = drafts[0];
   const courseName = new Map(courses.map((c) => [c.canvas_course_id, c.course_name]));
@@ -72,15 +75,68 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             {enrollment?.advisor_name ? ` · Advisor ${enrollment.advisor_name}` : ""}
           </p>
         </div>
-        {person.is_sample && (
-          <span className="rounded bg-[var(--color-gold-light)] px-2 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-navy-ink)]">
-            Fictional sample
-          </span>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {canReadSparks && (
+            <a
+              href="#spark"
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${sparks.length ? "bg-[var(--color-gold)] text-[var(--color-navy-ink)]" : "border border-[var(--color-border)] bg-white text-[var(--color-ink-muted)]"}`}
+            >
+              {sparks.length
+                ? `✦ Spark done · ${new Date(sparks[0].created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`
+                : "No Spark yet"}
+            </a>
+          )}
+          {person.is_sample && (
+            <span className="rounded bg-[var(--color-gold-light)] px-2 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-navy-ink)]">
+              Fictional sample
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-6">
+          <div id="spark" className="scroll-mt-6">
+            <Section title="What lights them up" source="Spark, in their words">
+              {!canReadSparks ? (
+                <Empty>Spark results are visible to teachers, admissions and admins.</Empty>
+              ) : sparks.length > 0 ? (
+                <div className="space-y-3">
+                  <SparkResults
+                    sessions={sparks}
+                    draft={canDraft && latest ? latest : null}
+                    canSeeDrafts={canDraft}
+                    firstName={person.preferred_name || person.first_name}
+                  />
+                  {voiceConsent && (
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <Link href={`/pathway/${person.id}/spark`} className="font-semibold underline">Start another Spark conversation →</Link>
+                      <SparkLinkButton personId={person.id} firstName={person.preferred_name || person.first_name} />
+                    </div>
+                  )}
+                </div>
+              ) : voiceConsent ? (
+                <div className="space-y-3">
+                  <p className="rounded-xl bg-[var(--color-canvas)] p-3 text-sm font-semibold text-[var(--color-navy-ink)]">
+                    {person.preferred_name || person.first_name} hasn&apos;t done Spark yet.
+                  </p>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-[var(--color-ink-muted)]">
+                      Applications show the formal version of a student. Sit with {person.preferred_name || person.first_name} and let them light up what they really love, or send a one-time link to do it at home.
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <Link href={`/pathway/${person.id}/spark`} className="rounded-lg bg-[var(--color-navy)] px-3 py-2 text-sm font-medium text-white">
+                        Start a Spark conversation ✦
+                      </Link>
+                      <SparkLinkButton personId={person.id} firstName={person.preferred_name || person.first_name} />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <Empty>No Spark yet. It needs student-voice consent (Consent box) first.</Empty>
+              )}
+            </Section>
+          </div>
           <Section title="Where they've been" source="Finalsite">
             {!admissions ? (
               <Empty>{canDraft ? "No admissions data imported yet." : "Admissions files are visible to the admissions office."}</Empty>
@@ -108,55 +164,6 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
             )}
           </Section>
 
-          <Section title="What lights them up" source="Spark conversation">
-            {sparks ? (
-              <div className="space-y-3 text-sm">
-                <ul className="flex flex-wrap gap-1.5">
-                  {sparks.sparks.picks.map((p) => (
-                    <li
-                      key={p.label}
-                      className={`rounded-full px-2.5 py-1 text-xs ${p.obsessed ? "bg-[var(--color-gold)] font-semibold text-[var(--color-navy-ink)]" : "bg-[var(--color-gold-light)] text-[var(--color-navy-ink)]"}`}
-                    >
-                      {p.obsessed ? "✦ " : ""}{p.label}
-                    </li>
-                  ))}
-                  {sparks.sparks.channels.map((c) => (
-                    <li key={c} className="rounded-full border border-[var(--color-border)] bg-white px-2.5 py-1 text-xs text-[var(--color-ink-muted)]">▶ {c}</li>
-                  ))}
-                </ul>
-                {sparks.sparks.answers.map((a) => (
-                  <blockquote key={a.prompt} className="rounded-xl border-l-4 border-[var(--color-gold)] bg-[var(--color-gold-light)] p-3">
-                    <p className="text-xs text-[var(--color-ink-muted)]">{a.prompt}</p>
-                    <p className="mt-1 text-[var(--color-ink)]">&ldquo;{a.text}&rdquo;</p>
-                  </blockquote>
-                ))}
-                {sparks.sparks.leanings.length > 0 && (
-                  <p className="text-xs text-[var(--color-ink-muted)]">Leans toward: {sparks.sparks.leanings.map((l) => l.choice).join(" · ")}</p>
-                )}
-                <p className="text-xs text-[var(--color-ink-muted)]">
-                  {sparks.source === "family_link" ? "Shared from home" : "From a Spark conversation"} on {sparks.created_at.slice(0, 10)}. New drafts grow from these first.{" "}
-                  {voiceConsent && <Link href={`/pathway/${person.id}/spark`} className="font-semibold underline">Start another →</Link>}
-                </p>
-                {voiceConsent && (
-                  <SparkLinkButton personId={person.id} firstName={person.preferred_name || person.first_name} />
-                )}
-              </div>
-            ) : voiceConsent ? (
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-[var(--color-ink-muted)]">
-                  Applications show the formal version of a student. Sit with {person.preferred_name || person.first_name} and let them light up what they really love.
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  <Link href={`/pathway/${person.id}/spark`} className="rounded-lg bg-[var(--color-navy)] px-3 py-2 text-sm font-medium text-white">
-                    Start a Spark conversation ✦
-                  </Link>
-                  <SparkLinkButton personId={person.id} firstName={person.preferred_name || person.first_name} />
-                </div>
-              </div>
-            ) : (
-              <Empty>Needs student-voice consent (Consent box) before a Spark conversation.</Empty>
-            )}
-          </Section>
 
           <Section title="Where they are now" source="Blackbaud · Canvas">
             {courses.length === 0 && classHistory.length === 0 && !enrollment ? (

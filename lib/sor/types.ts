@@ -182,8 +182,8 @@ export interface PersonProfile {
   enrollment: Enrollment | null;
   courses: CourseEnrollment[];
   classHistory: ClassHistoryRow[];
-  /** The most recent Spark conversation, if any. */
-  sparks: { sparks: import("./sparks").StudentSparks; created_at: string; source: "in_person" | "family_link" } | null;
+  /** Every Spark session, newest first ([] if none, or the role can't read them). */
+  sparks: import("./sparks").SparkSession[];
   evidence: AcademicEvidence[];
   observations: SorObservation[];
   drafts: PathwayDraft[];

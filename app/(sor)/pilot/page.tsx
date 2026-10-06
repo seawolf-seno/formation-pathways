@@ -89,6 +89,16 @@ export default async function PilotPage({ searchParams }: { searchParams: Promis
                     <span className="flex flex-wrap items-center gap-2 text-xs text-[var(--color-ink-muted)]">
                       <span>{STAGE[p.stage]}{p.grad_year ? ` · '${String(p.grad_year).slice(2)}` : ""}</span>
                       <span>· {p.observation_count} obs.</span>
+                      <span
+                        title={p.spark_count ? `${p.spark_count} Spark session${p.spark_count === 1 ? "" : "s"}` : "No Spark conversation yet"}
+                        className={`rounded-full px-2 py-0.5 ${p.spark_count ? "bg-[var(--color-gold)] font-semibold text-[var(--color-navy-ink)]" : "border border-[var(--color-border)]"}`}
+                      >
+                        {p.last_spark_at
+                          ? `✦ Spark ${new Date(p.last_spark_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}${
+                              !p.last_draft_at || p.last_draft_at < p.last_spark_at ? " · not in a draft yet" : " · in latest draft"
+                            }`
+                          : "No Spark yet"}
+                      </span>
                       {!p.is_sample &&
                         CONSENT_SCOPES.map(({ scope, label }) => {
                           const has = p.consents.some((c) => c.scope === scope);

@@ -19,7 +19,7 @@ import { checkFinalsiteConnection } from "./importers/finalsite-api";
 import { checkBlackbaudUser } from "./importers/blackbaud";
 import { blackbaudConnection, TOKEN_COOKIE } from "./blackbaud-auth";
 import { cookies } from "next/headers";
-import { sparksForPrompt, validateStudentSparks } from "./sparks";
+import { mergeSparks, sparksForPrompt, validateStudentSparks } from "./sparks";
 import {
   displayName,
   type ConsentScope,
@@ -643,7 +643,8 @@ function toRuakhInput(profile: PersonProfile): RuakhInput {
     })),
     // What lights them up, in their own words: needs student_voice consent to
     // exist at all, and reaches Claude only under the same AI rules as the rest.
-    studentSparks: profile.sparks ? sparksForPrompt(profile.sparks.sparks) : null,
+    // All sessions, so at-home answers add to the in-person ones.
+    studentSparks: profile.sparks.length ? sparksForPrompt(mergeSparks(profile.sparks)!) : null,
   };
 }
 
