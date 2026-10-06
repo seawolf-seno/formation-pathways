@@ -803,7 +803,9 @@ export async function createSparkLinkAction(personId: string): Promise<Result<{ 
         ok: false,
         error: /student_voice/.test(error.message)
           ? "There's no student-voice consent on file for this student, so a link can't be sent."
-          : error.message,
+          : /spark_links/.test(error.message)
+            ? "Family links need a database update first (migration 20261004150000_spark_family_links.sql). Ask an admin to apply it."
+            : error.message,
       };
     }
     await logAccess(staff, "spark_link_create", personId, { expiresAt });
