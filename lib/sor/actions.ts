@@ -31,11 +31,18 @@ import {
 
 export type Result<T = object> = ({ ok: true } & T) | { ok: false; error: string };
 
-const fail = (e: unknown): { ok: false; error: string } => ({
-  ok: false,
-  error:
-    e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : String(e),
-});
+const fail = (e: unknown): { ok: false; error: string } => {
+  const message = e && typeof e === "object" && "message" in e ? String((e as { message: unknown }).message) : String(e);
+  // requireStaff redirects a signed-out user to /login; inside an action that
+  // surfaces as "NEXT_REDIRECT". Whatever's on screen is still in the tab.
+  if (message === "NEXT_REDIRECT" || message.startsWith("NEXT_REDIRECT;")) {
+    return {
+      ok: false,
+      error: "Your sign-in has expired. Sign in again in a new tab, then come back here and try again. Nothing on this screen is lost.",
+    };
+  }
+  return { ok: false, error: message };
+};
 
 async function requireRole(...roles: StaffMember["role"][]): Promise<StaffMember> {
   const staff = await requireStaff();

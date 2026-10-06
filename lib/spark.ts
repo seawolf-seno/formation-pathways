@@ -32,7 +32,8 @@ export function parseVocabLines(raw: string): SparkOption[] {
   return raw
     .split("\n")
     .map((l) => l.trim())
-    .filter(Boolean)
+    // "#" lines are notes for faculty editing the file.
+    .filter((l) => l && !l.startsWith("#"))
     .map((l) => {
       const [label, emoji] = l.split("|").map((s) => s.trim());
       return { label, emoji: emoji ?? "" };
