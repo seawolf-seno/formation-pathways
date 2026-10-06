@@ -4,6 +4,30 @@
 
 import type { GeneratedPathway } from "../types";
 
+/** The Spark formats being compared in the Spark Lab (/pilot/spark-lab). */
+export const SPARK_FORMATS = ["classic", "starters", "swipe"] as const;
+export type SparkFormat = (typeof SPARK_FORMATS)[number];
+export const FORMAT_LABELS: Record<SparkFormat, string> = {
+  classic: "Current flow",
+  starters: "Sentence starters",
+  swipe: "Swipe deck",
+};
+export type FeltLikeMe = "yes" | "kind_of" | "not_really";
+export const FELT_LABELS: Record<FeltLikeMe, string> = { yes: "Yes", kind_of: "Kind of", not_really: "Not really" };
+
+/** One leg of a two-format Spark Lab sitting. */
+export interface SparkLabMeta {
+  /** Shared by both legs of one sitting. */
+  labId: string;
+  order: 1 | 2;
+  seconds: number;
+  /** "Did that feel like you?", asked right after this format. */
+  feltLikeMe: FeltLikeMe | null;
+  /** Second leg only: the other format, and which felt more like them. */
+  comparedWith?: SparkFormat;
+  preferred?: "this" | "other" | "same";
+}
+
 export interface StudentSparks {
   /** Answers to the open questions, spoken or typed, in the student's words. */
   answers: { prompt: string; text: string; via: "voice" | "text" }[];
@@ -14,6 +38,9 @@ export interface StudentSparks {
   /** YouTube channels they chose to share from their own watch history (read
    *  on their device; only these names leave it). */
   channels: string[];
+  /** Which Spark format produced these (absent on sessions before the lab). */
+  format?: SparkFormat;
+  lab?: SparkLabMeta;
 }
 
 const clip = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -44,7 +71,31 @@ export function validateStudentSparks(raw: unknown): { ok: true; sparks: Student
   if (!answers.length && !picks.length) {
     return { ok: false, error: "Light up at least one spark: answer a question or tap something you love." };
   }
-  return { ok: true, sparks: { answers, picks, leanings, channels } };
+  const format = (SPARK_FORMATS as readonly unknown[]).includes(r.format) ? (r.format as SparkFormat) : undefined;
+  const lab = format ? validateLabMeta(r.lab) : undefined;
+  return {
+    ok: true,
+    sparks: { answers, picks, leanings, channels, ...(format ? { format } : {}), ...(lab ? { lab } : {}) },
+  };
+}
+
+const FELT = new Set<unknown>(["yes", "kind_of", "not_really"]);
+function validateLabMeta(raw: unknown): SparkLabMeta | undefined {
+  if (typeof raw !== "object" || raw === null) return undefined;
+  const m = raw as Record<string, unknown>;
+  const labId = clip(m.labId, 64);
+  if (!labId || (m.order !== 1 && m.order !== 2)) return undefined;
+  const seconds = Math.max(0, Math.min(7200, Math.round(Number(m.seconds) || 0)));
+  const comparedWith = (SPARK_FORMATS as readonly unknown[]).includes(m.comparedWith) ? (m.comparedWith as SparkFormat) : undefined;
+  const preferred = m.preferred === "this" || m.preferred === "other" || m.preferred === "same" ? m.preferred : undefined;
+  return {
+    labId,
+    order: m.order,
+    seconds,
+    feltLikeMe: FELT.has(m.feltLikeMe) ? (m.feltLikeMe as FeltLikeMe) : null,
+    ...(comparedWith ? { comparedWith } : {}),
+    ...(comparedWith && preferred ? { preferred } : {}),
+  };
 }
 
 /** The sparks as plain text for the drafting prompt (first-person evidence). */

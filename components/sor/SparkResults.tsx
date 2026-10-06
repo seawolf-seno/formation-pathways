@@ -1,4 +1,4 @@
-import { sparkUses, type SparkSession, type SparkUse } from "@/lib/sor/sparks";
+import { FELT_LABELS, FORMAT_LABELS, sparkUses, type SparkSession, type SparkUse } from "@/lib/sor/sparks";
 import type { GeneratedPathway } from "@/lib/types";
 
 const day = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -135,6 +135,19 @@ export function SparkResults({
         const label = (
           <>
             {day(s.created_at)} · {via(s)}
+            {s.sparks.format && <> · {FORMAT_LABELS[s.sparks.format]}</>}
+            {s.sparks.lab?.feltLikeMe && <> · felt like them: {FELT_LABELS[s.sparks.lab.feltLikeMe].toLowerCase()}</>}
+            {s.sparks.lab?.preferred && s.sparks.lab.comparedWith && (
+              <>
+                {" "}
+                · preferred{" "}
+                {s.sparks.lab.preferred === "same"
+                  ? "neither"
+                  : s.sparks.lab.preferred === "this"
+                    ? `this over ${FORMAT_LABELS[s.sparks.lab.comparedWith].toLowerCase()}`
+                    : FORMAT_LABELS[s.sparks.lab.comparedWith].toLowerCase()}
+              </>
+            )}
             {draft && s.created_at > draft.created_at && <span className="ml-2 rounded bg-[var(--color-gold-light)] px-1.5 py-0.5">not in a draft yet</span>}
           </>
         );

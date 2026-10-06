@@ -100,6 +100,7 @@ export function SparkSky({
   interests,
   pairs,
   isSample,
+  onFinish,
 }: {
   /** In person on a staff device, or at home through a one-time family link. */
   target: { kind: "staff"; personId: string } | { kind: "family"; token: string };
@@ -108,8 +109,11 @@ export function SparkSky({
   interests: SparkOption[];
   pairs: SparkChoicePair[];
   isSample: boolean;
+  /** Spark Lab: skip the intro, and hand the sparks back instead of saving
+   *  them and showing the sky (the lab saves, and asks how it felt). */
+  onFinish?: (sparks: StudentSparks) => void;
 }) {
-  const [step, setStep] = useState<Step>("intro");
+  const [step, setStep] = useState<Step>(onFinish ? "ask" : "intro");
   const [qi, setQi] = useState(0);
   const [draft, setDraft] = useState("");
   const [usedVoice, setUsedVoice] = useState(false);
@@ -198,29 +202,37 @@ export function SparkSky({
   // Leaving with unsaved sparks loses them, so say so before the tab closes.
   const unsaved = !saved && (answers.length > 0 || picks.size > 0);
   useEffect(() => {
-    if (!unsaved) return;
+    if (!unsaved || onFinish) return;
     const warn = (e: BeforeUnloadEvent) => e.preventDefault();
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [unsaved]);
+  }, [unsaved, onFinish]);
 
   /** The sky is the end of the conversation, so it saves on arrival: closing
    *  the tab after seeing it must not lose everything. The button below stays
    *  only as a retry if saving failed. */
   function reveal() {
+    if (onFinish) {
+      onFinish(collected());
+      return;
+    }
     setStep("reveal");
     if (!saved && !pending && stars.length > 0) save();
+  }
+
+  function collected(): StudentSparks {
+    return {
+      answers,
+      picks: [...picks.entries()].map(([label, obsessed]) => ({ label, obsessed })),
+      leanings,
+      channels: [...channels],
+    };
   }
 
   function save() {
     setError(null);
     start(async () => {
-      const sparks = {
-        answers,
-        picks: [...picks.entries()].map(([label, obsessed]) => ({ label, obsessed })),
-        leanings,
-        channels: [...channels],
-      };
+      const sparks = collected();
       const res =
         target.kind === "staff"
           ? await saveStudentSparksAction({ personId: target.personId, sparks })
@@ -414,7 +426,7 @@ export function SparkSky({
             <div className="spark-row">
               <span />
               <button className="spark-go" onClick={reveal}>
-                {channelOptions ? "Show me my sky ✦" : "Skip, show me my sky ✦"}
+                {onFinish ? (channelOptions ? "Done with this one ✦" : "Skip, done with this one ✦") : channelOptions ? "Show me my sky ✦" : "Skip, show me my sky ✦"}
               </button>
             </div>
           </div>

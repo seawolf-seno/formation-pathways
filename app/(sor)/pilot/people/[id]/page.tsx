@@ -111,6 +111,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                   {voiceConsent && (
                     <div className="flex flex-wrap items-center gap-2 text-sm">
                       <Link href={`/pathway/${person.id}/spark`} className="font-semibold underline">Start another Spark conversation →</Link>
+                      <Link href={`/pathway/${person.id}/spark?format=classic`} className="text-xs underline">one format only</Link>
                       <SparkLinkButton personId={person.id} firstName={person.preferred_name || person.first_name} />
                     </div>
                   )}
@@ -127,6 +128,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                     <div className="flex flex-wrap gap-2">
                       <Link href={`/pathway/${person.id}/spark`} className="rounded-lg bg-[var(--color-navy)] px-3 py-2 text-sm font-medium text-white">
                         Start a Spark conversation ✦
+                      </Link>
+                      <Link href={`/pathway/${person.id}/spark?format=classic`} className="self-center text-xs underline">
+                        one format only
                       </Link>
                       <SparkLinkButton personId={person.id} firstName={person.preferred_name || person.first_name} />
                     </div>

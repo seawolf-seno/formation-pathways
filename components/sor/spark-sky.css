@@ -313,3 +313,55 @@
   }
   .spark-line { stroke-dashoffset: 0; }
 }
+
+/* ---------- Spark Lab: swipe deck, reactions, closing list */
+.spark-swipe { outline: none; }
+.spark-swipe-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 15rem;
+  margin: 8px 0 16px;
+  padding: 24px;
+  border-radius: 20px;
+  background: linear-gradient(160deg, #16324f, #1f4569);
+  border: 1px solid #8fb3d955;
+  color: var(--star);
+  text-align: center;
+  touch-action: none;
+  user-select: none;
+  cursor: grab;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.spark-swipe-card:active { cursor: grabbing; }
+.spark-swipe-card.is-yes { border-color: var(--pacific); box-shadow: 0 0 30px -6px #8fb3d9aa; }
+.spark-swipe-card.is-so { border-color: var(--gold); box-shadow: 0 0 36px -4px #c9a24bcc; }
+.spark-swipe-card.is-no { opacity: 0.6; }
+.spark-swipe-emoji { font-size: 52px; line-height: 1; }
+.spark-swipe-label { font-family: var(--font-display, Georgia, serif); font-size: clamp(22px, 5vw, 28px); line-height: 1.2; }
+.spark-swipe-hint { font-size: 12px; letter-spacing: 0.04em; color: #f7f9fb99; }
+.spark-swipe-buttons { justify-content: space-between; }
+.spark-swipe-done { margin-top: 12px; width: 100%; }
+.spark-choices { justify-content: center; flex-wrap: wrap; }
+.spark-lab-lit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.spark-lab-lit li {
+  border-radius: 999px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: var(--star);
+  border: 1px solid #8fb3d955;
+}
+.spark-lab-lit li.is-bright { background: var(--gold); color: #0b1c2e; border-color: transparent; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) {
+  .spark-swipe-card { transition: none; }
+}

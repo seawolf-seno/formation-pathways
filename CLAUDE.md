@@ -126,6 +126,15 @@ adults behind the scenes; students stay present, in person, with people.
   draft's hooks/✦ steps, or "not in a pathway"); `/pilot` roster shows Spark status per student.
   Drafting now merges all sessions (`mergeSparks`), not just the latest. RLS unchanged: teachers
   read sparks but not drafts (so no "used in" for them); plain `staff` read neither.
+- **Spark Lab (2026-10-06, branch `seno/spark-lab`)**: "Start a Spark conversation" now runs two
+  formats back to back (`components/sor/SparkLab.tsx`), pairs rotating through all six orders of
+  current flow / sentence starters / swipe deck (`lib/sor/spark-lab.ts`). After each: "Did that
+  feel like you?"; after both: "Which felt more like you?" Each leg saves as its own
+  `student_sparks` row with `format` + `lab` in the jsonb (no migration). `/pilot/spark-lab`
+  compares formats (reactions, head to head, time, specific details, share of sparks used in a
+  later draft), counts only, pilot vs. fictional samples. `?format=classic` = the old single
+  flow; family links still use it. Content: `prompts/spark-starters.txt`, `prompts/spark-cards.txt`.
+  Spark (all modes) now saves on reaching the end; an expired sign-in shows a plain message.
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)

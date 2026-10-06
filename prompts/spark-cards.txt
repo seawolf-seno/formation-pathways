@@ -1,0 +1,42 @@
+# Spark Lab swipe cards: specific, not categories. One per line, "label|emoji".
+# Faculty: keep them concrete enough that two kids who tap "Music" would split here.
+Restoring old things so they work again|🔧
+Taking apart something to see how it works|🪛
+Building things out of wood or metal|🪚
+Coding a game or app|🎮
+Editing videos until the cut is perfect|🎬
+Taking photos of things other people walk past|📷
+Drawing or designing characters|✏️
+Writing songs or making beats|🎧
+Learning a song by ear|🎸
+Singing with other people|🎤
+Acting or doing voices|🎭
+Writing stories, poems or fan fiction|📝
+Knowing every stat about a team or player|📊
+Coaching or teaching younger kids|🧒
+Training for something hard, alone|🏃
+Being out on the water|🌊
+Hiking, camping or being somewhere wild|🏕️
+Fishing, birding or tracking animals|🐦
+Taking care of animals|🐾
+Growing plants or food|🌱
+Cooking for people|🍳
+Baking something until it's just right|🧁
+Fixing up a car, bike or board|🚲
+Flying drones or building robots|🤖
+Space, rockets and what's out there|🚀
+How the body or the brain works|🧠
+Why people believe what they believe|🕊️
+Arguing a side and winning|💬
+Starting a little business or selling things|💸
+Organizing an event so everyone has fun|🎉
+Making a new kid feel welcome|🤝
+Listening when a friend is going through it|💛
+Standing up for someone|🛡️
+Volunteering somewhere hands-on|🧰
+Learning another language or culture|🌍
+History rabbit holes|🏛️
+Maps, cities and how places work|🗺️
+Puzzles, chess or strategy games|♟️
+Math that clicks like a puzzle|🔢
+Experiments: what happens if…|🧪
