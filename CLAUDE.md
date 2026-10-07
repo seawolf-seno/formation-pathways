@@ -241,6 +241,10 @@ Test for every screen: "would a parent trust this with their child's story?"
 - Existing pages/nav live under `app/(staff)/` with their own layout; `/apply`
   and `/applicant/[slugToken]` stay outside that group so public-facing pages
   never inherit the internal staff header/nav.
+- From 2026-10-30 Supabase no longer auto-grants Data API access to new `public`
+  tables (existing tables are unaffected). Every migration that creates a table must
+  include its own `grant` statements in the same file, or the table is unreachable
+  via supabase-js — this applies to preview branches and local `db reset` too.
 
 ## Architecture notes (follow these — extend, don't duplicate)
 - Reads vs. writes split: `lib/queries.ts` holds plain read functions called
