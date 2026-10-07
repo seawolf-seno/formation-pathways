@@ -45,3 +45,6 @@ data/*.db-*
 
 # Claude Code agent worktrees
 .claude/worktrees/
+
+# local eval reports (scripts/eval-pathways.ts)
+/reports/
