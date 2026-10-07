@@ -77,6 +77,9 @@ export default async function PilotPage({ searchParams }: { searchParams: Promis
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
           <h2 className="font-display text-lg text-[var(--color-navy-ink)]">Pilot roster ({roster.length})</h2>
           <div className="flex flex-wrap items-center gap-3">
+            <Link href="/pilot/inquiries" className="text-sm font-semibold text-[var(--color-navy-ink)] underline">
+              Inquiries →
+            </Link>
             <Link href="/pilot/spark-lab" className="text-sm font-semibold text-[var(--color-navy-ink)] underline">
               Spark Lab: which format works best →
             </Link>

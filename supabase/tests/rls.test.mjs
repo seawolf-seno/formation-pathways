@@ -195,6 +195,45 @@ await expect("non-staff cannot read the demo snapshot", "stranger", `select * fr
 await expect("staff reads the demo snapshot", "teach", `select version from demo_snapshots`, true, r => r.rows.length === 1);
 await expect("nobody deletes the demo snapshot through the API", "admin", `delete from demo_snapshots returning *`, true, r => r.rows.length === 0);
 await expect("only one snapshot row can exist", "admin", `insert into demo_snapshots (id, version, db, updated_by) values (2, 1, 'x', '${ids.admin}')`, false);
+
+// Inquiries (/discover): closed until approval is recorded; the public only
+// gets submit_inquiry(); only admin and admissions read them.
+const inq = (extra = {}) => JSON.stringify({
+  parent_first_name: "Pat", parent_last_name: "Rivera", parent_relationship: "Mother", parent_email: "pat@example.com",
+  address_1: "1 Ocean Ave", city: "Newport Beach", state: "CA", zip: "92660", country: "United States",
+  child_first_name: "Sam", child_last_name: "Rivera", child_grade: 9, entry_year: 2027, current_school: "Harbor View Middle School",
+  one_thing: "Fixes every bike on our street.", interests: ["STEM", "Surf"], consent_contact: true, consent_pathway: true,
+  consent_version: "2026-10-v1", source: "website", ...extra }).replace(/'/g, "''");
+const submit = (extra) => `select submit_inquiry('${inq(extra)}'::jsonb) as code`;
+await expectAnon("the public sees the form is closed", `select inquiries_open() as open`, true, r => r.rows[0].open === false);
+await expectAnon("inquiries are refused until approval is recorded", submit(), false);
+await expect("inquiries can't open without an approver", "admin", `update pilot_settings set inquiries_open = true`, false);
+await expect("a teacher can't open inquiries", "teach", `update pilot_settings set inquiries_open = true, inquiries_approved_by = 'x', inquiries_approval_reference = 'y', inquiries_approved_at = now() returning *`, true, r => r.rows.length === 0);
+await expect("admin opens inquiries with the approval recorded", "admin", `update pilot_settings set inquiries_open = true, inquiries_approved_by = 'Head of School', inquiries_approval_reference = 'Leadership mtg 2026-10-14', inquiries_approved_at = now() returning *`, true, r => r.rows.length === 1);
+await expectAnon("...and now open", `select inquiries_open() as open`, true, r => r.rows[0].open === true);
+let firstCode = null;
+await expectAnon("a family inquires and gets their own share code", submit(), true, r => { firstCode = r.rows[0]?.code; return /^[A-Z0-9]{8}$/.test(firstCode ?? ""); });
+await expectAnon("an inquiry through a family's link is credited to them", submit({ ref: firstCode?.toLowerCase(), parent_email: "lee@example.com", child_first_name: "Lee" }), true, r => /^[A-Z0-9]{8}$/.test(r.rows[0]?.code ?? ""));
+await expect("...recorded as a share, by that code", "adm", `select source, referred_by_code from inquiries where child_first_name = 'Lee'`, true, r => r.rows[0]?.source === "share" && r.rows[0]?.referred_by_code === firstCode);
+await expectAnon("an unknown referral code is ignored, not trusted", submit({ ref: "ZZZZZZZZ", parent_email: "kai@example.com", child_first_name: "Kai" }), true);
+await expect("...and that inquiry isn't credited to anyone", "adm", `select source, referred_by_code from inquiries where child_first_name = 'Kai'`, true, r => r.rows[0]?.source === "website" && r.rows[0]?.referred_by_code === null);
+await expectAnon("no inquiry without consent to be contacted", submit({ consent_contact: false }), false);
+await expectAnon("a malformed email is refused", submit({ parent_email: "not-an-email" }), false);
+await expectAnon("a missing address is refused (Finalsite needs it)", submit({ address_1: "" }), false);
+await expectAnon("unexpected fields are refused", submit({ is_sample: true }), false);
+await expectAnon("anon can't read inquiries", `select * from inquiries`, false, r => r.rows.length === 0);
+await expectAnon("anon can't insert an inquiry directly", `insert into inquiries (share_code, parent_first_name) values ('AAAAAAAA','x')`, false);
+await expect("a teacher can't read inquiries", "teach", `select * from inquiries`, true, r => r.rows.length === 0);
+await expect("admissions reads inquiries", "adm", `select finalsite_external_id from inquiries`, true, r => r.rows.length === 3 && r.rows.every(x => /^FP-[0-9A-F]{12}$/.test(x.finalsite_external_id)));
+await expect("admissions updates follow-up fields", "adm", `update inquiries set status = 'contacted', finalsite_exported_at = now() where child_first_name = 'Sam' returning id`, true, r => r.rows.length === 1);
+await expect("what a family sent can't be edited", "adm", `update inquiries set parent_email = 'other@example.com' where child_first_name = 'Sam'`, false);
+await expect("a teacher can't update inquiries", "teach", `update inquiries set status = 'closed' returning id`, true, r => r.rows.length === 0);
+await expect("admin can add a fictional sample by hand", "admin", `insert into inquiries (share_code, parent_first_name, parent_last_name, parent_relationship, parent_email, address_1, city, state, zip, child_first_name, child_last_name, child_grade, entry_year, consent_contact, consent_version, is_sample) values ('SAMPLE01','A','B','Mother','a@example.com','1 St','City','CA','90000','C','D',9,2027,true,'v1',true)`, true);
+await expect("...but not a real one", "admin", `insert into inquiries (share_code, parent_first_name, parent_last_name, parent_relationship, parent_email, address_1, city, state, zip, child_first_name, child_last_name, child_grade, entry_year, consent_contact, consent_version) values ('REAL0001','A','B','Mother','a@example.com','1 St','City','CA','90000','C','D',9,2027,true,'v1')`, false);
+await expect("admissions can't delete inquiries", "adm", `delete from inquiries returning id`, true, r => r.rows.length === 0);
+await expect("closing inquiries again", "admin", `update pilot_settings set inquiries_open = false returning *`, true, r => r.rows.length === 1);
+await expectAnon("...shuts the form", submit({ parent_email: "late@example.com" }), false);
+
 const exposed = await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef");
 const noneExposed = exposed.rows.length === 0; if (noneExposed) pass++; else fail++;
 console.log(`${noneExposed ? "PASS" : "FAIL"}  no SECURITY DEFINER function in the API-exposed public schema`, exposed.rows.map(r => r.proname));

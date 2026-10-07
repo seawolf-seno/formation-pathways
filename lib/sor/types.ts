@@ -53,6 +53,51 @@ export interface PilotSettings {
   funnel_approved_by: string | null;
   funnel_approval_reference: string | null;
   funnel_approved_at: string | null;
+  /** The public /discover inquiry form is open (needs a recorded approval). */
+  inquiries_open: boolean;
+  inquiries_approved_by: string | null;
+  inquiries_approval_reference: string | null;
+  inquiries_approved_at: string | null;
+}
+
+export type InquiryStatus = "new" | "contacted" | "applied" | "enrolled" | "closed";
+export const INQUIRY_STATUSES: InquiryStatus[] = ["new", "contacted", "applied", "enrolled", "closed"];
+
+/** A family's inquiry from /discover (supabase/migrations/20261009000000_inquiries.sql). */
+export interface Inquiry {
+  id: string;
+  created_at: string;
+  status: InquiryStatus;
+  source: "website" | "share" | "direct";
+  referred_by_code: string | null;
+  share_code: string;
+  parent_first_name: string;
+  parent_last_name: string;
+  parent_relationship: string;
+  parent_email: string;
+  parent_phone: string | null;
+  address_1: string;
+  address_2: string | null;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+  child_first_name: string;
+  child_last_name: string;
+  child_grade: number;
+  entry_year: number;
+  current_school: string | null;
+  one_thing: string | null;
+  interests: string[];
+  consent_contact: boolean;
+  consent_pathway: boolean;
+  consent_version: string;
+  delete_after: string;
+  is_sample: boolean;
+  finalsite_external_id: string;
+  finalsite_exported_at: string | null;
+  finalsite_contact_id: string | null;
+  applied_at: string | null;
 }
 
 export interface Person {

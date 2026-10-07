@@ -10,6 +10,7 @@ import type {
   PilotSettings,
   StaffListEntry,
   StaffMember,
+  Inquiry,
 } from "./types";
 import type { FunnelCount } from "./funnel";
 import { validateStudentSparks } from "./sparks";
@@ -62,6 +63,10 @@ export async function getPilotSettings(): Promise<PilotSettings> {
     funnel_approved_by: null,
     funnel_approval_reference: null,
     funnel_approved_at: null,
+    inquiries_open: false,
+    inquiries_approved_by: null,
+    inquiries_approval_reference: null,
+    inquiries_approved_at: null,
   };
 }
 
@@ -245,4 +250,17 @@ export async function getFunnelCounts(): Promise<{ rows: FunnelCount[]; mode: "l
     }
   }
   return { rows: [], mode: "none", importedAt: null };
+}
+
+/** Inquiries from /discover, newest first. RLS: admin and admissions only;
+ *  everyone else gets an empty list. Empty too until the migration is applied. */
+export async function getInquiries(): Promise<Inquiry[]> {
+  const supabase = await getSorClient();
+  const { data, error } = await supabase
+    .from("inquiries")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(1000);
+  if (error) console.error("inquiries read failed:", error.message);
+  return (data ?? []) as Inquiry[];
 }

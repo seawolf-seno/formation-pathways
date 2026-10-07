@@ -31,11 +31,32 @@ const securityHeaders = [
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
 
+// /discover (the family inquiry form) may be embedded on the school website,
+// like Finalsite's form is today. X-Frame-Options can't list sites, so that
+// route drops it and enforces frame-ancestors instead; everything else
+// still refuses all framing.
+const discoverFrameAncestors =
+  process.env.DISCOVER_EMBED_ORIGINS?.trim() || "https://www.pacificachristian.org https://pacificachristian.org";
+const discoverHeaders = [
+  ...securityHeaders
+    .filter((h) => h.key !== "X-Frame-Options")
+    .map((h) =>
+      h.key === "Content-Security-Policy-Report-Only"
+        ? { ...h, value: h.value.replace("; frame-ancestors 'none'", "") }
+        : h
+    ),
+  { key: "Content-Security-Policy", value: `frame-ancestors 'self' ${discoverFrameAncestors}` },
+];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
     // Production only: dev's hot reload needs looser rules.
-    return process.env.NODE_ENV === "production" ? [{ source: "/:path*", headers: securityHeaders }] : [];
+    if (process.env.NODE_ENV !== "production") return [];
+    return [
+      { source: "/:path((?!discover(?:/|$)).*)", headers: securityHeaders },
+      { source: "/discover", headers: discoverHeaders },
+    ];
   },
   // Prompts, fictional sample exports, the world-signals snapshot, the
   // migrations (read by the schema drift check) and card artwork use fs at

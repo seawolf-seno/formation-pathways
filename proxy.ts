@@ -30,7 +30,7 @@ export async function proxy(request: NextRequest) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
     return response;
   }
-  if (path.startsWith("/spark/")) {
+  if (path.startsWith("/spark/") || path === "/discover" || path.startsWith("/discover/")) {
     // The deliberate public WRITE surfaces, both with no school sign-in:
     // - /spark/[token]: an applicant's Spark survey (fictional demo).
     //   submitSparkResponseAction (lib/actions.ts) is scoped by spark_token to
@@ -39,6 +39,10 @@ export async function proxy(request: NextRequest) {
     //   database functions spark_link_greeting/submit check the token hash,
     //   expiry, single use and student_voice consent; write-only. See
     //   supabase/migrations/20261004150000_spark_family_links.sql.
+    // - /discover: the family inquiry form (Fizzy #29). Saves only through
+    //   the database function submit_inquiry(), which refuses until an
+    //   admin records leadership's approval. Its page registers one action
+    //   (lib/discover-actions.ts). See docs/inquiries.md.
     const response = NextResponse.next();
     response.headers.set("Cache-Control", "no-store");
     response.headers.set("Referrer-Policy", "no-referrer");
