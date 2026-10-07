@@ -152,6 +152,13 @@ adults behind the scenes; students stay present, in person, with people.
   six different moments); a STYLE section bans contrast formulas and stock phrases, and
   `lib/draft-style.ts` tidies the two that still slip through. `npm run eval:pathways` now
   counts glimpse openings, weekdays, em dashes and banned phrasing.
+- **CI on main + database drift check (2026-10-07)**: CI also runs on every push to `main`.
+  `/pilot` shows admins whether the live database has every table and column the migrations
+  create (`lib/sor/drift.ts`: zero-row selects as the admin; names the file to apply, and flags
+  a table the Data API can't reach, which needs grants). `npm run db:drift:sql` prints the same
+  check as one metadata-only query for the read-only connection or SQL editor. Verified against
+  live 2026-10-07: nothing missing. Checks tables and columns only, not functions, policies or
+  triggers.
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)
@@ -234,6 +241,10 @@ Test for every screen: "would a parent trust this with their child's story?"
 - Existing pages/nav live under `app/(staff)/` with their own layout; `/apply`
   and `/applicant/[slugToken]` stay outside that group so public-facing pages
   never inherit the internal staff header/nav.
+- From 2026-10-30 Supabase no longer auto-grants Data API access to new `public`
+  tables (existing tables are unaffected). Every migration that creates a table must
+  include its own `grant` statements in the same file, or the table is unreachable
+  via supabase-js — this applies to preview branches and local `db reset` too.
 
 ## Architecture notes (follow these — extend, don't duplicate)
 - Reads vs. writes split: `lib/queries.ts` holds plain read functions called

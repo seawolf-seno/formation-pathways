@@ -10,7 +10,8 @@
     "test:db": "node supabase/tests/rls.test.mjs",
     "test:share": "node --test tests/*.test.mjs",
     "world:refresh": "node scripts/refresh-world-signals.mjs",
-    "eval:pathways": "jiti scripts/eval-pathways.ts"
+    "eval:pathways": "jiti scripts/eval-pathways.ts",
+    "db:drift:sql": "jiti scripts/db-drift-sql.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",

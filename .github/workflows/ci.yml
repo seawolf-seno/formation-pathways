@@ -3,6 +3,10 @@ name: CI
 on:
   pull_request:
     branches: [main]
+  # Also every push to main: a fix pushed to a branch after its PR merged
+  # once reached main without CI (2026-10-06).
+  push:
+    branches: [main]
 
 jobs:
   build:
