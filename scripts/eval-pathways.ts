@@ -130,7 +130,8 @@ function checks(all: { student: string; pathways: GeneratedPathway[]; courses: s
   lines.push(
     `- Glimpses: ${glimpses.length}; distinct two-word openings: ${new Set(openers).size}; ` +
       `open with "Picture"/"Imagine": ${glimpses.filter((g) => /^(picture|imagine)\b/i.test(g)).length}; ` +
-      `name a weekday: ${glimpses.filter((g) => weekday.test(g)).length}`
+      `name a weekday: ${glimpses.filter((g) => weekday.test(g)).length}; ` +
+      `open with a time of day: ${glimpses.filter((g) => /^(late|early|mid|it'?s (the )?(end|start|middle))\b|^(morning|afternoon|evening|lunch|dawn|dusk)\b/i.test(g)).length}`
   );
   const common = [...openers.reduce((m, o) => m.set(o, (m.get(o) ?? 0) + 1), new Map<string, number>())]
     .filter(([, n]) => n >= 3)

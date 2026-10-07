@@ -2,7 +2,8 @@
 // emphasis tics the prompt bans (prompts/unique-pathways.txt, STYLE) but the
 // model still slips in. Only rewrites that keep the meaning: "not just X" as a
 // trailing or bracketed clause is dropped, "not just X but Y" becomes "X and
-// Y", "exactly the/what" loses "exactly". Applied to fresh drafts only, never
+// Y", a "not X but Y" clause after a dash or comma keeps only Y, and
+// "exactly the/what" loses "exactly". Applied to fresh drafts only, never
 // to text a staff member wrote. Pure; tested in tests/draft-style.test.mjs.
 import type { GeneratedPathway } from "./types";
 
@@ -16,6 +17,10 @@ export function tidyPhrasing(text: string): string {
       .replace(/\s+[—–]\s*not just [^—–.;]+?\s*[—–]\s*/gi, " ")
       // "… audible, not just visible." → "… audible."
       .replace(/,?\s*[—–]?\s*not just [^.;!?,—–]+(?=[.;!?])/gi, "")
+      // "… a chapel talk — not a performance, but an argument —" → "… a chapel talk — an argument —"
+      // Only after a dash or comma, where "not" opens the clause; never a
+      // verb's "not" ("he did not stop but …") and never "not only".
+      .replace(/([—–,])\s*not (?!only\b)(?:[^.;!?—–]{1,60}?),? but (?:also )?/gi, "$1 ")
       .replace(/\bexactly (the|what)\b/gi, "$1")
       .replace(/\s{2,}/g, " ")
       .replace(/\s+([.,;!?])/g, "$1")

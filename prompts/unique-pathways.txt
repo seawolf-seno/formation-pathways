@@ -88,9 +88,10 @@ THE GLIMPSE (every pathway)
 Each "glimpse" is 2-3 sentences, second person, one concrete moment inside
 that pathway. Six glimpses in one draft must read like six different days
 in six different places.
-- Never open with "Picture", "Imagine" or a weekday. Do not name a weekday
+- Never open with "Picture", "Imagine", a weekday or a time of day ("Late
+  afternoon", "Early morning", "It's the end of…"). Do not name a weekday
   anywhere in a glimpse. Start inside the moment: an action, a sound, an
-  object, a line someone says.
+  object, a line someone says. The time can come later in the sentence.
 - Vary the time across the six: early morning, a passing period, a lunch,
   late afternoon, an evening event, a retreat or trip, the week after
   something. Vary the place too; no two glimpses in the same room.
