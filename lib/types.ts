@@ -101,8 +101,9 @@ export interface GeneratedPathway {
   /** Optional: about one step per year, for the journey visual. Older drafts
    *  don't have it; lib/pathway-journey.ts derives steps instead. */
   milestones?: PathwayMilestone[];
-  /** Optional: 2–3 sentences, second person, a concrete moment ("Picture a
-   *  Thursday in spring of junior year…"). An invitation, not a prediction. */
+  /** Optional: 2–3 sentences, second person, one concrete moment that starts
+   *  inside the scene (see "THE GLIMPSE" in prompts/unique-pathways.txt). An
+   *  invitation, not a prediction. */
   glimpse?: string;
   /** Optional: the one distinctive detail this pathway grows from, in the
    *  student's own words (a prior school, a project, a hobby, one sentence). */

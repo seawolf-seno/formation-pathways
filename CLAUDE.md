@@ -144,6 +144,14 @@ adults behind the scenes; students stay present, in person, with people.
   checks for generic names, course-named pathways, hooks and why-nows. Needs a key in
   `.env.local`; without one it reports the fallback. `docs/spark-lab-guide.md` is the run
   sheet for Spark Lab sittings. Parallel work for colleagues is on Fizzy (board Salty, #18–27).
+- **Grounded "why now", varied glimpses, plainer prose (2026-10-07)**: a pathway's "why now"
+  must cite a numbered podcast item (`whyNowRef`); code keeps it only if the item exists, isn't
+  reused, the line shares real words with it, and the draft has fewer than three; the source is
+  written from the item (`groundWhyNows`, `lib/world-signals.ts`). Feeds drop reruns and
+  money/valuation sentences. Glimpses follow "THE GLIMPSE" rules (no weekday, no "Picture",
+  six different moments); a STYLE section bans contrast formulas and stock phrases, and
+  `lib/draft-style.ts` tidies the two that still slip through. `npm run eval:pathways` now
+  counts glimpse openings, weekdays, em dashes and banned phrasing.
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)

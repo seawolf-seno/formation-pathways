@@ -120,6 +120,39 @@ function checks(all: { student: string; pathways: GeneratedPathway[]; courses: s
   const hooks = all.reduce((n, s) => n + s.pathways.filter((p) => p.hook).length, 0);
   const whyNow = all.reduce((n, s) => n + s.pathways.filter((p) => p.whyNow).length, 0);
   lines.push(`- Pathways: ${total}; with a hook: ${hooks}; with a "why now": ${whyNow}`);
+  const maxWhy = Math.max(0, ...all.map((s) => s.pathways.filter((p) => p.whyNow).length));
+  lines.push(`- Most "why now" lines in one draft: ${maxWhy}`);
+
+  // Glimpses: how they open, and whether they lean on a weekday.
+  const glimpses = all.flatMap((s) => s.pathways.map((p) => p.glimpse ?? "")).filter(Boolean);
+  const openers = glimpses.map((g) => g.split(/\s+/).slice(0, 2).join(" ").toLowerCase().replace(/[^a-z' ]/g, ""));
+  const weekday = /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i;
+  lines.push(
+    `- Glimpses: ${glimpses.length}; distinct two-word openings: ${new Set(openers).size}; ` +
+      `open with "Picture"/"Imagine": ${glimpses.filter((g) => /^(picture|imagine)\b/i.test(g)).length}; ` +
+      `name a weekday: ${glimpses.filter((g) => weekday.test(g)).length}`
+  );
+  const common = [...openers.reduce((m, o) => m.set(o, (m.get(o) ?? 0) + 1), new Map<string, number>())]
+    .filter(([, n]) => n >= 3)
+    .map(([o, n]) => `"${o}" ×${n}`);
+  lines.push(`- Glimpse openings used 3+ times: ${common.length ? common.join(", ") : "none"}`);
+
+  // Style: the patterns prompts/unique-pathways.txt bans.
+  const text = all
+    .flatMap((s) => s.pathways.flatMap((p) => [p.name, p.firstSemester, p.stretchChallenge, p.glimpse ?? "", p.whyNow ?? "", ...(p.milestones ?? []).map((m) => m.detail)]))
+    .join("\n");
+  const SLOP: [string, RegExp][] = [
+    ["not just", /\bnot just\b/gi],
+    ["it's not / isn't … it's", /\b(it'?s not|isn'?t)\b[^.]{0,60}\bit'?s\b/gi],
+    ["not X but Y", /\bnot [a-z]+(?: [a-z]+){0,4},? but\b/gi],
+    ["exactly the / exactly what", /\bexactly (the|what)\b/gi],
+    ["right now", /\bright now\b/gi],
+    ["more than ever", /\bmore than ever\b/gi],
+    ["journey/tapestry/testament/delve/unlock/embark/thrive/navigate/landscape", /\b(journey|tapestry|testament|delve|unlock\w*|embark\w*|thrive\w*|navigat\w*|landscape)\b/gi],
+  ];
+  const hits = SLOP.map(([label, re]) => [label, text.match(re)?.length ?? 0] as const);
+  lines.push(`- Em dashes: ${(text.match(/—/g) ?? []).length}`);
+  lines.push(`- Banned phrasing: ${hits.map(([l, n]) => `${l} ${n}`).join("; ")}`);
   return lines;
 }
 

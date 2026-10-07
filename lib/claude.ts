@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { withJourneyFields } from "./pathway-journey";
+import { tidyDraftPathway } from "./draft-style";
 import fs from "fs";
 import path from "path";
 import {
@@ -18,7 +19,7 @@ import {
   type SuggestedTag,
 } from "./types";
 import type { CanvasSyncResult } from "./integrations/canvas";
-import { formatWorldSignals, getWorldSignals } from "./world-signals";
+import { formatWorldSignals, getWorldSignals, groundWhyNows, type WorldSignal } from "./world-signals";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 const PROMPTS_DIR = path.join(process.cwd(), "prompts");
@@ -59,9 +60,21 @@ function pathwaySystemPrompt(lead: string): string {
 
 /** "The world right now" appended to a pathway prompt's user message. Public
  *  podcast show notes only; nothing about the student leaves for this. */
-async function withWorldSignals(user: string): Promise<string> {
-  const block = formatWorldSignals(await getWorldSignals());
-  return block ? `${user}\n\n---\n${block}` : user;
+async function withWorldSignals(user: string): Promise<{ user: string; signals: WorldSignal[] }> {
+  const world = await getWorldSignals();
+  const block = formatWorldSignals(world);
+  return { user: block ? `${user}\n\n---\n${block}` : user, signals: world.signals };
+}
+
+/** The model's pathways, each "why now" checked against the signals it was
+ *  shown (lib/world-signals.ts groundWhyNows), then cleaned, capped and
+ *  tidied of the phrasing tics the prompt bans (lib/draft-style.ts). */
+function finishPathways(raw: unknown, signals: WorldSignal[]): GeneratedPathway[] {
+  if (!Array.isArray(raw)) return [];
+  return groundWhyNows(raw.filter(isGeneratedPathway), signals)
+    .slice(0, PATHWAY_COUNT.draft)
+    .map(withJourneyFields)
+    .map(tidyDraftPathway);
 }
 
 // Six pathways with journeys, hooks and why-nows are long; leave headroom.
@@ -343,7 +356,7 @@ export async function draftAdmissionsPathways(
     const answerBlock = answers
       .map((a, i) => `Q${i + 1}: ${a.question}\nA${i + 1}: ${a.answer}`)
       .join("\n\n");
-    const user = await withWorldSignals(
+    const { user, signals } = await withWorldSignals(
       sparkContext
         ? `${answerBlock}\n\n---\nAdditional context from a pre-essay interest survey (not an essay answer):\n${sparkContext}`
         : answerBlock
@@ -364,9 +377,7 @@ export async function draftAdmissionsPathways(
       seedObservations?: unknown;
     };
 
-    const pathways = Array.isArray(parsed.pathways)
-      ? parsed.pathways.filter(isGeneratedPathway).slice(0, PATHWAY_COUNT.draft).map(withJourneyFields)
-      : [];
+    const pathways = finishPathways(parsed.pathways, signals);
 
     const seedObservations: SeedObservationDraft[] = Array.isArray(
       parsed.seedObservations
@@ -707,7 +718,7 @@ export async function draftRuakhPathways(input: RuakhInput): Promise<RuakhDraft>
     // Courses last: nearly every classmate shares them, so they're backdrop
     // (see prompts/ruakh-today.txt), not the first thing the model reads.
     const { courses, ...distinctive } = input;
-    const user = await withWorldSignals(JSON.stringify({ ...distinctive, courses }, null, 2));
+    const { user, signals } = await withWorldSignals(JSON.stringify({ ...distinctive, courses }, null, 2));
     const message = await anthropic.messages.create({
       model: MODEL,
       max_tokens: PATHWAY_MAX_TOKENS,
@@ -717,9 +728,7 @@ export async function draftRuakhPathways(input: RuakhInput): Promise<RuakhDraft>
     const textBlock = message.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") return fallback;
     const parsed = extractJson(textBlock.text) as { portrait?: unknown; pathways?: unknown };
-    const pathways = Array.isArray(parsed.pathways)
-      ? parsed.pathways.filter(isGeneratedPathway).slice(0, PATHWAY_COUNT.draft).map(withJourneyFields)
-      : [];
+    const pathways = finishPathways(parsed.pathways, signals);
     if (typeof parsed.portrait !== "string" || pathways.length < PATHWAY_COUNT.min) return fallback;
     return { portrait: parsed.portrait, pathways, usedFallback: false };
   } catch {

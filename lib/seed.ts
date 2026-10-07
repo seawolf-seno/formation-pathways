@@ -378,7 +378,7 @@ const APPLICANTS: SeedApplicant[] = [
             { when: "Senior year", title: "Hand off what you've learned", detail: "Lead a Makers Space project with younger students, then choose the road that fits what you've built." },
           ],
           glimpse:
-            "Picture a Thursday in the spring of your junior year. It's after school in the Makers Space, the drone's left motor is still stuttering, and two freshmen are watching you take it apart again, because you're the one who isn't afraid to open it up.",
+            "After school in the Makers Space, the drone's left motor is still stuttering and two freshmen are watching you take it apart again. You find the loose solder joint on the third try, then hand one of them the iron.",
         },
         {
           name: "Abuela's Engineer",
@@ -399,7 +399,7 @@ const APPLICANTS: SeedApplicant[] = [
             { when: "Senior year", title: "Share the plans", detail: "Present your 100 hours of STEM work to the community and choose where to keep building." },
           ],
           glimpse:
-            "Picture a Saturday morning at your abuela's kitchen table. She's testing the third version of the thing you built for her knees, and this time she doesn't hand it back. She asks if you can make two more for her friends.",
+            "Saturday morning at your abuela's kitchen table, she tests the third version of the thing you built for her knees. This time she doesn't hand it back. She asks if you can make two more for her friends.",
         },
         {
           name: "The One Who Sits Down",
@@ -498,7 +498,7 @@ const APPLICANTS: SeedApplicant[] = [
             { when: "Senior year", title: "Teach the conversation", detail: "Help younger students practice Intellectual Hospitality, then choose where to keep asking." },
           ],
           glimpse:
-            "Picture a Tuesday seminar in the spring of your junior year. Six chairs, one table, and a classmate who thinks you're wrong about something that matters. You lean in instead of out, because you've learned that asking out loud is where it gets real.",
+            "Six chairs, one table, and a classmate who thinks you're wrong about something that matters. You ask him for his best case, out loud, and write down the one part you can't answer yet.",
         },
         {
           name: "Steelman",

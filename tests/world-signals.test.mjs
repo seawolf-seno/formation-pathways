@@ -4,8 +4,11 @@ import {
   WORLD_SOURCES,
   formatWorldSignals,
   parseFeedItems,
+  groundWhyNows,
+  signalSource,
   signalsFromItems,
   splitTbpnChapters,
+  stripMoney,
   stripPromo,
 } from "../lib/world-signals.ts";
 
@@ -74,4 +77,49 @@ test("the prompt block is dated, numbered and names its sources", () => {
   assert.match(block, /^WORLD RIGHT NOW .*gathered 2026-10-06, from the saved snapshot/);
   assert.match(block, /\[W1\] 2026-10-05 · TBPN — Linda Du, co-founder of Valon Technologies, discusses/);
   assert.equal(formatWorldSignals({ fetchedAt: now.toISOString(), origin: "live", signals: [] }), "");
+});
+
+test("money sentences are stripped; what they build stays", () => {
+  assert.equal(
+    stripMoney("Joowon Kim co-founded Melius, an AI creative platform. It has raised $25 million. He explains its tools for video."),
+    "Joowon Kim co-founded Melius, an AI creative platform. He explains its tools for video."
+  );
+});
+
+test("reruns and money-only notes never become signals", () => {
+  const items = [
+    { title: "A 4-Track Mind", description: "In this short episode, first aired in 2011, a neurologist issues a dare.", pubDate: "Fri, 02 Oct 2026 10:00:00 GMT" },
+    { title: "Fund news", description: "The fund raised $50 million. It writes checks under $1 million.", pubDate: "Fri, 02 Oct 2026 10:00:00 GMT" },
+    { title: "Bats survive an epidemic", description: "A genetic secret helps little brown bats survive white nose syndrome.", pubDate: "Fri, 02 Oct 2026 10:00:00 GMT" },
+  ];
+  const radiolab = WORLD_SOURCES.find((s) => s.id === "radiolab");
+  assert.deepEqual(signalsFromItems({ ...radiolab, episodes: 5 }, items, now).map((s) => s.title), ["Bats survive an epidemic"]);
+});
+
+test("a why-now stands only on a real, unused signal, at most three per draft, with the source from the signal", () => {
+  const signals = [
+    { source: "TBPN", lens: "", date: "2026-10-05", title: "Underdog", note: "A private personal assistant running entirely on phones." },
+    { source: "Short Wave (NPR)", lens: "", date: "2026-09-30", title: "Bats", note: "Little brown bats surviving white nose syndrome." },
+    { source: "Radiolab", lens: "", date: "2026-10-02", title: "Grass", note: "Grassland ancestors and human history." },
+    { source: "99% Invisible", lens: "", date: "2026-10-06", title: "Bricks", note: "Messy beautiful bricks hiding across Chicago." },
+  ];
+  // One sentence that restates every item, so only the citation rules decide.
+  const said = "Private assistant phones; brown bats surviving; grassland ancestors history; bricks hiding Chicago.";
+  const p = (ref, extra = {}) => ({ name: "x", whyNow: said, whyNowRef: ref, whyNowSource: "Made up · 1999", ...extra });
+  const out = groundWhyNows([p("W1"), p("W1"), p("W9"), p(undefined), p("[W2]"), p("W3"), p("W4")], signals);
+  assert.deepEqual(
+    out.map((o) => o.whyNowSource ?? null),
+    ["TBPN · Oct 5, 2026", null, null, null, "Short Wave (NPR) · Sep 30, 2026", "Radiolab · Oct 2, 2026", null]
+  );
+  assert.ok(out.every((o) => !("whyNowRef" in o)), "refs never reach storage");
+  assert.ok(!("whyNow" in out[1]), "a reused signal loses its why-now");
+  assert.equal(signalSource(signals[3]), "99% Invisible · Oct 6, 2026");
+});
+
+test("a why-now that cites an item but says something else is dropped", () => {
+  const signals = [{ source: "TBPN", lens: "", date: "2026-10-02", title: "BYOCompute", note: "Bring your own compute: companies renting their own chips." }];
+  const off = groundWhyNows([{ name: "x", whyNow: "The Forge class coming to Pacifica would let Mateo ship games to a real server.", whyNowRef: "W1" }], signals);
+  assert.ok(!("whyNow" in off[0]));
+  const on = groundWhyNows([{ name: "x", whyNow: "Companies are renting their own compute chips now; Mateo already builds on borrowed parts.", whyNowRef: "W1" }], signals);
+  assert.equal(on[0].whyNowSource, "TBPN · Oct 2, 2026");
 });
