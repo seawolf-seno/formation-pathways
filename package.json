@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test:db": "node supabase/tests/rls.test.mjs",
     "test:share": "node --test tests/*.test.mjs",
-    "world:refresh": "node scripts/refresh-world-signals.mjs"
+    "world:refresh": "node scripts/refresh-world-signals.mjs",
+    "eval:pathways": "jiti scripts/eval-pathways.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
@@ -31,7 +32,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "jiti": "^2.7.0"
   },
   "allowScripts": {
     "better-sqlite3@13.0.3": true,
