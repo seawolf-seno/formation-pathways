@@ -27,12 +27,9 @@ Rules:
   "Junior spring", "Senior year"), a short "title" (3–7 words), and a
   one-sentence "detail" naming a real Pacifica experience from the context.
   Steps build on each other; the last one points toward the fourYearHorizon.
-- And a "glimpse": 2–3 sentences in the second person that let the applicant
-  picture one concrete, ordinary moment inside this pathway (e.g. "Picture a
-  Thursday in the spring of your junior year…"). Sensory and specific, warm,
-  an invitation, never a promise or prediction. Same rules as everywhere
-  else: only real programs from the context, and a real faculty member only
-  by name and department, never an invented habit, phrase or anecdote.
+- And a "glimpse": 2–3 sentences in the second person, one concrete moment
+  inside this pathway, following THE GLIMPSE rules below. Warm and specific,
+  an invitation, never a promise or prediction.
 - CRITICAL for mentorArchetype: never invent a personal habit, teaching
   style, phrase, or anecdote for the named teacher — you only know their
   name and department, nothing else about them as a person. State only
@@ -40,7 +37,7 @@ Rules:
   or signature program does). Do not write "a teacher who says/asks/
   believes..." attached to a real name.
 - Each pathway also needs a "hook" and, where a world signal genuinely
-  fits, "whyNow" and "whyNowSource" (see the section below).
+  fits, "whyNow" and "whyNowRef" (see the section below).
 - Each pathway must directly quote or closely echo at least one specific
   phrase from the applicant's actual answers — this is the moment they
   realize they were truly read, so do not paraphrase into blandness.
@@ -71,8 +68,8 @@ in exactly this shape:
       ],
       "glimpse": "string",
       "hook": "string",
-      "whyNow": "string (optional)",
-      "whyNowSource": "string (required with whyNow)"
+      "whyNow": "string (optional, at most three per draft)",
+      "whyNowRef": "W number of the item it restates (required with whyNow)"
     }
   ],
   "seedObservations": [

@@ -56,11 +56,10 @@ Rules:
   step grows from one of the student's sparks, add "spark": the spark in 1–5
   of THEIR words (e.g. "restoring old tools"); otherwise omit "spark".
 - And a "glimpse": 2–3 sentences in the second person, written so the
-  student could read it in a conversation with a teacher, picturing one
-  concrete, ordinary moment inside this pathway ("Picture a Tuesday next
-  spring…"). Warm, specific, an invitation, never a promise or prediction;
-  no grades, no deficits, and a real faculty member only by name and
-  department.
+  student could read it in a conversation with a teacher, one concrete
+  moment inside this pathway, following THE GLIMPSE rules below. Warm,
+  specific, an invitation, never a promise or prediction; no grades, no
+  deficits.
 - Never invent a personal habit, phrase or anecdote for a real teacher.
 - Never invent a program not in the context. Never mention grades, scores,
   GPA, rank, test results, lateness or missing work. Never use the word
@@ -68,7 +67,7 @@ Rules:
 - Quote or closely echo at least one phrase the student wrote or a teacher
   wrote in each pathway.
 - Each pathway also needs a "hook" and, where a world signal genuinely
-  fits, "whyNow" and "whyNowSource" (see the section below). A spark is
+  fits, "whyNow" and "whyNowRef" (see the section below). A spark is
   often the best hook.
 - This is a draft for staff. Do not address the student or family directly.
 
@@ -88,8 +87,8 @@ Respond with ONLY valid JSON, no prose, no markdown fences, exactly:
       ],
       "glimpse": "string",
       "hook": "string",
-      "whyNow": "string (optional)",
-      "whyNowSource": "string (required with whyNow)"
+      "whyNow": "string (optional, at most three per draft)",
+      "whyNowRef": "W number of the item it restates (required with whyNow)"
     }
   ]
 }

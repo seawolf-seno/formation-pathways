@@ -96,6 +96,13 @@ const CACHE_MS = 6 * 60 * 60 * 1000;
 // Not for a Christian high school's pathway drafts, or simply not a pathway.
 const UNSUITABLE =
   /\b(gambl\w*|betting|sportsbook|casino|prediction market\w*|polymarket|kalshi|memecoin\w*|onlyfans|porn\w*|sex\w*|murder\w*|suicide|overdose|drunk\w*|alcohol\w*|sobriety|cannabis|marijuana|vap(e|ing)|election\w*|trump|biden|harris|democrat\w*|republican\w*|partisan)\b/i;
+// Old episodes re-released: not "right now", whatever the feed date says.
+const RERUN = /\b(first aired|originally aired|first published|rebroadcast|encore|from the archives?|we're revisiting|a replay)\b/i;
+// Money as the point (raises, valuations, funds): dropped sentence by sentence,
+// so a guest segment keeps what they're building and loses what they raised.
+const MONEY = /(\$\s?\d|\b\d+(\.\d+)?\s?(million|billion)\b|\braise[sd]?\b|\bfundrais\w*|\bseries [a-f]\b|\bvaluation\b|\bventure (fund|capital|firm)\b|\binvest(s|ing|ment|ments|or|ors)?\b)/i;
+const MIN_NOTE = 40;
+
 // TBPN chapters that are reactions or banter rather than something a kid could grow toward.
 const TBPN_NOISE = /timeline reactions|mansion section|white pill|^intro$|^outro$|ad read|sponsor/i;
 // A whole promotional sentence anywhere in the notes.
@@ -127,6 +134,15 @@ export function cleanText(text: string): string {
     .replace(/<[^>]+>/g, " ")
     .replace(/https?:\/\/\S+/g, " ")
     .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Drops sentences about money raised, valuations and investing. */
+export function stripMoney(text: string): string {
+  const sentences = text.match(/[^.!?]+(?:[.!?]+\s*|$)/g) ?? [];
+  return sentences
+    .filter((sentence) => !MONEY.test(sentence))
+    .join("")
     .trim();
 }
 
@@ -210,8 +226,12 @@ export function signalsFromItems(source: WorldSource, items: FeedItem[], now: Da
         ? splitTbpnChapters(item)
         : [{ title: item.title, note: stripPromo(item.description) }];
     for (const p of pieces) {
-      const note = clip(p.note, NOTE_MAX);
-      if (!note || UNSUITABLE.test(`${p.title} ${note}`)) continue;
+      if (RERUN.test(`${p.title} ${p.note}`)) continue;
+      const unmoneyed = stripMoney(p.note);
+      // A note that was mostly about money leaves too little to stand on.
+      if (!unmoneyed || (unmoneyed !== p.note.trim() && unmoneyed.length < MIN_NOTE)) continue;
+      const note = clip(unmoneyed, NOTE_MAX);
+      if (UNSUITABLE.test(`${p.title} ${note}`)) continue;
       signals.push({ source: source.name, lens: source.lens, date, title: clip(p.title, 140), note });
     }
     if (source.id !== "tbpn" && signals.length >= source.episodes) break;
@@ -305,6 +325,64 @@ export async function getWorldSignals(): Promise<WorldSignals> {
       cache.pending = undefined;
     });
   return cache.pending;
+}
+
+/** "TBPN · Oct 5, 2026" for a signal, the only form a pathway's source takes. */
+export function signalSource(s: WorldSignal): string {
+  const day = new Date(`${s.date}T12:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+  return `${s.source} · ${day}`;
+}
+
+// Words that say nothing about which item a sentence restates.
+const GENERIC = new Set(
+  "about after again people their there these those which while would could should being doing making through student students school pacifica episode recent recently podcast notes something someone everyone things right where other every still later today world".split(" ")
+);
+function contentWords(text: string): Set<string> {
+  return new Set(
+    text
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .split(/\s+/)
+      .filter((w) => w.length >= 5 && !GENERIC.has(w))
+      .map((w) => w.slice(0, 6))
+  );
+}
+/** A why-now has to say something the cited item says: at least two of its
+ *  distinctive words. Catches a line that cites W7 but talks about W12, or
+ *  about nothing in the notes at all. */
+export function restatesSignal(whyNow: string, s: WorldSignal): boolean {
+  const theirs = contentWords(`${s.title} ${s.note}`);
+  let shared = 0;
+  for (const w of contentWords(whyNow)) if (theirs.has(w)) shared++;
+  return shared >= 2;
+}
+
+/** At most this many pathways in one draft carry a "why now". */
+export const MAX_WHY_NOWS = 3;
+
+/**
+ * Keeps a pathway's "why now" only when it cites a real signal ("whyNowRef":
+ * "W7", numbered as in formatWorldSignals), that signal isn't already used by
+ * an earlier pathway, the line actually restates it (restatesSignal), and the
+ * draft is under MAX_WHY_NOWS. The source line is
+ * rewritten from the signal itself, never the model's text. Everything else
+ * loses its why-now. Pure; works on the model's raw pathway objects.
+ */
+export function groundWhyNows<T extends object>(pathways: T[], signals: WorldSignal[], max = MAX_WHY_NOWS): T[] {
+  const used = new Set<number>();
+  return pathways.map((p) => {
+    const rest = { ...(p as Record<string, unknown>) };
+    const { whyNow, whyNowRef } = rest;
+    delete rest.whyNow;
+    delete rest.whyNowRef;
+    delete rest.whyNowSource;
+    const n = typeof whyNowRef === "string" ? Number(whyNowRef.trim().match(/^\[?W(\d+)\]?$/i)?.[1]) : NaN;
+    const signal = Number.isInteger(n) ? signals[n - 1] : undefined;
+    if (typeof whyNow !== "string" || !whyNow.trim() || !signal || used.has(n) || used.size >= max) return rest as T;
+    if (!restatesSignal(whyNow, signal)) return rest as T;
+    used.add(n);
+    return { ...rest, whyNow, whyNowSource: signalSource(signal) } as T;
+  });
 }
 
 /** The block appended to the user message. Empty string when there's nothing. */

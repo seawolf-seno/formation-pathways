@@ -364,7 +364,7 @@ export function EditPathwaysPanel({
             ))}
           </div>
           <label className="block text-xs text-[var(--color-ink-muted)]">
-            A glimpse (2–3 sentences, &quot;Picture a Thursday next spring…&quot;; an invitation, not a promise)
+            A glimpse (2–3 sentences that start inside one moment, with a detail from their world; an invitation, not a promise)
             <textarea value={row.glimpse} onChange={(e) => set(i, "glimpse", e.target.value)} rows={3} className={area} />
           </label>
           <div className="grid gap-2 sm:grid-cols-[1fr_12rem]">
