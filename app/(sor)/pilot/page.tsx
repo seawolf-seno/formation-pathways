@@ -14,6 +14,8 @@ import {
   StaffPanel,
 } from "@/components/sor/PilotControls";
 import { CONSENT_SCOPES, displayName } from "@/lib/sor/types";
+import { checkSchemaDrift, gapsByFile, type DriftReport } from "@/lib/sor/drift";
+import { getSorClient } from "@/lib/sor/supabase-server";
 
 const STAGE: Record<string, string> = {
   applicant: "Applicant",
@@ -37,11 +39,17 @@ export default async function PilotPage({ searchParams }: { searchParams: Promis
   const staff = await requireStaff();
   if (staff.role !== "admin" && staff.role !== "admissions") redirect("/capture");
   const isAdmin = staff.role === "admin";
-  const [settings, roster, runs, staffList] = await Promise.all([
+  const [settings, roster, runs, staffList, drift] = await Promise.all([
     getPilotSettings(),
     getRoster(),
     getImportRuns(),
     isAdmin ? getStaffList() : Promise.resolve([]),
+    // Admins only: is the live database behind the migrations in this deploy?
+    isAdmin
+      ? getSorClient()
+          .then((supabase) => checkSchemaDrift(supabase))
+          .catch(() => "failed" as const)
+      : Promise.resolve(null),
   ]);
   const bb = isAdmin ? await blackbaudConnection() : { token: null, expiresAt: null };
 
@@ -54,6 +62,8 @@ export default async function PilotPage({ searchParams }: { searchParams: Promis
           people already on this list.
         </p>
       </div>
+
+      {drift && <DriftNotice drift={drift} />}
 
       <GatePanel settings={settings} isAdmin={isAdmin} />
 
@@ -169,5 +179,54 @@ export default async function PilotPage({ searchParams }: { searchParams: Promis
         </section>
       )}
     </div>
+  );
+}
+
+/** Admins: whether the live database has every table and column the code's
+ *  migrations create (lib/sor/drift.ts). Quiet when it does. */
+function DriftNotice({ drift }: { drift: DriftReport | "failed" }) {
+  if (drift === "failed") {
+    return <p className="text-xs text-[var(--color-ink-muted)]">Couldn&apos;t check the database against the code just now.</p>;
+  }
+  if (drift.gaps.length === 0 && drift.errors.length === 0) {
+    return (
+      <p className="text-xs text-[var(--color-ink-muted)]">
+        ✓ The database matches the code ({drift.checkedTables} tables checked).
+      </p>
+    );
+  }
+  return (
+    <section className="space-y-2 rounded-xl border border-[var(--color-gold)] bg-[var(--color-gold-light)] p-4 text-sm text-[var(--color-navy-ink)]">
+      {drift.gaps.length > 0 && (
+        <>
+          <p className="font-semibold">The database is behind the code. Pages that use these parts may look empty until it&apos;s updated.</p>
+          <ul className="list-disc space-y-1 pl-5">
+            {gapsByFile(drift.gaps).map(([file, gaps]) => (
+              <li key={file}>
+                <code className="text-xs">supabase/migrations/{file}</code>
+                {": "}
+                {gaps
+                  .map((g) =>
+                    g.kind === "unreachable"
+                      ? `${g.table} exists but the app can't reach it (needs grants)`
+                      : g.column
+                        ? `${g.table}.${g.column} missing`
+                        : `${g.table} table missing`
+                  )
+                  .join("; ")}
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-[var(--color-ink-muted)]">
+            Apply each file in the Supabase SQL editor (or run <code>supabase db push</code>), oldest first, then reload this page.
+          </p>
+        </>
+      )}
+      {drift.errors.length > 0 && (
+        <p className="text-xs text-[var(--color-ink-muted)]">
+          Couldn&apos;t check {drift.errors.map((e) => e.table).join(", ")}: {drift.errors[0].message}
+        </p>
+      )}
+    </section>
   );
 }
