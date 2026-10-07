@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { ApplicantQuestionnaire } from "@/components/ApplicantQuestionnaire";
+import { requireDemoAccess } from "@/lib/demo-access";
 
 // Editable by staff: one line per question, ideas separated by " | ". These are
 // things to think about, never suggested answers.
@@ -17,7 +18,8 @@ function loadHelpIdeas(): string[][] {
   }
 }
 
-export default function ApplyPage() {
+export default async function ApplyPage() {
+  await requireDemoAccess();
   return (
     <div className="min-h-full bg-[var(--color-canvas)]">
       <ApplicantQuestionnaire helpIdeas={loadHelpIdeas()} />

@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const { token, expiresIn } = await exchangeCode(await requestOrigin(), code, verifier);
     await logAccess(staff, "blackbaud_connect", null, {});
     const res = back("connected");
-    const secure = request.nextUrl.protocol === "https:";
+    const secure = process.env.NODE_ENV === "production" || request.nextUrl.protocol === "https:";
     res.cookies.set(TOKEN_COOKIE, tokenCookieValue(token, expiresIn), {
       httpOnly: true, secure, sameSite: "lax", path: "/", maxAge: Math.max(60, expiresIn - 60),
     });

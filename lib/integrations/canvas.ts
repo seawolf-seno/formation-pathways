@@ -283,8 +283,13 @@ function daysAgo(n: number): string {
   return d.toISOString();
 }
 
+/** Live Canvas for the DEMO is a local-only validation tool. In production the
+ *  demo always uses the mock: the pilot's own importer
+ *  (lib/sor/importers/canvas.ts) shares CANVAS_* and is the only path real
+ *  Canvas data may take there, under its course allowlist and consent. */
 export function isLiveCanvasConfigured(): boolean {
   return (
+    process.env.NODE_ENV !== "production" &&
     process.env.MOCK_INTEGRATIONS === "false" &&
     Boolean(process.env.CANVAS_API_TOKEN) &&
     Boolean(process.env.CANVAS_BASE_URL)

@@ -159,6 +159,13 @@ adults behind the scenes; students stay present, in person, with people.
   check as one metadata-only query for the read-only connection or SQL editor. Verified against
   live 2026-10-07: nothing missing. Checks tables and columns only, not functions, policies or
   triggers.
+- **Security review (2026-10-07, card #26)**: `docs/security-review.md`. Fixed in code: Next
+  16.3.8 (critical next/og advisory), open redirect (`lib/safe-next.ts`), demo pages/actions
+  require active staff in production (`lib/demo-access.ts`), demo never uses live Canvas/Drive
+  in production, sparks re-validated on read, security headers (CSP report-only). **Needs seno to
+  apply `20261008000000_security_hardening.sql`** (draft guards, fixed `is_sample`, link and
+  payload checks, no cascade deletes from staff, demo snapshot admin/admissions only). Open
+  decisions listed in the doc. Hosting move plan: `docs/hosting-move.md`.
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)

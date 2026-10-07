@@ -1,6 +1,8 @@
 import { LoginForm } from "@/components/sor/LoginForm";
 import { isSorConfigured } from "@/lib/sor/supabase-server";
 
+export const metadata = { robots: { index: false, follow: false } };
+
 const ERRORS: Record<string, string> = {
   link: "That sign-in link expired or was already used. Request a new code below.",
   pending:

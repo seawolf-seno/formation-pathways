@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getApplicantByToken, getSharesForApplicant } from "@/lib/queries";
 import { FamilyPathways } from "@/components/FamilyPathways";
 import { syncDemoDb } from "@/lib/demo-persist";
+import { requireDemoAccess } from "@/lib/demo-access";
 
 export const metadata = {
   robots: { index: false, follow: false },
@@ -18,6 +19,7 @@ export default async function ApplicantPathwayPage({
 }: {
   params: Promise<{ slugToken: string }>;
 }) {
+  await requireDemoAccess();
   await syncDemoDb();
   const { slugToken } = await params;
   const applicant = getApplicantByToken(extractToken(slugToken));

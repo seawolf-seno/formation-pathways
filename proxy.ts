@@ -7,8 +7,9 @@ import { createServerClient } from "@supabase/ssr";
 //
 // System-of-record routes always need sign-in. The fictional exec demo stays
 // open in local dev (board rehearsals), but once deployed it's behind a
-// signed-in @pacificachristian.org account too: it has no auth of its own and
-// its Claude calls cost money.
+// signed-in @pacificachristian.org account too, and every demo page and
+// action also requires active staff (lib/demo-access.ts): its Claude calls
+// cost money, and a pending or deactivated account passes this check.
 const SOR_PREFIXES = ["/pilot", "/capture", "/season", "/pathway"];
 
 export async function proxy(request: NextRequest) {

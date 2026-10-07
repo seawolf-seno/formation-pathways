@@ -48,3 +48,6 @@ data/*.db-*
 
 # local eval reports (scripts/eval-pathways.ts)
 /reports/
+
+# Fizzy CLI config holds an API token in plaintext
+.fizzy.yaml
