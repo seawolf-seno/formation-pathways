@@ -8,6 +8,10 @@ on:
   push:
     branches: [main]
 
+# The workflow only reads the repo; give its token nothing more.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest

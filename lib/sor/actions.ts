@@ -4,6 +4,7 @@ import fs from "fs";
 import { createHash, randomBytes } from "crypto";
 import path from "path";
 import { requestOrigin } from "@/lib/origin";
+import { safeNext } from "@/lib/safe-next";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { draftObservation, draftRuakhPathways, type RuakhInput } from "@/lib/claude";
@@ -17,7 +18,7 @@ import { runFunnelImport, type FunnelImportOutcome } from "./importers/run-funne
 import { seasonOf } from "./funnel";
 import { checkFinalsiteConnection } from "./importers/finalsite-api";
 import { checkBlackbaudUser } from "./importers/blackbaud";
-import { blackbaudConnection, TOKEN_COOKIE } from "./blackbaud-auth";
+import { blackbaudConnection, FLOW_COOKIE, TOKEN_COOKIE } from "./blackbaud-auth";
 import { cookies } from "next/headers";
 import { mergeSparks, sparksForPrompt, validateStudentSparks } from "./sparks";
 import {
@@ -65,11 +66,6 @@ const AI_OFF_FOR_REAL =
 
 // ---------------------------------------------------------------- auth
 
-/** Only same-site paths, so a crafted ?next= can't bounce staff elsewhere. */
-function safeNext(next: FormDataEntryValue | null): string {
-  const n = String(next ?? "/capture");
-  return n.startsWith("/") && !n.startsWith("//") ? n : "/capture";
-}
 
 /** Emails a 6-digit sign-in code (and a link, for laptops). The code is what
  *  makes phones work: the link often opens in a different browser or inside
@@ -123,6 +119,11 @@ export async function signInWithGoogleAction(formData: FormData): Promise<Result
 export async function signOutAction() {
   const supabase = await getSorClient();
   await supabase.auth.signOut();
+  // The Blackbaud token is tied to whoever connected it; don't leave it for
+  // the next person who signs in on this browser.
+  const jar = await cookies();
+  jar.delete(TOKEN_COOKIE);
+  jar.set(FLOW_COOKIE, "", { path: "/auth/blackbaud", maxAge: 0 });
   redirect("/login");
 }
 
@@ -374,11 +375,15 @@ export async function revokeConsentAction(consentId: string, personId: string): 
   try {
     const staff = await requireRole("admin");
     const supabase = await getSorClient();
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("consents")
       .update({ revoked_at: new Date().toISOString() })
-      .eq("id", consentId);
+      .eq("id", consentId)
+      .eq("person_id", personId)
+      .is("revoked_at", null)
+      .select("id");
     if (error) return fail(error);
+    if (!data?.length) throw new Error("That consent isn't active for this student.");
     await logAccess(staff, "revoke_consent", personId, { consentId });
     revalidatePath(`/pilot/people/${personId}`);
     revalidatePath("/pilot");
@@ -890,11 +895,16 @@ export async function approveDraftAction(draftId: string, personId: string): Pro
   try {
     const staff = await requireRole("admin", "admissions");
     const supabase = await getSorClient();
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("pathway_drafts")
       .update({ status: "approved", approved_by: staff.display_name, approved_at: new Date().toISOString() })
-      .eq("id", draftId);
+      .eq("id", draftId)
+      .eq("person_id", personId)
+      .eq("status", "draft")
+      .select("id");
     if (error) return fail(error);
+    // Signed drafts stay signed by whoever signed them.
+    if (!data?.length) throw new Error("Only an unsigned draft for this student can be signed.");
     await logAccess(staff, "approve_draft", personId, { draftId });
     revalidatePath(`/pilot/people/${personId}`);
     return { ok: true };

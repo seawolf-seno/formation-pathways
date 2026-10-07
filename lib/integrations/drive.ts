@@ -108,7 +108,8 @@ export class LiveDriveSource implements DriveSource {
 }
 
 export function getDriveSource(): DriveSource {
-  const mockDisabled = process.env.MOCK_INTEGRATIONS === "false";
+  // Local-only validation tool, like live Canvas: never in production.
+  const mockDisabled = process.env.NODE_ENV !== "production" && process.env.MOCK_INTEGRATIONS === "false";
   const accessToken = process.env.GOOGLE_DRIVE_ACCESS_TOKEN;
   const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
   if (mockDisabled && accessToken && folderId) {

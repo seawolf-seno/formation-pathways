@@ -4,12 +4,14 @@ import { getClasses, getStudentsWithStats } from "@/lib/queries";
 import { ClassSwitcher } from "@/components/ClassSwitcher";
 import { GlobalCaptureButton } from "@/components/GlobalCaptureButton";
 import { PacificaLogo } from "@/components/PacificaLogo";
+import { requireDemoAccess } from "@/lib/demo-access";
 
 export default async function StaffLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  await requireDemoAccess();
   const classes = getClasses();
   const students = getStudentsWithStats();
   const cookieStore = await cookies();

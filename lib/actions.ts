@@ -1,5 +1,7 @@
 "use server";
 
+import { requireDemoAccess } from "./demo-access";
+
 import { randomBytes } from "crypto";
 import fs from "fs";
 import path from "path";
@@ -102,6 +104,7 @@ function applicantRow(id: number): Applicant {
 export async function draftObservationAction(
   rawText: string
 ): Promise<DraftObservationResult> {
+  await requireDemoAccess();
   await syncDemoDb();
   if (!rawText || !rawText.trim()) {
     return {
@@ -122,6 +125,7 @@ export async function saveObservationAction(input: {
   tags: FormationTag[];
   disciplineFlag: string | null;
 }): Promise<Observation> {
+  await requireDemoAccess();
   await demoWrite();
   const { studentId, author, rawText, cleanText, tags, disciplineFlag } =
     input;
@@ -164,6 +168,7 @@ export async function draftPortraitAction(
   studentId: number,
   type: PortraitType
 ): Promise<Portrait> {
+  await requireDemoAccess();
   await demoWrite();
   const student = getStudent(studentId);
   if (!student) throw new Error("Student not found");
@@ -206,6 +211,7 @@ export async function updatePortraitContentAction(
   portraitId: number | string,
   content: string
 ): Promise<Portrait> {
+  await requireDemoAccess();
   await demoWrite();
   const existing = await getPortrait(portraitId);
   if (!existing) throw new Error("Portrait not found");
@@ -232,6 +238,7 @@ export async function updatePortraitContentAction(
 }
 
 export async function createClassAction(name: string): Promise<SchoolClass> {
+  await requireDemoAccess();
   await demoWrite();
   const trimmed = name.trim();
   if (!trimmed) throw new Error("A class name is required");
@@ -251,6 +258,7 @@ export async function createStudentAction(
   name: string,
   grade: number
 ): Promise<Student> {
+  await requireDemoAccess();
   await demoWrite();
   const trimmed = name.trim();
   if (!trimmed) throw new Error("A student name is required");
@@ -274,6 +282,7 @@ export async function enrollStudentAction(
   classId: number,
   studentId: number
 ): Promise<void> {
+  await requireDemoAccess();
   await demoWrite();
   db.prepare(
     "INSERT OR IGNORE INTO class_students (class_id, student_id) VALUES (?, ?)"
@@ -287,6 +296,7 @@ export async function unenrollStudentAction(
   classId: number,
   studentId: number
 ): Promise<void> {
+  await requireDemoAccess();
   await demoWrite();
   db.prepare(
     "DELETE FROM class_students WHERE class_id = ? AND student_id = ?"
@@ -300,6 +310,7 @@ export async function signPortraitAction(
   portraitId: number | string,
   signedBy: string
 ): Promise<Portrait> {
+  await requireDemoAccess();
   await demoWrite();
   if (!signedBy || !signedBy.trim()) {
     throw new Error("A name is required to sign a Pathway Portrait");
@@ -327,6 +338,7 @@ export async function signPortraitAction(
 }
 
 export async function startApplicantAction(name: string): Promise<Applicant> {
+  await requireDemoAccess();
   await demoWrite();
   const trimmed = name.trim();
   if (!trimmed) throw new Error("A name is required to start an application");
@@ -356,6 +368,7 @@ export async function saveApplicantAnswerAction(
   questionIndex: number,
   answerText: string
 ): Promise<void> {
+  await requireDemoAccess();
   await demoWrite();
   const applicant = applicantRow(applicantId);
   if (applicant.status !== "in_progress") return;
@@ -373,6 +386,7 @@ export async function saveApplicantAnswerAction(
 export async function submitApplicantAction(
   applicantId: number
 ): Promise<Applicant> {
+  await requireDemoAccess();
   await demoWrite();
   const applicant = applicantRow(applicantId);
 
@@ -390,6 +404,7 @@ export async function submitApplicantAction(
 export async function regenerateApplicantPathwaysAction(
   applicantId: number
 ): Promise<Applicant> {
+  await requireDemoAccess();
   await demoWrite();
   const applicant = applicantRow(applicantId);
   const sparkContext = applicant.spark_response
@@ -411,6 +426,7 @@ export async function approveApplicantAction(
   applicantId: number,
   approvedBy: string
 ): Promise<Applicant> {
+  await requireDemoAccess();
   await demoWrite();
   const trimmed = approvedBy.trim();
   if (!trimmed) throw new Error("A staff name is required to approve a Pathway page");
@@ -432,6 +448,7 @@ export async function approveApplicantAction(
 export async function convertApplicantToStudentAction(
   applicantId: number
 ): Promise<Student> {
+  await requireDemoAccess();
   await demoWrite();
   const applicant = applicantRow(applicantId);
   if (!applicant.generated) {
@@ -480,6 +497,7 @@ export async function createCourseAction(
   teacherName: string,
   studentIds: number[]
 ): Promise<Course> {
+  await requireDemoAccess();
   await demoWrite();
   const trimmedName = name.trim();
   const trimmedTeacher = teacherName.trim();
@@ -509,6 +527,7 @@ export async function addCourseSkillAction(
   name: string,
   description: string
 ): Promise<CourseSkill> {
+  await requireDemoAccess();
   await demoWrite();
   const trimmedName = name.trim();
   if (!trimmedName) throw new Error("A skill name is required");
@@ -530,6 +549,7 @@ export async function updateCourseCanvasIdAction(
   courseId: number,
   canvasCourseId: string
 ): Promise<Course> {
+  await requireDemoAccess();
   await demoWrite();
   const trimmed = canvasCourseId.trim();
 
@@ -544,6 +564,7 @@ export async function updateCourseCanvasIdAction(
 }
 
 export async function listAvailableDriveDocsAction(): Promise<DriveDoc[]> {
+  await requireDemoAccess();
   await syncDemoDb();
   return getDriveSource().listAvailableDocs();
 }
@@ -552,6 +573,7 @@ export async function linkDriveDocAction(
   courseId: number,
   fileId: string
 ): Promise<Course> {
+  await requireDemoAccess();
   await demoWrite();
   const doc = await getDriveSource().fetchDoc(fileId);
 
@@ -652,6 +674,7 @@ export async function syncCourseAction(courseId: number): Promise<{
   snapshots: SkillSnapshot[];
   pendingObservations: PendingSkillObservation[];
 }> {
+  await requireDemoAccess();
   await demoWrite();
   return runCourseSync(courseId);
 }
@@ -662,6 +685,7 @@ export async function simulateCanvasActivityAction(courseId: number): Promise<{
   snapshots: SkillSnapshot[];
   pendingObservations: PendingSkillObservation[];
 }> {
+  await requireDemoAccess();
   await demoWrite();
   if (isLiveCanvasConfigured()) {
     throw new Error("Simulate only works against the mock Canvas — live Canvas is configured.");
@@ -684,6 +708,7 @@ export async function approveSkillSignalObservationAction(input: {
   text: string;
   tags: FormationTag[];
 }): Promise<Observation> {
+  await requireDemoAccess();
   await demoWrite();
   const { studentId, text, tags } = input;
 
@@ -731,6 +756,7 @@ export async function createPathwayShareAction(
   applicantToken: string,
   selection: ShareSelection
 ): Promise<{ token: string }> {
+  await requireDemoAccess();
   await demoWrite();
   const applicant = approvedApplicantByToken(applicantToken);
   const content = buildPublicShareContent(
@@ -750,6 +776,7 @@ export async function revokePathwayShareAction(
   applicantToken: string,
   shareToken: string
 ): Promise<void> {
+  await requireDemoAccess();
   await demoWrite();
   const applicant = approvedApplicantByToken(applicantToken);
   db.prepare(
@@ -766,6 +793,7 @@ export async function revokePathwayShareAction(
 // generated pathways. See docs/interest-survey.md.
 
 export async function ensureSparkLinkAction(applicantId: number): Promise<string> {
+  await requireDemoAccess();
   await demoWrite();
   const applicant = applicantRow(applicantId);
   if (applicant.spark_token) return applicant.spark_token;

@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   const res = NextResponse.redirect(authorizeUrl(await requestOrigin(), state, challenge));
   res.cookies.set(FLOW_COOKIE, `${state}.${verifier}`, {
     httpOnly: true,
-    secure: request.nextUrl.protocol === "https:",
+    secure: process.env.NODE_ENV === "production" || request.nextUrl.protocol === "https:",
     sameSite: "lax",
     path: "/auth/blackbaud",
     maxAge: 600,

@@ -12,6 +12,7 @@ import type {
   StaffMember,
 } from "./types";
 import type { FunnelCount } from "./funnel";
+import { validateStudentSparks } from "./sparks";
 
 /** The signed-in, active staff member, or a redirect to /login. Signed in
  *  and waiting for an admin → /login?error=pending; not on the staff table at
@@ -170,11 +171,20 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
     observations: observations.data ?? [],
     drafts: drafts.data ?? [],
     classHistory: classHistory.data ?? [],
-    sparks: (sparks.data ?? []).map((row) => ({
-      sparks: row.sparks,
-      created_at: row.created_at,
-      source: row.source === "family_link" ? "family_link" : "in_person",
-    })),
+    // Re-validated on read: a family link can submit straight to the database,
+    // so a stored row isn't trusted to have the app's shape.
+    sparks: (sparks.data ?? []).flatMap((row) => {
+      const checked = validateStudentSparks(row.sparks);
+      if (!checked.ok) {
+        console.error("student_sparks row skipped: not a valid Spark session");
+        return [];
+      }
+      return [{
+        sparks: checked.sparks,
+        created_at: row.created_at,
+        source: row.source === "family_link" ? ("family_link" as const) : ("in_person" as const),
+      }];
+    }),
   } as PersonProfile;
 }
 
