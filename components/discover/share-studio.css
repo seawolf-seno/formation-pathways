@@ -1,0 +1,127 @@
+/* The family's share studio (ShareStudio.tsx). Builds on family-pathways.css
+   tokens: --ink, --gold, --muted. Mobile first. */
+.ss-grid { display: grid; gap: 28px; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 860px) { .ss-grid { grid-template-columns: minmax(0, 24rem) minmax(0, 1fr); gap: 44px; } }
+
+.ss-preview { display: flex; justify-content: center; }
+.ss-card {
+  width: 100%;
+  max-width: 24rem;
+  height: auto;
+  border-radius: 10px;
+  box-shadow: 0 18px 40px -18px rgba(13, 34, 54, 0.45);
+  background: #e8eef5;
+}
+.ss-feed { aspect-ratio: 4 / 5; }
+.ss-story { aspect-ratio: 9 / 16; max-width: 18rem; }
+
+.ss-controls { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.ss-field { border: 0; margin: 0; padding: 0; min-width: 0; }
+.ss-field legend, .ss-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ss-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.ss-option, .ss-look {
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  background: #fffdf8;
+  border: 1px solid #16324f33;
+  border-radius: 999px;
+  padding: 9px 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ss-option[aria-pressed="true"], .ss-look[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: #fff; }
+.ss-option:focus-visible, .ss-look:focus-visible, .ss-primary:focus-visible, .ss-secondary:focus-visible, .ss-target:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.ss-looks { display: flex; flex-wrap: wrap; gap: 8px; }
+.ss-look { display: inline-flex; align-items: center; gap: 10px; padding: 6px 16px 6px 6px; }
+.ss-swatch {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid #16324f26;
+  overflow: hidden;
+  flex: none;
+}
+.ss-swatch span { position: absolute; left: 7px; top: 9px; width: 12px; height: 2px; border-radius: 1px; }
+
+.ss-primary {
+  font: inherit;
+  font-size: 17px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--ink);
+  border: 0;
+  border-radius: 999px;
+  padding: 15px 28px;
+  min-height: 52px;
+  cursor: pointer;
+  align-self: stretch;
+}
+@media (min-width: 860px) { .ss-primary { align-self: flex-start; min-width: 14rem; } }
+.ss-primary:disabled { opacity: 0.6; cursor: progress; }
+
+.ss-more { display: flex; flex-direction: column; gap: 14px; }
+.ss-targets { display: flex; flex-wrap: wrap; gap: 8px; }
+.ss-target {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  text-decoration: none;
+  border: 1px solid #16324f33;
+  border-radius: 999px;
+  padding: 8px 14px;
+  background: #fffdf8;
+}
+.ss-target:hover { border-color: var(--ink); }
+.ss-tip, .ss-fine, .ss-note { margin: 0; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.ss-error { margin: 0; font-size: 14px; color: #8a3b12; }
+
+.ss-caption {
+  width: 100%;
+  font: inherit;
+  font-size: 15.5px;
+  line-height: 1.55;
+  color: var(--ink);
+  background: #fffdf8;
+  border: 1px solid #16324f40;
+  border-radius: 8px;
+  padding: 12px;
+  resize: vertical;
+}
+.ss-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.ss-secondary {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--ink);
+  border-radius: 999px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.ss-stop {
+  font: inherit;
+  font-size: inherit;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) { .ss-option, .ss-look { transition: none; } }

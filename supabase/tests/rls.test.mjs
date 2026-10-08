@@ -249,6 +249,46 @@ await expect("signing an inquiry pathway records the signer's own name", "adm", 
 await expect("a signed pathway is read-only", "admin", `update inquiry_pathways set pathways = '[]'`, false);
 await expectAnon("anon can't read inquiry pathways", `select * from inquiry_pathways`, false, r => r.rows.length === 0);
 
+// The family's own link and their shares (docs/family-sharing.md).
+const flink = (who, t, inq = robin) => `insert into inquiry_family_links (inquiry_id, token_hash, created_by) values (${inq}, ${hash(t)}, '${ids[who]}') returning id`;
+await expect("a teacher can't make a family link", "teach", flink("teach", "fam-teach"), false);
+await expect("no link for a family without a signed pathway", "adm", flink("adm", "fam-none", noPathway), false);
+await expect("admissions makes the family's link", "adm", flink("adm", "fam-good"), true, r => r.rows.length === 1);
+await expect("a link can't be made to last a year", "adm", `insert into inquiry_family_links (inquiry_id, token_hash, created_by, expires_at) values (${robin}, ${hash("fam-long")}, '${ids.adm}', now() + interval '1 year')`, false);
+await expect("an expired link (made by the database clock)", "admin", `insert into inquiry_family_links (inquiry_id, token_hash, created_by, expires_at) values (${robin}, ${hash("fam-old")}, '${ids.admin}', now() - interval '1 day') returning id`, true, r => r.rows.length === 1);
+await expectAnon("anon can't read family links", `select * from inquiry_family_links`, false, r => r.rows.length === 0);
+await expectAnon("the family's page: their own words and signed pathway, no contact details", `select family_page('fam-good') as p`, true, (r) => {
+  const p = r.rows[0].p;
+  return p && p.child_first_name === "Robin" && Array.isArray(p.pathways) && p.share_code === "TESTMODE"
+    && !("parent_email" in p) && !("address_1" in p) && !("parent_phone" in p) && !("child_last_name" in p);
+});
+await expectAnon("a wrong token gets nothing", `select family_page('fam-guess') as p`, true, r => r.rows[0].p === null);
+await expectAnon("an expired token gets nothing", `select family_page('fam-old') as p`, true, r => r.rows[0].p === null);
+await expectAnon("a share needs a real card look", `select family_share('fam-good', 0, 'neon') as c`, true, r => r.rows[0].c === null);
+await expectAnon("...and a pathway that exists", `select family_share('fam-good', 3, 'tide') as c`, true, r => r.rows[0].c === null);
+await expectAnon("a wrong token can't share", `select family_share('fam-guess', 0, 'tide') as c`, true, r => r.rows[0].c === null);
+await expectAnon("the family shares a pathway", `select family_share('fam-good', 0, 'tide') as c`, true, r => /^[0-9a-f]{12}$/.test(r.rows[0].c));
+const code = (await db.query(`select code from inquiry_shares where style = 'tide' and stopped_at is null`)).rows[0]?.code ?? "none";
+await expectAnon("the same choice gives the same code", `select family_share('fam-good', 0, 'tide') as c`, true, r => r.rows[0].c === code);
+await expectAnon("anon can't read or write shares directly", `insert into inquiry_shares (inquiry_id, inquiry_pathway_id, pathway_index, style, code) select inquiry_id, id, 0, 'sky', 'aaaaaaaaaaaa' from inquiry_pathways`, false);
+await expectAnon("the public share: first name and the pathway only", `select public_share('${code}') as s`, true, (r) => {
+  const s = r.rows[0].s;
+  return s && s.first_name === "Robin" && s.pathway.name === "x" && s.ref === "TESTMODE" && Object.keys(s).sort().join() === "first_name,pathway,ref,style";
+});
+await expect("admissions sees the family's shares", "adm", `select * from inquiry_shares`, true, r => r.rows.length === 1);
+await expect("a teacher doesn't", "teach", `select * from inquiry_shares`, true, r => r.rows.length === 0);
+await expect("sharing is logged", "admin", `select count(*)::int n from access_log where action = 'inquiry_family_share'`, true, r => r.rows[0].n === 1);
+await expectAnon("the family stops sharing", `select family_stop_sharing('fam-good') as n`, true, r => r.rows[0].n === 1);
+await expectAnon("...and the public share is gone", `select public_share('${code}') as s`, true, r => r.rows[0].s === null);
+await expect("admissions closes the inquiry", "adm", `update inquiries set status = 'closed' where share_code = 'TESTMODE' returning id`, true, r => r.rows.length === 1);
+await expectAnon("...so the family link stops", `select family_page('fam-good') as p`, true, r => r.rows[0].p === null);
+await expect("admissions reopens it", "adm", `update inquiries set status = 'contacted' where share_code = 'TESTMODE' returning id`, true, r => r.rows.length === 1);
+await expect("deactivating the staff member who made the link", "admin", `update staff set active = false where user_id = '${ids.adm}' returning user_id`, true, r => r.rows.length === 1);
+await expectAnon("...stops the link", `select family_page('fam-good') as p`, true, r => r.rows[0].p === null);
+await expect("reactivating them", "admin", `update staff set active = true where user_id = '${ids.adm}' returning user_id`, true, r => r.rows.length === 1);
+await expect("admissions can end a family's link", "adm", `delete from inquiry_family_links where token_hash = ${hash("fam-good")} returning id`, true, r => r.rows.length === 1);
+await expectAnon("...and it's gone", `select family_page('fam-good') as p`, true, r => r.rows[0].p === null);
+
 const exposed = await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef");
 const noneExposed = exposed.rows.length === 0; if (noneExposed) pass++; else fail++;
 console.log(`${noneExposed ? "PASS" : "FAIL"}  no SECURITY DEFINER function in the API-exposed public schema`, exposed.rows.map(r => r.proname));

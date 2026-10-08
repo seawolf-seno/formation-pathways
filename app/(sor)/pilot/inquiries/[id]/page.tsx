@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getInquiry, logAccess, requireStaff } from "@/lib/sor/queries";
-import { DraftInquiryPathwayButton, InquiryDraftReview, InquiryStatusPicker } from "@/components/sor/InquiryControls";
+import { DraftInquiryPathwayButton, FamilyLinkPanel, InquiryDraftReview, InquiryStatusPicker } from "@/components/sor/InquiryControls";
+import { PALETTES } from "@/lib/family-share";
 import { describeSent, inquiryInput } from "@/lib/sor/ai-input";
 import { SentToAi } from "@/components/sor/SentToAi";
 
@@ -25,7 +26,7 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
   if (staff.role !== "admin" && staff.role !== "admissions") redirect("/capture");
   const found = await getInquiry(id);
   if (!found) notFound();
-  const { inquiry: i, drafts } = found;
+  const { inquiry: i, drafts, familyLinks, shares } = found;
   await logAccess(staff, "view_inquiry", null, { inquiry: i.id });
 
   const signed = drafts.find((d) => d.status === "approved");
@@ -76,7 +77,7 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
               Signed by <span className="font-semibold">{signed.approved_by}</span>, {signed.approved_at ? when(signed.approved_at) : ""}.{" "}
               {signed.pathways.length} {signed.pathways.length === 1 ? "pathway" : "pathways"}: {signed.pathways.map((p) => p.name).join(" · ")}
             </p>
-            <p className="text-xs text-[var(--color-ink-muted)]">Read-only. Sending it to the family comes next (card #29); for now, open the family view.</p>
+            <p className="text-xs text-[var(--color-ink-muted)]">Read-only. Draft again to change it.</p>
           </div>
         ) : !aiAllowed ? (
           <p className="text-sm text-[var(--color-ink-muted)]">
@@ -101,6 +102,38 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
           </div>
         )}
       </section>
+
+      {signed && i.consent_pathway && (
+        <section className="rounded-xl border border-[var(--color-border)] bg-white p-5">
+          <h2 className="mb-3 font-display text-lg text-[var(--color-navy-ink)]">Send it to the family</h2>
+          <FamilyLinkPanel
+            inquiryId={i.id}
+            parentFirstName={i.parent_first_name}
+            parentEmail={i.parent_email}
+            childFirstName={i.child_first_name}
+            pathwayCount={signed.pathways.length}
+            staffName={staff.display_name}
+            links={familyLinks}
+          />
+          {shares.length > 0 && (
+            <div className="mt-4 border-t border-[var(--color-border)] pt-3">
+              <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">What they&apos;ve shared</p>
+              <ul className="mt-2 space-y-1 text-sm">
+                {shares.map((s) => (
+                  <li key={s.id}>
+                    {signed.pathways[s.pathway_index]?.name ?? `Pathway ${s.pathway_index + 1}`} · {PALETTES[s.style].label} ·{" "}
+                    {s.stopped_at ? (
+                      <span className="text-[var(--color-ink-muted)]">stopped {when(s.stopped_at)}</span>
+                    ) : (
+                      <a className="underline" href={`/w/${s.code}`} target="_blank" rel="noopener noreferrer">/w/{s.code}</a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

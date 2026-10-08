@@ -16,7 +16,9 @@ export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
   // Parent-curated public shares (and their card images) are the one public
   // surface. They serve only a whitelisted snapshot; see docs/pathway-sharing.md.
-  if (path.startsWith("/share/") || path.startsWith("/from/")) {
+  // /w/[code]: an inquiring family's shared pathway and its card image
+  // (docs/family-sharing.md), read-only like the demo shares.
+  if (path.startsWith("/share/") || path.startsWith("/from/") || path.startsWith("/w/")) {
     // A public preview must not become a bypass for POSTed staff Server Actions.
     if (request.method !== "GET" && request.method !== "HEAD") {
       return new NextResponse("Method not allowed", {
@@ -30,7 +32,7 @@ export async function proxy(request: NextRequest) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
     return response;
   }
-  if (path.startsWith("/spark/") || path === "/discover" || path.startsWith("/discover/")) {
+  if (path.startsWith("/spark/") || path === "/discover" || path.startsWith("/discover/") || path.startsWith("/welcome/")) {
     // The deliberate public WRITE surfaces, both with no school sign-in:
     // - /spark/[token]: an applicant's Spark survey (fictional demo).
     //   submitSparkResponseAction (lib/actions.ts) is scoped by spark_token to
@@ -43,6 +45,11 @@ export async function proxy(request: NextRequest) {
     //   the database function submit_inquiry(), which refuses until an
     //   admin records leadership's approval. Its page registers one action
     //   (lib/discover-actions.ts). See docs/inquiries.md.
+    // - /welcome/[token]: an inquiring family's own page, by the private
+    //   link admissions sends. Reads and shares only through the database
+    //   functions family_page/family_share/family_stop_sharing, which check
+    //   the token; its page registers two actions (lib/family-actions.ts).
+    //   See docs/family-sharing.md.
     const response = NextResponse.next();
     response.headers.set("Cache-Control", "no-store");
     response.headers.set("Referrer-Policy", "no-referrer");

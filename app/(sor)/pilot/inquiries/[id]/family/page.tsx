@@ -4,7 +4,6 @@ import { getConsentedAlumniStories } from "@/lib/queries";
 import { syncDemoDb } from "@/lib/demo-persist";
 import { pickStories } from "@/lib/inquiry";
 import { welcomeMatches } from "@/lib/discover";
-import { requestOrigin } from "@/lib/origin";
 import { FamilyWelcome } from "@/components/discover/FamilyWelcome";
 
 export const metadata = { title: "What the family sees · Formation Pathways" };
@@ -24,14 +23,16 @@ export default async function FamilyPreviewPage({ params }: { params: Promise<{ 
   await logAccess(staff, "view_inquiry_family_preview", null, { inquiry: i.id });
 
   await syncDemoDb();
-  const { stories, sameSchool } = pickStories(getConsentedAlumniStories(), i.current_school ?? "");
+  // Graduate stories are the demo's invented ones: fictional samples only.
+  const { stories, sameSchool } = i.is_sample
+    ? pickStories(getConsentedAlumniStories(), i.current_school ?? "")
+    : { stories: [], sameSchool: false };
   const signed = drafts.find((d) => d.status === "approved");
-  const origin = await requestOrigin();
 
   return (
     <>
       <p className="sticky top-0 z-10 bg-[var(--color-gold-light)] px-4 py-2 text-center text-xs text-[var(--color-navy-ink)]">
-        Staff preview{i.is_sample ? " of a fictional sample" : ""}. Families can&apos;t open this yet; sending it to them is the next step.
+        Staff preview{i.is_sample ? " of a fictional sample" : ""}. The family sees this at their own link (make it on the inquiry page), where they can share.
       </p>
       <FamilyWelcome
         familyName={i.parent_last_name}
@@ -45,8 +46,7 @@ export default async function FamilyPreviewPage({ params }: { params: Promise<{ 
         }))}
         sameSchool={sameSchool}
         pathways={signed?.pathways ?? null}
-        cardUrl={`/pilot/inquiries/${i.id}/card`}
-        referralUrl={`${origin}/discover?ref=${i.share_code}`}
+        cardBase={`/pilot/inquiries/${i.id}/card`}
         moreWithApplication
       />
     </>
