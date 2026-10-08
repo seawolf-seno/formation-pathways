@@ -22,6 +22,7 @@ import { blackbaudConnection, FLOW_COOKIE, TOKEN_COOKIE } from "./blackbaud-auth
 import { cookies } from "next/headers";
 import { mergeSparks, sparksForPrompt, validateStudentSparks } from "./sparks";
 import {
+  INQUIRY_STATUSES,
   displayName,
   type ConsentScope,
   type LifecycleStage,
@@ -487,6 +488,104 @@ export async function setFunnelApprovalAction(formData: FormData): Promise<Resul
     if (error) return fail(error);
     await logAccess(staff, open ? "funnel_live_open" : "funnel_live_close", null, open ? { approvedBy, reference } : {});
     revalidatePath("/season");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ---------------------------------------------------------------- inquiries (/discover)
+
+/** Opens or closes the public /discover form. Opening records who approved
+ *  storing prospective families' details, and where (DB-enforced). */
+export async function setInquiriesApprovalAction(formData: FormData): Promise<Result> {
+  try {
+    const staff = await requireRole("admin");
+    const open = formData.get("open") === "true";
+    const approvedBy = String(formData.get("approved_by") ?? "").trim();
+    const reference = String(formData.get("approval_reference") ?? "").trim();
+    if (open && (!approvedBy || !reference)) {
+      return { ok: false, error: "Enter who approved collecting inquiries here and where that approval lives." };
+    }
+    const supabase = await getSorClient();
+    const { error } = await supabase
+      .from("pilot_settings")
+      .update(
+        open
+          ? {
+              inquiries_open: true,
+              inquiries_approved_by: approvedBy,
+              inquiries_approval_reference: reference,
+              inquiries_approved_at: new Date().toISOString(),
+            }
+          : { inquiries_open: false }
+      )
+      .eq("id", true);
+    if (error) return fail(error);
+    await logAccess(staff, open ? "inquiries_open" : "inquiries_close", null, open ? { approvedBy, reference } : {});
+    revalidatePath("/pilot/inquiries");
+    revalidatePath("/discover");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Admissions moves an inquiry along. Only follow-up fields change; what the
+ *  family sent is fixed (DB trigger). */
+export async function updateInquiryStatusAction(id: string, status: string): Promise<Result> {
+  try {
+    const staff = await requireRole("admin", "admissions");
+    if (!(INQUIRY_STATUSES as string[]).includes(status)) throw new Error("Unknown status.");
+    const supabase = await getSorClient();
+    const { data, error } = await supabase
+      .from("inquiries")
+      .update({ status, ...(status === "applied" ? { applied_at: new Date().toISOString() } : {}) })
+      .eq("id", id)
+      .select("id");
+    if (error) return fail(error);
+    if (!data?.length) throw new Error("That inquiry isn't available.");
+    await logAccess(staff, "inquiry_status", null, { inquiry: id, status });
+    revalidatePath("/pilot/inquiries");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** A fictional inquiry, for trying the inbox and the Finalsite export before
+ *  any real family uses the form. Never exported (the export skips samples). */
+export async function addSampleInquiryAction(): Promise<Result> {
+  try {
+    const staff = await requireRole("admin");
+    const supabase = await getSorClient();
+    const n = Math.floor(Math.random() * 900) + 100;
+    const { error } = await supabase.from("inquiries").insert({
+      is_sample: true,
+      share_code: randomBytes(4).toString("hex").toUpperCase(),
+      source: "website",
+      parent_first_name: "Sample",
+      parent_last_name: `Family ${n}`,
+      parent_relationship: "Mother",
+      parent_email: `sample${n}@example.com`,
+      address_1: "1 Example Way",
+      city: "Newport Beach",
+      state: "CA",
+      zip: "92660",
+      child_first_name: "Alex",
+      child_last_name: `Family ${n}`,
+      child_grade: 9,
+      entry_year: new Date().getFullYear() + 1,
+      current_school: "Harbor View Middle School",
+      one_thing: "Builds radios from thrift-store parts and keeps the ones that almost work.",
+      interests: ["STEM", "Surf"],
+      consent_contact: true,
+      consent_pathway: true,
+      consent_version: "sample",
+    });
+    if (error) return fail(error);
+    await logAccess(staff, "inquiry_sample_add", null, {});
+    revalidatePath("/pilot/inquiries");
     return { ok: true };
   } catch (e) {
     return fail(e);

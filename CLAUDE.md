@@ -166,6 +166,14 @@ adults behind the scenes; students stay present, in person, with people.
   apply `20261008000000_security_hardening.sql`** (draft guards, fixed `is_sample`, link and
   payload checks, no cascade deletes from staff, demo snapshot admin/admissions only). Open
   decisions listed in the doc. Hosting move plan: `docs/hosting-move.md`.
+- **Inquiries foundation (2026-10-08, card #29)**: our own family inquiry form at `/discover`
+  (public; `?src=website`, `?ref=CODE`, `?embed=1` framable on pacificachristian.org only),
+  admissions inbox and Finalsite export at `/pilot/inquiries`. Finalsite's External API is
+  read-only, so inquiries go to Finalsite as a Create-import CSV matched by each inquiry's FP id
+  (`CHILD.external_id`); settings in `docs/inquiries.md`. **Closed until seno applies
+  `20261009000000_inquiries.sql` and an admin records leadership's approval on
+  `/pilot/inquiries`.** Consent wording in `lib/discover.ts` is a draft for leadership. Next PRs:
+  welcome page, signed pathway by email, sharing with referral codes and thank-yous.
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)
