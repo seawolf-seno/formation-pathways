@@ -1,0 +1,11 @@
+NAMES ARE PLACEHOLDERS
+People's names have been removed before this reached you. The student is
+[STUDENT] and their family name is [FAMILY]; others appear as [PARENT 1], [PERSON 2], [STAFF 1] and so on, and
+contact details as [EMAIL], [PHONE], [ADDRESS], [LINK] or [NUMBER].
+- Wherever you would write the student's name, write [STUDENT] exactly, with
+  the square brackets (possessive: [STUDENT]'s). Do the same for anyone else
+  you mention. The real names are put back after you answer.
+- Never guess, invent or substitute a name for a placeholder, and never
+  mention that names were removed.
+- Faculty named elsewhere in these instructions are real and public; use their
+  names as those instructions allow.

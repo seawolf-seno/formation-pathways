@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getInquiry, logAccess, requireStaff } from "@/lib/sor/queries";
 import { DraftInquiryPathwayButton, InquiryDraftReview, InquiryStatusPicker } from "@/components/sor/InquiryControls";
+import { describeSent, inquiryInput } from "@/lib/sor/ai-input";
+import { SentToAi } from "@/components/sor/SentToAi";
 
 export const metadata = { title: "Inquiry · Formation Pathways" };
 
@@ -26,6 +28,8 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
   const signed = drafts.find((d) => d.status === "approved");
   const latestDraft = drafts.find((d) => d.status === "draft");
   const aiAllowed = i.is_sample || process.env.AI_REAL_STUDENTS?.trim() === "on";
+  const { anon, ...payload } = inquiryInput(i);
+  const sentToAi = describeSent(payload, anon);
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6">
@@ -60,6 +64,7 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
           </Link>
         </div>
 
+        {i.consent_pathway && aiAllowed && !signed && <div className="mb-4"><SentToAi {...sentToAi} /></div>}
         {!i.consent_pathway ? (
           <p className="text-sm text-[var(--color-ink-muted)]">This family didn&apos;t ask for a pathway, so none is drafted.</p>
         ) : signed ? (

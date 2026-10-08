@@ -55,7 +55,7 @@ function extractJson(text: string): unknown {
 /** Both pathway generators share one system prompt tail: the distinctiveness
  *  and world-signal rules (prompts/unique-pathways.txt), then the school. */
 function pathwaySystemPrompt(lead: string): string {
-  return [lead, "unique-pathways.txt", "pacifica-context.txt"].map(readPrompt).join("\n\n---\n\n");
+  return [lead, "unique-pathways.txt", "pacifica-context.txt", "placeholders.txt"].map(readPrompt).join("\n\n---\n\n");
 }
 
 /** "The world right now" appended to a pathway prompt's user message. Public
@@ -104,7 +104,7 @@ export async function draftObservation(
   if (!anthropic) return fallback;
 
   try {
-    const system = readPrompt("clean-and-tag.txt");
+    const system = [readPrompt("clean-and-tag.txt"), readPrompt("placeholders.txt")].join("\n\n---\n\n");
     const message = await anthropic.messages.create({
       model: MODEL,
       max_tokens: 700,

@@ -183,6 +183,16 @@ adults behind the scenes; students stay present, in person, with people.
   referral link. AI only for samples until `AI_REAL_STUDENTS=on`. **Needs seno to apply
   `20261010000000_inquiry_pathways.sql`.** Walkthrough: `docs/inquiry-demo.md`. Next: email the
   family page, referral thank-yous.
+- **AI on real students, names removed (2026-10-08, card #22 done)**: leadership approved
+  `AI_REAL_STUDENTS=on` on condition that student data is anonymized. Every system-of-record
+  AI call (pathway drafts, capture cleanup, inquiry pathways) goes through
+  `lib/sor/ai-input.ts` → `lib/sor/anonymize.ts`: known names (student, family, roster,
+  staff in the record, inquiry parent) and contact details become placeholders
+  (`[STUDENT]`, `[FAMILY]`, `[PERSON n]`, `[STAFF n]`, `[EMAIL]`…), `assertNoNames` refuses
+  to send a payload with a known name left, and names are restored locally in the result.
+  Staff see the exact payload under "What the AI sees" on person and inquiry pages. Names
+  not in our records can't be caught: `docs/ai-anonymization.md`. Never add an AI call on
+  real data that bypasses `ai-input.ts`.
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)
@@ -347,10 +357,10 @@ Test for every screen: "would a parent trust this with their child's story?"
   again.
   (The pseudonymize-before-use contract above governs the **demo**. The system
   of record is the one sanctioned exception. It stores real names only under
-  the consent and gate rules in principle #5, sends Claude the first name only (no
-  ids, no timeliness data) and only with `ai_drafting` consent, never imports
-  Canvas scores, and matches spoken names locally (`lib/sor/match.ts`) so the
-  roster never reaches Claude. Keep all four properties.)
+  the consent and gate rules in principle #5, sends Claude **no names at all**
+  (placeholders via `lib/sor/anonymize.ts`, restored locally; no ids) and only with
+  `ai_drafting` consent, never imports Canvas scores, and matches spoken names locally
+  (`lib/sor/match.ts`) so the roster never reaches Claude. Keep all four properties.)
 - System of record specifics: one `people` row per student for the whole
   lifecycle, linked to source ids via `external_ids`. The access log is
   append-only (no app user can update or delete it), and its `person_id` is

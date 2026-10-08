@@ -7,13 +7,13 @@ import { requestOrigin } from "@/lib/origin";
 import { safeNext } from "@/lib/safe-next";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { draftAdmissionsPathways, draftObservation, draftRuakhPathways, type RuakhInput } from "@/lib/claude";
-import { inquiryDraftInput } from "@/lib/discover";
+import { draftAdmissionsPathways, draftObservation, draftRuakhPathways } from "@/lib/claude";
+import { inquiryInput, pathwayInput, personPseudonymizer } from "./ai-input";
 import { DEMO_FAMILIES } from "@/lib/discover-demo";
 import { FORMATION_TAGS, PATHWAY_COUNT, type FormationTag, type GeneratedPathway } from "@/lib/types";
 import { sanitizeGlimpse, sanitizeMilestones, sanitizeUniqueness } from "@/lib/pathway-journey";
 import { getSorClient } from "./supabase-server";
-import { getCaptureRoster, getInquiry, getPersonProfile, logAccess, requireStaff } from "./queries";
+import { getCaptureRoster, getInquiry, getPersonProfile, getRoster, logAccess, requireStaff } from "./queries";
 import { matchPeople } from "./match";
 import { runImport, type ImportOutcome } from "./importers/run";
 import { runFunnelImport, type FunnelImportOutcome } from "./importers/run-funnel";
@@ -22,7 +22,7 @@ import { checkFinalsiteConnection } from "./importers/finalsite-api";
 import { checkBlackbaudUser } from "./importers/blackbaud";
 import { blackbaudConnection, FLOW_COOKIE, TOKEN_COOKIE } from "./blackbaud-auth";
 import { cookies } from "next/headers";
-import { mergeSparks, sparksForPrompt, validateStudentSparks } from "./sparks";
+import { validateStudentSparks } from "./sparks";
 import {
   INQUIRY_STATUSES,
   displayName,
@@ -638,8 +638,11 @@ export async function draftInquiryPathwayAction(inquiryId: string): Promise<Resu
     const { inquiry } = found;
     if (!inquiry.consent_pathway) throw new Error("This family didn't ask for a Formation Pathway.");
     if (!inquiry.is_sample && !realStudentAiOn()) throw new Error(AI_OFF_FOR_REAL);
-    const { answers, context } = inquiryDraftInput(inquiry);
-    const { result, usedFallback } = await draftAdmissionsPathways(answers, context);
+    const { answers, context, anon } = inquiryInput(inquiry);
+    anon.assertNoNames(JSON.stringify({ answers, context }));
+    const drafted = await draftAdmissionsPathways(answers, context);
+    const result = anon.restoreDeep(drafted.result);
+    const usedFallback = drafted.usedFallback;
     if (!result.pathways.length) throw new Error("No pathway came back. Try again.");
     const supabase = await getSorClient();
     const { error } = await supabase
@@ -740,7 +743,7 @@ export async function draftCaptureAction(
   Result<{ cleanText: string; tags: FormationTag[]; disciplineFlag: string | null; aiUsed: boolean; aiNote: string | null }>
 > {
   try {
-    await requireStaff();
+    const staff = await requireStaff();
     const profile = await getPersonProfile(personId);
     if (!profile) return { ok: false, error: "Student not found." };
     if (!hasConsent(profile, "ai_drafting")) {
@@ -763,7 +766,10 @@ export async function draftCaptureAction(
         aiNote: `${AI_OFF_FOR_REAL} Saving your words as spoken.`,
       };
     }
-    const draft = await draftObservation(transcript);
+    const anon = personPseudonymizer(profile, await getRoster(), staff.display_name);
+    const sent = anon.scrub(transcript, { dictation: true });
+    anon.assertNoNames(sent);
+    const draft = anon.restoreDeep(await draftObservation(sent));
     return {
       ok: true,
       cleanText: draft.cleanText,
@@ -810,46 +816,6 @@ export async function saveCaptureAction(input: {
 
 // ---------------------------------------------------------------- who they are today (#2)
 
-function toRuakhInput(profile: PersonProfile): RuakhInput {
-  const { person, admissions, enrollment, courses, classHistory, evidence, observations } = profile;
-  const courseName = new Map(courses.map((c) => [c.canvas_course_id, c.course_name]));
-  return {
-    firstName: person.preferred_name || person.first_name,
-    stage: person.stage,
-    grade: enrollment?.grade ?? person.current_grade,
-    previousSchool: admissions?.previous_school ?? null,
-    interests: admissions?.interests ?? [],
-    activities: admissions?.activities ?? [],
-    applicationResponses: admissions?.responses ?? [],
-    // Canvas courses (with teacher), then Blackbaud class history: titles and
-    // school year only, no grades.
-    courses: [
-      ...courses.map((c) => ({ name: c.course_name, teacher: c.teacher_name })),
-      ...classHistory
-        .filter((h) => !courses.some((c) => c.course_name === h.course_title))
-        .slice(0, 40)
-        .map((h) => ({ name: `${h.course_title} (${h.school_year}${h.offering_type ? `, ${h.offering_type}` : ""})`, teacher: null })),
-    ],
-    teacherComments: evidence
-      .filter((e) => e.teacher_comment)
-      .map((e) => ({
-        course: courseName.get(e.canvas_course_id) ?? "a course",
-        assignment: e.assignment_name,
-        comment: e.teacher_comment!,
-      })),
-    observations: observations.map((o) => ({
-      author: o.author_name,
-      text: o.body,
-      tags: o.tags,
-      date: o.created_at.slice(0, 10),
-    })),
-    // What lights them up, in their own words: needs student_voice consent to
-    // exist at all, and reaches Claude only under the same AI rules as the rest.
-    // All sessions, so at-home answers add to the in-person ones.
-    studentSparks: profile.sparks.length ? sparksForPrompt(mergeSparks(profile.sparks)!) : null,
-  };
-}
-
 export async function draftPathwaysAction(personId: string): Promise<Result> {
   try {
     const staff = await requireRole("admin", "admissions");
@@ -861,8 +827,10 @@ export async function draftPathwaysAction(personId: string): Promise<Result> {
     if (!profile.person.is_sample && !realStudentAiOn()) {
       return { ok: false, error: `${AI_OFF_FOR_REAL} Sample students can be drafted now.` };
     }
-    const input = toRuakhInput(profile);
-    const draft = await draftRuakhPathways(input);
+    // Names out before it leaves, back in after (lib/sor/anonymize.ts).
+    const { input, anon } = pathwayInput(profile, await getRoster(), staff.display_name);
+    anon.assertNoNames(JSON.stringify(input));
+    const draft = anon.restoreDeep(await draftRuakhPathways(input));
     const sources = [
       profile.admissions && "finalsite",
       profile.enrollment && "blackbaud",
