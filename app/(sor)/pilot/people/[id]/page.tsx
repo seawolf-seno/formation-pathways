@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPersonProfile, logAccess, requireStaff } from "@/lib/sor/queries";
+import { getPersonProfile, getRoster, logAccess, requireStaff } from "@/lib/sor/queries";
+import { describeSent, pathwayInput } from "@/lib/sor/ai-input";
+import { SentToAi } from "@/components/sor/SentToAi";
 import { displayName } from "@/lib/sor/types";
 import { PathwaysDisplay } from "@/components/PathwaysDisplay";
 import { TagChip } from "@/components/TagChips";
@@ -57,6 +59,12 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   const canReadSparks = canDraft || staff.role === "teacher";
   const aiConsent = person.is_sample || consents.some((c) => c.scope === "ai_drafting" && !c.revoked_at);
   const latest = drafts[0];
+  // What a draft would send, for staff to check (names removed).
+  let sentToAi: ReturnType<typeof describeSent> | null = null;
+  if (canDraft && aiConsent) {
+    const { input, anon } = pathwayInput(profile, await getRoster(), staff.display_name);
+    sentToAi = describeSent(input, anon);
+  }
   const courseName = new Map(courses.map((c) => [c.canvas_course_id, c.course_name]));
   const comments = evidence.filter((e) => e.teacher_comment);
   const historyYears = [...new Set(classHistory.map((h) => h.school_year))];
@@ -262,6 +270,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                 </div>
                 <DraftButton personId={person.id} hasDraft={Boolean(latest)} allowed={aiConsent} />
               </div>
+              {sentToAi && <div className="mb-4"><SentToAi {...sentToAi} /></div>}
               {latest && (
                 <div className="space-y-6">
                   <div className="relative rounded-xl bg-white p-5">

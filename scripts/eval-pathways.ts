@@ -10,6 +10,7 @@
 import fs from "fs";
 import path from "path";
 import { draftAdmissionsPathways, draftRuakhPathways, type RuakhInput } from "../lib/claude";
+import { Pseudonymizer } from "../lib/sor/anonymize";
 import { getWorldSignals } from "../lib/world-signals";
 import type { GeneratedPathway } from "../lib/types";
 
@@ -46,7 +47,7 @@ function parseCsv(text: string): Record<string, string>[] {
   return body.map((r) => Object.fromEntries(header.map((h, i) => [h, r[i] ?? ""])));
 }
 
-type Person = { first_name: string; preferred_name?: string; stage: string; current_grade?: number; ids: Record<string, string> };
+type Person = { first_name: string; last_name: string; preferred_name?: string; stage: string; current_grade?: number; ids: Record<string, string> };
 const roster = JSON.parse(fixture("pilot-roster.json")).people as Person[];
 const finalsite = parseCsv(fixture("finalsite-applicants.csv"));
 const blackbaud = JSON.parse(fixture("blackbaud-users.json")).users as {
@@ -189,7 +190,16 @@ async function main() {
   for (const p of roster) {
     const input = ruakhInputFor(p);
     const started = Date.now();
-    const draft = await draftRuakhPathways(input);
+    // Drafted exactly as the live app drafts: names out, then back in.
+    const anon = new Pseudonymizer({
+      student: { first: p.first_name, last: p.last_name, preferred: p.preferred_name },
+      others: roster.filter((o) => o !== p).map((o) => ({ first: o.first_name, last: o.last_name, preferred: o.preferred_name })),
+    });
+    const sent = { ...anon.scrubDeep(input), firstName: "[STUDENT]" };
+    anon.assertNoNames(JSON.stringify(sent));
+    const draft = anon.restoreDeep(await draftRuakhPathways(sent));
+    const unrestored = JSON.stringify(draft.pathways).match(/\[(?:STUDENT|FAMILY|PARENT|PERSON|STAFF)[^\]]*\]?/gi) ?? [];
+    if (unrestored.length) console.log(`${input.firstName}: ${unrestored.length} placeholder(s) the model mangled: ${unrestored.slice(0, 3).join(", ")}`);
     const secs = Math.round((Date.now() - started) / 1000);
     all.push({ student: input.firstName, pathways: draft.pathways, courses: input.courses.map((c) => c.name) });
     out.push(

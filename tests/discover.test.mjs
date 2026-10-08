@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cleanRef, cleanSource, entryYears, validateInquiry, INQUIRY_CONSENT_VERSION } from "../lib/discover.ts";
+import { cleanRef, cleanSource, entryYears, inquiryDraftInput, validateInquiry, welcomeMatches, INQUIRY_CONSENT_VERSION } from "../lib/discover.ts";
 
 const now = new Date("2026-10-08T12:00:00Z");
 const good = {
@@ -44,4 +44,18 @@ test("a link can only claim the website as its source; codes must look like code
   assert.equal(cleanSource("website"), "website");
   assert.equal(cleanRef("ab12cd34"), "AB12CD34");
   for (const bad of ["", "short", "AB12CD34X", "AB12-CD3", null, 42]) assert.equal(cleanRef(bad), null);
+});
+
+test("the welcome page names programs for what a family picked; any sport means Athletics", () => {
+  assert.deepEqual(welcomeMatches(["Surf", "STEM", "Juggling"]).map((m) => m.program), ["STEM Scholars", "Wolfpack Athletics"]);
+  assert.deepEqual(welcomeMatches([]), []);
+});
+
+test("a draft is built from the family's own words first, and says it's only an inquiry", () => {
+  const { answers, context } = inquiryDraftInput({ child_first_name: "Sam", child_grade: 9, entry_year: 2027, current_school: "Harbor View", one_thing: "Fixes bikes.", interests: ["STEM"] });
+  assert.equal(answers[0].answer, "Fixes bikes.");
+  assert.equal(answers.length, 2);
+  assert.match(context, /grade 9, fall 2027/);
+  assert.match(context, /only what is above/);
+  assert.equal(inquiryDraftInput({ child_first_name: "A", child_grade: 9, entry_year: 2027, current_school: null, one_thing: null, interests: [] }).answers.length, 0);
 });

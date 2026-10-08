@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { addSampleInquiryAction, setInquiriesApprovalAction, updateInquiryStatusAction } from "@/lib/sor/actions";
+import {
+  addDemoFamiliesAction, addSampleInquiryAction, draftInquiryPathwayAction, setInquiriesApprovalAction,
+  signInquiryPathwayAction, updateInquiryStatusAction,
+} from "@/lib/sor/actions";
+import type { GeneratedPathway } from "@/lib/types";
 import { INQUIRY_STATUSES, type InquiryStatus, type PilotSettings } from "@/lib/sor/types";
 
 const input = "w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm";
@@ -127,6 +131,99 @@ export function CopySnippet({ label, text }: { label: string; text: string }) {
         </button>
       </div>
       <pre className="overflow-x-auto rounded-lg bg-[var(--color-canvas)] p-3 text-xs leading-relaxed"><code>{text}</code></pre>
+    </div>
+  );
+}
+
+/** Admin/admissions: five fictional families to try the whole flow with. */
+export function DemoFamiliesButton() {
+  const [msg, setMsg] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  return (
+    <span className="inline-flex flex-col gap-1">
+      <button
+        className={quiet}
+        disabled={pending}
+        onClick={() => start(async () => {
+          const res = await addDemoFamiliesAction();
+          setMsg(res.ok ? `Added ${res.added} demo families.` : res.error);
+        })}
+      >
+        {pending ? "Adding…" : "Load demo families"}
+      </button>
+      {msg && <span className="text-xs text-[var(--color-ink-muted)]">{msg}</span>}
+    </span>
+  );
+}
+
+/** Drafts a pathway from what the family wrote. Takes about a minute. */
+export function DraftInquiryPathwayButton({ inquiryId, again }: { inquiryId: string; again: boolean }) {
+  const [msg, setMsg] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  return (
+    <span className="inline-flex flex-col gap-1">
+      <button
+        className={again ? quiet : button}
+        disabled={pending}
+        onClick={() => start(async () => {
+          setMsg(null);
+          const res = await draftInquiryPathwayAction(inquiryId);
+          setMsg(res.ok ? (res.usedFallback ? "AI assist is offline, so this is a canned example draft." : null) : res.error);
+        })}
+      >
+        {pending ? "Drafting… (about a minute)" : again ? "Draft again" : "Draft a Formation Pathway"}
+      </button>
+      {msg && <span className="max-w-md text-xs text-[var(--color-ink-muted)]">{msg}</span>}
+    </span>
+  );
+}
+
+/** Review a draft: keep up to three pathways, then sign. */
+export function InquiryDraftReview({
+  inquiryId, pathwayId, pathways,
+}: { inquiryId: string; pathwayId: string; pathways: GeneratedPathway[] }) {
+  const [keep, setKeep] = useState<number[]>(pathways.map((_, i) => i).slice(0, 3));
+  const [error, setError] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const toggle = (i: number) =>
+    setKeep((k) => (k.includes(i) ? k.filter((x) => x !== i) : k.length >= 3 ? k : [...k, i]));
+  return (
+    <div className="space-y-3">
+      <ol className="grid gap-3 md:grid-cols-2">
+        {pathways.map((p, i) => {
+          const on = keep.includes(i);
+          return (
+            <li key={i}>
+              <label
+                className={`block h-full cursor-pointer rounded-lg border p-4 text-sm ${on ? "border-[var(--color-navy)] bg-[var(--color-surface,#fff)]" : "border-[var(--color-border)] opacity-70"}`}
+              >
+                <span className="flex items-start gap-2">
+                  <input type="checkbox" className="mt-1" checked={on} onChange={() => toggle(i)} disabled={!on && keep.length >= 3} />
+                  <span className="font-display text-base text-[var(--color-navy-ink)]">{p.name}</span>
+                </span>
+                {p.hook && <span className="mt-1 block text-xs text-[var(--color-ink-muted)]">Grows from “{p.hook.replace(/^["“]|["”]$/g, "")}”</span>}
+                <span className="mt-2 block">{p.firstSemester}</span>
+                {p.glimpse && <span className="mt-2 block font-display italic">{p.glimpse}</span>}
+                {p.whyNow && <span className="mt-2 block text-xs text-[var(--color-ink-muted)]">Why now: {p.whyNow}</span>}
+              </label>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          className={button}
+          disabled={pending || keep.length === 0}
+          onClick={() => start(async () => {
+            const res = await signInquiryPathwayAction(pathwayId, inquiryId, keep);
+            setError(res.ok ? null : res.error);
+          })}
+        >
+          {pending ? "Signing…" : `Sign ${keep.length === 1 ? "this pathway" : `these ${keep.length}`}`}
+        </button>
+        <span className="text-xs text-[var(--color-ink-muted)]">Keep up to three. Signing records your name; a signed pathway can&apos;t be edited.</span>
+      </div>
+      {error && <p className="text-xs text-red-700">{error}</p>}
     </div>
   );
 }
