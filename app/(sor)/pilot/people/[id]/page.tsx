@@ -9,6 +9,9 @@ import { TagChip } from "@/components/TagChips";
 import { SparkResults } from "@/components/sor/SparkResults";
 import { ApproveButton, ConsentPanel, DraftButton, EditPathwaysPanel, ExternalIdsPanel, SparkLinkButton, WithdrawButton } from "@/components/sor/PersonControls";
 
+// Drafting runs here as a Server Action and takes about two minutes.
+export const maxDuration = 300;
+
 /** A small labeled fact chip: grade, class year, advisor. */
 function Fact({ label, value }: { label: string; value: string }) {
   return (
@@ -279,7 +282,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                     </span>
                     {latest.used_fallback && (
                       <p className="mb-3 rounded bg-[var(--color-gold-light)] px-3 py-2 text-xs text-[var(--color-navy-ink)]">
-                        AI assist is offline (no API key). This is a template, not a real synthesis.
+                        AI assist was unavailable or too slow, so this is a template, not a real synthesis. Draft again for a full one.
                       </p>
                     )}
                     {latest.portrait.split(/\n\n+/).map((para, i) => (

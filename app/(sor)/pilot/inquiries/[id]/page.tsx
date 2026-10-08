@@ -5,6 +5,9 @@ import { DraftInquiryPathwayButton, InquiryDraftReview, InquiryStatusPicker } fr
 import { describeSent, inquiryInput } from "@/lib/sor/ai-input";
 import { SentToAi } from "@/components/sor/SentToAi";
 
+// Drafting runs here as a Server Action and takes about two minutes.
+export const maxDuration = 300;
+
 export const metadata = { title: "Inquiry · Formation Pathways" };
 
 const when = (iso: string) =>
@@ -84,7 +87,7 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-ink-muted)]">
               <span className="font-semibold text-[var(--color-navy-ink)]">Draft</span> from {when(latestDraft.created_at)}
-              {latestDraft.used_fallback && " (AI assist was offline: canned example)"}. Keep the ones that sound like this child, then sign.
+              {latestDraft.used_fallback && " (AI assist was unavailable or too slow: a simple offline draft)"}. Keep the ones that sound like this child, then sign.
             </p>
             <InquiryDraftReview inquiryId={i.id} pathwayId={latestDraft.id} pathways={latestDraft.pathways} />
             <DraftInquiryPathwayButton inquiryId={i.id} again />

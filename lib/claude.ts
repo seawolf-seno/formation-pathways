@@ -32,7 +32,8 @@ let client: Anthropic | null | undefined;
 function getClient(): Anthropic | null {
   if (client !== undefined) return client;
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  client = apiKey ? new Anthropic({ apiKey }) : null;
+  // Short calls: a minute each, two retries (overloaded, network blips).
+  client = apiKey ? new Anthropic({ apiKey, timeout: 60_000, maxRetries: 2 }) : null;
   return client;
 }
 
@@ -79,6 +80,10 @@ function finishPathways(raw: unknown, signals: WorldSignal[]): GeneratedPathway[
 
 // Six pathways with journeys, hooks and why-nows are long; leave headroom.
 const PATHWAY_MAX_TOKENS = 9000;
+// A six-pathway draft takes about two minutes. Give up at 230s, once, so the
+// canned fallback still returns inside Vercel's 300s function limit
+// (maxDuration on the pages that draft) instead of the request dying.
+const PATHWAY_REQUEST = { timeout: 230_000, maxRetries: 0 };
 
 function fallbackCleanText(rawText: string): string {
   return rawText.trim().replace(/\s+/g, " ").replace(/\b(um|uh),?\s+/gi, "");
@@ -366,7 +371,7 @@ export async function draftAdmissionsPathways(
       max_tokens: PATHWAY_MAX_TOKENS,
       system,
       messages: [{ role: "user", content: user }],
-    });
+    }, PATHWAY_REQUEST);
     const textBlock = message.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {
       return { result: fallback, usedFallback: true };
@@ -724,7 +729,7 @@ export async function draftRuakhPathways(input: RuakhInput): Promise<RuakhDraft>
       max_tokens: PATHWAY_MAX_TOKENS,
       system,
       messages: [{ role: "user", content: user }],
-    });
+    }, PATHWAY_REQUEST);
     const textBlock = message.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") return fallback;
     const parsed = extractJson(textBlock.text) as { portrait?: unknown; pathways?: unknown };

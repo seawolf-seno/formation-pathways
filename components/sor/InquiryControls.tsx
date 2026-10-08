@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { DRAFT_LOST, DraftWait, useElapsed } from "./DraftWait";
 import {
   addDemoFamiliesAction, addSampleInquiryAction, draftInquiryPathwayAction, setInquiriesApprovalAction,
   signInquiryPathwayAction, updateInquiryStatusAction,
@@ -160,6 +161,7 @@ export function DemoFamiliesButton() {
 export function DraftInquiryPathwayButton({ inquiryId, again }: { inquiryId: string; again: boolean }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const seconds = useElapsed(pending);
   return (
     <span className="inline-flex flex-col gap-1">
       <button
@@ -167,12 +169,17 @@ export function DraftInquiryPathwayButton({ inquiryId, again }: { inquiryId: str
         disabled={pending}
         onClick={() => start(async () => {
           setMsg(null);
-          const res = await draftInquiryPathwayAction(inquiryId);
-          setMsg(res.ok ? (res.usedFallback ? "AI assist is offline, so this is a canned example draft." : null) : res.error);
+          try {
+            const res = await draftInquiryPathwayAction(inquiryId);
+            setMsg(res.ok ? (res.usedFallback ? "AI assist was unavailable or too slow, so this is a simple offline draft. Try again for a full one." : null) : res.error);
+          } catch {
+            setMsg(DRAFT_LOST);
+          }
         })}
       >
-        {pending ? "Drafting… (about a minute)" : again ? "Draft again" : "Draft a Formation Pathway"}
+        {pending ? "Drafting…" : again ? "Draft again" : "Draft a Formation Pathway"}
       </button>
+      {pending && <DraftWait seconds={seconds} />}
       {msg && <span className="max-w-md text-xs text-[var(--color-ink-muted)]">{msg}</span>}
     </span>
   );

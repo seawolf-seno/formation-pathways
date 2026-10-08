@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { DRAFT_LOST, DraftWait, useElapsed } from "./DraftWait";
 import {
   approveDraftAction,
   draftPathwaysAction,
@@ -21,6 +22,7 @@ const quiet =
 export function DraftButton({ personId, hasDraft, allowed }: { personId: string; hasDraft: boolean; allowed: boolean }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const seconds = useElapsed(pending);
   return (
     <div>
       <button
@@ -28,15 +30,21 @@ export function DraftButton({ personId, hasDraft, allowed }: { personId: string;
         className={button}
         onClick={() =>
           start(async () => {
-            const res = await draftPathwaysAction(personId);
-            setError(res.ok ? null : res.error);
+            setError(null);
+            try {
+              const res = await draftPathwaysAction(personId);
+              setError(res.ok ? null : res.error);
+            } catch {
+              setError(DRAFT_LOST);
+            }
           })
         }
       >
         {pending ? "Reading their story…" : hasDraft ? "Draft again from latest data" : "Draft who they are today + 6 pathways"}
       </button>
+      {pending && <DraftWait seconds={seconds} />}
       {!allowed && <p className="mt-1 text-xs text-[var(--color-ink-muted)]">Needs AI-drafting consent.</p>}
-      {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
+      {error && <p className="mt-2 max-w-md text-sm text-red-700">{error}</p>}
     </div>
   );
 }
