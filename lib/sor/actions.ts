@@ -7,11 +7,13 @@ import { requestOrigin } from "@/lib/origin";
 import { safeNext } from "@/lib/safe-next";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { draftObservation, draftRuakhPathways, type RuakhInput } from "@/lib/claude";
+import { draftAdmissionsPathways, draftObservation, draftRuakhPathways, type RuakhInput } from "@/lib/claude";
+import { inquiryDraftInput } from "@/lib/discover";
+import { DEMO_FAMILIES } from "@/lib/discover-demo";
 import { FORMATION_TAGS, PATHWAY_COUNT, type FormationTag, type GeneratedPathway } from "@/lib/types";
 import { sanitizeGlimpse, sanitizeMilestones, sanitizeUniqueness } from "@/lib/pathway-journey";
 import { getSorClient } from "./supabase-server";
-import { getCaptureRoster, getPersonProfile, logAccess, requireStaff } from "./queries";
+import { getCaptureRoster, getInquiry, getPersonProfile, logAccess, requireStaff } from "./queries";
 import { matchPeople } from "./match";
 import { runImport, type ImportOutcome } from "./importers/run";
 import { runFunnelImport, type FunnelImportOutcome } from "./importers/run-funnel";
@@ -586,6 +588,95 @@ export async function addSampleInquiryAction(): Promise<Result> {
     if (error) return fail(error);
     await logAccess(staff, "inquiry_sample_add", null, {});
     revalidatePath("/pilot/inquiries");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Five fictional families (lib/discover-demo.ts) for admissions to try the
+ *  whole flow. Samples: never exported, clearly marked. */
+export async function addDemoFamiliesAction(): Promise<Result<{ added: number }>> {
+  try {
+    const staff = await requireRole("admin", "admissions");
+    const supabase = await getSorClient();
+    const year = new Date().getMonth() >= 3 ? new Date().getFullYear() + 1 : new Date().getFullYear();
+    const rows = DEMO_FAMILIES.map((f, n) => ({
+      ...f,
+      is_sample: true,
+      share_code: randomBytes(4).toString("hex").toUpperCase(),
+      source: "website",
+      parent_email: `${f.parent_first_name.toLowerCase()}.${f.parent_last_name.toLowerCase()}@example.com`,
+      address_1: `${120 + n * 7} Example Way`,
+      city: "Newport Beach",
+      state: "CA",
+      zip: "92660",
+      entry_year: year,
+      consent_contact: true,
+      consent_pathway: true,
+      consent_version: "demo",
+    }));
+    const { error } = await supabase.from("inquiries").insert(rows);
+    if (error) return fail(error);
+    await logAccess(staff, "inquiry_demo_families", null, { added: rows.length });
+    revalidatePath("/pilot/inquiries");
+    return { ok: true, added: rows.length };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Drafts a Formation Pathway for an inquiring family, from their own words
+ *  (lib/discover.ts inquiryDraftInput). Only if they asked for one; AI on a
+ *  real family waits on AI_REAL_STUDENTS, like students. Saved as a draft
+ *  that a named staff member signs. */
+export async function draftInquiryPathwayAction(inquiryId: string): Promise<Result<{ usedFallback: boolean }>> {
+  try {
+    const staff = await requireRole("admin", "admissions");
+    const found = await getInquiry(inquiryId);
+    if (!found) throw new Error("That inquiry isn't available.");
+    const { inquiry } = found;
+    if (!inquiry.consent_pathway) throw new Error("This family didn't ask for a Formation Pathway.");
+    if (!inquiry.is_sample && !realStudentAiOn()) throw new Error(AI_OFF_FOR_REAL);
+    const { answers, context } = inquiryDraftInput(inquiry);
+    const { result, usedFallback } = await draftAdmissionsPathways(answers, context);
+    if (!result.pathways.length) throw new Error("No pathway came back. Try again.");
+    const supabase = await getSorClient();
+    const { error } = await supabase
+      .from("inquiry_pathways")
+      .insert({ inquiry_id: inquiry.id, pathways: result.pathways, used_fallback: usedFallback, generated_by: staff.user_id });
+    if (error) return fail(error);
+    await logAccess(staff, "inquiry_pathway_draft", null, { inquiry: inquiry.id, usedFallback });
+    revalidatePath(`/pilot/inquiries/${inquiry.id}`);
+    return { ok: true, usedFallback };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Signs a pathway draft, keeping the pathways staff chose. The database
+ *  records the signer's own name and makes it read-only. */
+export async function signInquiryPathwayAction(pathwayId: string, inquiryId: string, keep: number[]): Promise<Result> {
+  try {
+    const staff = await requireRole("admin", "admissions");
+    const found = await getInquiry(inquiryId);
+    const draft = found?.drafts.find((d) => d.id === pathwayId && d.status === "draft");
+    if (!draft) throw new Error("Only an unsigned draft for this family can be signed.");
+    // Staff keep the ones worth sending (three is the usual), in draft order.
+    const chosen = [...new Set(keep)].filter((i) => Number.isInteger(i) && draft.pathways[i]).sort((a, b) => a - b);
+    if (chosen.length < 1 || chosen.length > 3) throw new Error("Keep one to three pathways to sign.");
+    const supabase = await getSorClient();
+    const { data, error } = await supabase
+      .from("inquiry_pathways")
+      .update({ status: "approved", pathways: chosen.map((i) => draft.pathways[i]) })
+      .eq("id", pathwayId)
+      .eq("inquiry_id", inquiryId)
+      .eq("status", "draft")
+      .select("id");
+    if (error) return fail(error);
+    if (!data?.length) throw new Error("Only an unsigned draft for this family can be signed.");
+    await logAccess(staff, "inquiry_pathway_sign", null, { inquiry: inquiryId, pathway: pathwayId });
+    revalidatePath(`/pilot/inquiries/${inquiryId}`);
     return { ok: true };
   } catch (e) {
     return fail(e);

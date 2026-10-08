@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getInquiries, getPilotSettings, logAccess, requireStaff } from "@/lib/sor/queries";
 import { requestOrigin } from "@/lib/origin";
-import { CopySnippet, InquiriesSwitch, InquiryStatusPicker, SampleInquiryButton } from "@/components/sor/InquiryControls";
+import { CopySnippet, DemoFamiliesButton, InquiriesSwitch, InquiryStatusPicker, SampleInquiryButton } from "@/components/sor/InquiryControls";
 
 export const metadata = { title: "Inquiries · Formation Pathways" };
 
@@ -107,6 +107,18 @@ export default async function InquiriesPage() {
         </Section>
       </div>
 
+      <Section title="Try it">
+        <p className="max-w-3xl text-sm text-[var(--color-ink-muted)]">
+          Fill in the form as a family would: while you&apos;re signed in, <Link href="/discover" className="underline">/discover</Link> runs
+          in test mode and saves a sample, even while the form is closed. Or load five fictional families. Open any inquiry to
+          draft and sign a Formation Pathway, then see what the family sees. Samples are never sent to Finalsite.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Link href="/discover" className="rounded-lg bg-[var(--color-navy)] px-3 py-2 text-sm font-medium text-white">Fill in the form</Link>
+          <DemoFamiliesButton />
+        </div>
+      </Section>
+
       <Section title={`Inbox (${inquiries.length})`}>
         {inquiries.length === 0 ? (
           <p className="text-sm text-[var(--color-ink-muted)]">No inquiries yet.</p>
@@ -134,7 +146,9 @@ export default async function InquiriesPage() {
                         {i.is_sample && <span className="ml-1 rounded bg-[var(--color-gold-light)] px-1.5 py-0.5 text-[10px] font-semibold uppercase">Sample</span>}
                       </td>
                       <td className="py-3 pr-3">
-                        <span className="font-medium text-[var(--color-navy-ink)]">{i.child_first_name} {i.child_last_name}</span>
+                        <Link href={`/pilot/inquiries/${i.id}`} className="font-medium text-[var(--color-navy-ink)] underline decoration-[var(--color-border)] underline-offset-2 hover:decoration-current">
+                          {i.child_first_name} {i.child_last_name}
+                        </Link>
                         <span className="block text-xs text-[var(--color-ink-muted)]">
                           Grade {i.child_grade}, fall {i.entry_year}{i.current_school ? ` · ${i.current_school}` : ""}
                         </span>

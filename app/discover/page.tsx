@@ -3,6 +3,7 @@ import { PacificaLogo } from "@/components/PacificaLogo";
 import { InquiryForm } from "@/components/discover/InquiryForm";
 import { cleanRef, cleanSource, entryYears } from "@/lib/discover";
 import { getSorClient, isSorConfigured } from "@/lib/sor/supabase-server";
+import { getStaffOrNull } from "@/lib/sor/queries";
 import "@/components/discover/discover.css";
 
 export const metadata = {
@@ -42,7 +43,9 @@ export default async function DiscoverPage({
   await connection();
   const q = await searchParams;
   const embed = q.embed === "1";
-  const open = await isOpen();
+  const [open, staff] = await Promise.all([isOpen(), getStaffOrNull()]);
+  // Signed-in admissions always get test mode: their inquiries are samples.
+  const testMode = staff?.role === "admin" || staff?.role === "admissions";
 
   return (
     <main className={`dsc${embed ? " is-embed" : ""}`}>
@@ -74,8 +77,8 @@ export default async function DiscoverPage({
           )}
         </header>
 
-        {open ? (
-          <InquiryForm years={entryYears()} source={cleanSource(q.src)} referral={cleanRef(q.ref)} />
+        {open || testMode ? (
+          <InquiryForm years={entryYears()} source={cleanSource(q.src)} referral={cleanRef(q.ref)} testMode={testMode} />
         ) : (
           <section className="dsc-thanks">
             <p className="dsc-eyebrow" style={{ marginTop: 0 }}>Opening soon</p>

@@ -155,3 +155,60 @@ export function validateInquiry(
     },
   };
 }
+
+// ---------------------------------------------------------------- after they inquire
+
+/** What the welcome page says about each area a family picks. Written by
+ *  people, from real programs in prompts/pacifica-context.txt. No AI. */
+export const PROGRAM_MATCHES: Record<string, { program: string; line: string }> = {
+  STEM: {
+    program: "STEM Scholars",
+    line: "Science and engineering with STEM Scholars, and clubs like the Drone Club and the student-led Makers Space.",
+  },
+  Humanities: {
+    program: "The Center for Philosophy & Theology",
+    line: "Small Oxford-style seminars on first principles, where understanding a view you disagree with is the point.",
+  },
+  "Visual/Performing Arts": {
+    program: "PACARTS",
+    line: "Theater, visual arts, film and photography, music and dance with working artist-instructors, ending each year in the i.Sight Festival.",
+  },
+  "Business/Entrepreneurship": {
+    program: "The Minchin Center",
+    line: "Shark-Tank-style pitches, and The Wolf Shack: a real campus store that students run, from inventory to profit.",
+  },
+  Athletics: {
+    program: "Wolfpack Athletics",
+    line: "Process over product: player development and character alongside winning, whether a student specializes or plays several sports.",
+  },
+};
+
+/** The programs to show for what a family picked; a sport counts as Athletics. */
+export function welcomeMatches(interests: string[]): { program: string; line: string }[] {
+  const areas = new Set(interests.filter((i) => i in PROGRAM_MATCHES));
+  if (interests.some((i) => (SPORTS as readonly string[]).includes(i))) areas.add("Athletics");
+  return AREAS.filter((a) => areas.has(a)).map((a) => PROGRAM_MATCHES[a]);
+}
+
+/** What a pathway draft is built from: the family's own words first. */
+export function inquiryDraftInput(i: {
+  child_first_name: string;
+  child_grade: number;
+  entry_year: number;
+  current_school: string | null;
+  one_thing: string | null;
+  interests: string[];
+}): { answers: { question: string; answer: string }[]; context: string } {
+  const answers = [
+    ...(i.one_thing ? [{ question: "One thing about my child that a brochure would miss", answer: i.one_thing }] : []),
+    ...(i.current_school ? [{ question: "Where my child goes to school now", answer: i.current_school }] : []),
+  ];
+  const context = [
+    `${i.child_first_name} would start in grade ${i.child_grade}, fall ${i.entry_year}.`,
+    i.interests.length ? `The family marked these interests on the inquiry form: ${i.interests.join(", ")}.` : "",
+    "This is an inquiry, not an application: the family has shared only what is above.",
+  ]
+    .filter(Boolean)
+    .join("\n");
+  return { answers, context };
+}

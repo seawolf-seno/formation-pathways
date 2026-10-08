@@ -234,6 +234,21 @@ await expect("admissions can't delete inquiries", "adm", `delete from inquiries 
 await expect("closing inquiries again", "admin", `update pilot_settings set inquiries_open = false returning *`, true, r => r.rows.length === 1);
 await expectAnon("...shuts the form", submit({ parent_email: "late@example.com" }), false);
 
+
+// Inquiry pathways: admissions drafts and signs; only for families who asked.
+await expect("admissions adds a fictional sample (test mode)", "adm", `insert into inquiries (share_code, parent_first_name, parent_last_name, parent_relationship, parent_email, address_1, city, state, zip, child_first_name, child_last_name, child_grade, entry_year, consent_contact, consent_pathway, consent_version, is_sample) values ('TESTMODE','T','M','Father','t@example.com','1 St','City','CA','90000','Robin','M',9,2027,true,true,'v1',true) returning id`, true, r => r.rows.length === 1);
+await expect("...but a teacher can't", "teach", `insert into inquiries (share_code, parent_first_name, parent_last_name, parent_relationship, parent_email, address_1, city, state, zip, child_first_name, child_last_name, child_grade, entry_year, consent_contact, consent_version, is_sample) values ('TEACHER1','T','M','Father','t@example.com','1 St','City','CA','90000','R','M',9,2027,true,'v1',true)`, false);
+const robin = `(select id from inquiries where share_code = 'TESTMODE')`;
+const noPathway = `(select id from inquiries where share_code = 'SAMPLE01')`; // added earlier without pathway consent
+await expect("admissions drafts a pathway for a family who asked", "adm", `insert into inquiry_pathways (inquiry_id, pathways, generated_by) values (${robin}, '[{"name":"x"}]', '${ids.adm}') returning id`, true, r => r.rows.length === 1);
+await expect("no pathway for a family who didn't ask", "adm", `insert into inquiry_pathways (inquiry_id, pathways, generated_by) values (${noPathway}, '[]', '${ids.adm}')`, false);
+await expect("nobody drafts as someone else", "adm", `insert into inquiry_pathways (inquiry_id, pathways, generated_by) values (${robin}, '[]', '${ids.admin}')`, false);
+await expect("a teacher can't draft or read inquiry pathways", "teach", `select * from inquiry_pathways`, true, r => r.rows.length === 0);
+await expect("a draft can't move to another family", "adm", `update inquiry_pathways set inquiry_id = ${noPathway}`, false);
+await expect("signing an inquiry pathway records the signer's own name", "adm", `update inquiry_pathways set status = 'approved', approved_by = 'Someone else' returning approved_by = (select display_name from staff where user_id = auth.uid()) as own`, true, r => r.rows[0]?.own === true);
+await expect("a signed pathway is read-only", "admin", `update inquiry_pathways set pathways = '[]'`, false);
+await expectAnon("anon can't read inquiry pathways", `select * from inquiry_pathways`, false, r => r.rows.length === 0);
+
 const exposed = await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef");
 const noneExposed = exposed.rows.length === 0; if (noneExposed) pass++; else fail++;
 console.log(`${noneExposed ? "PASS" : "FAIL"}  no SECURITY DEFINER function in the API-exposed public schema`, exposed.rows.map(r => r.proname));

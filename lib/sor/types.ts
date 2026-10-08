@@ -100,6 +100,18 @@ export interface Inquiry {
   applied_at: string | null;
 }
 
+/** A Formation Pathway draft for an inquiring family (inquiry_pathways). */
+export interface InquiryPathway {
+  id: string;
+  inquiry_id: string;
+  created_at: string;
+  pathways: import("../types").GeneratedPathway[];
+  used_fallback: boolean;
+  status: "draft" | "approved";
+  approved_by: string | null;
+  approved_at: string | null;
+}
+
 export interface Person {
   id: string;
   first_name: string;

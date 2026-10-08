@@ -102,6 +102,7 @@
 
 .dsc-consent { display: grid; grid-template-columns: 20px 1fr; gap: 10px; align-items: start; margin: 4px 0 12px; font-size: 14px; line-height: 1.5; }
 .dsc-consent input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--ink); }
+.dsc-test { margin: 18px 0 4px; padding: 10px 14px; background: var(--gold-soft); border-left: 3px solid var(--gold); font-size: 13.5px; line-height: 1.5; }
 .dsc-honeypot { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 
 .dsc-submit {

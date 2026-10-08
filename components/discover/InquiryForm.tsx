@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { submitInquiryAction, type InquiryResult } from "@/lib/discover-actions";
+import { submitInquiryAction, submitTestInquiryAction, type InquiryResult } from "@/lib/discover-actions";
 import { AREAS, CONSENT_CONTACT, CONSENT_PATHWAY, GRADES, RELATIONSHIPS, SPORTS, type InquiryErrors } from "@/lib/discover";
 
 type Values = Record<string, string>;
@@ -38,11 +38,13 @@ function Field({
 }
 
 export function InquiryForm({
-  years, source, referral,
+  years, source, referral, testMode = false,
 }: {
   years: number[];
   source: "website" | "direct";
   referral: string | null;
+  /** Signed-in admissions: saved as a fictional sample, never sent to Finalsite. */
+  testMode?: boolean;
 }) {
   const [values, setValues] = useState<Values>({ entry_year: String(years[0]), child_grade: "9", country: "United States" });
   const [interests, setInterests] = useState<Set<string>>(new Set());
@@ -71,7 +73,7 @@ export function InquiryForm({
     const honeypot = (e.currentTarget.elements.namedItem("website") as HTMLInputElement | null)?.value ?? "";
     setMessage(null);
     start(async () => {
-      const res = await submitInquiryAction({
+      const res = await (testMode ? submitTestInquiryAction : submitInquiryAction)({
         ...values,
         interests: [...interests],
         consent_contact: consentContact,
@@ -115,6 +117,13 @@ export function InquiryForm({
             </span>
           </li>
         </ol>
+        {done.testInquiryId && (
+          <p className="dsc-test">
+            Test mode: saved as a fictional sample.{" "}
+            <a className="dsc-link" href={`/pilot/inquiries/${done.testInquiryId}`} target="_top">Open it in the inbox</a>{" "}
+            to draft and sign the pathway, then see what the family gets.
+          </p>
+        )}
       </section>
     );
   }
@@ -124,6 +133,12 @@ export function InquiryForm({
 
   return (
     <form className="dsc-form" onSubmit={send} noValidate>
+      {testMode && (
+        <p className="dsc-test">
+          Test mode: you&apos;re signed in as admissions, so this is saved as a fictional sample. It&apos;s never sent to
+          Finalsite, and no family sees it. Sign out to see the form as a family does.
+        </p>
+      )}
       <fieldset className="dsc-part">
         <legend><span className="n">1</span><span className="t">Your child</span></legend>
         <div className="dsc-row">

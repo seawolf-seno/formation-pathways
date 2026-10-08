@@ -174,6 +174,15 @@ adults behind the scenes; students stay present, in person, with people.
   `20261009000000_inquiries.sql` and an admin records leadership's approval on
   `/pilot/inquiries`.** Consent wording in `lib/discover.ts` is a draft for leadership. Next PRs:
   welcome page, signed pathway by email, sharing with referral codes and thank-yous.
+- **Inquiry demo loop (2026-10-08, branch `seno/inquiry-demo-loop`, card #29)**: signed-in
+  admin/admissions get a **test mode** on `/discover` (saves fictional samples, even while closed);
+  **Load demo families** (`lib/discover-demo.ts`); `/pilot/inquiries/[id]` drafts six pathways
+  from the family's own words (`inquiryDraftInput`), staff keep up to three and sign
+  (`inquiry_pathways`, consent + read-only-once-signed triggers); `/pilot/inquiries/[id]/family`
+  previews the family page (`components/discover/FamilyWelcome.tsx`) with a share card and
+  referral link. AI only for samples until `AI_REAL_STUDENTS=on`. **Needs seno to apply
+  `20261010000000_inquiry_pathways.sql`.** Walkthrough: `docs/inquiry-demo.md`. Next: email the
+  family page, referral thank-yous.
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)

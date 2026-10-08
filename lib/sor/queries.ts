@@ -11,6 +11,7 @@ import type {
   StaffListEntry,
   StaffMember,
   Inquiry,
+  InquiryPathway,
 } from "./types";
 import type { FunnelCount } from "./funnel";
 import { validateStudentSparks } from "./sparks";
@@ -263,4 +264,38 @@ export async function getInquiries(): Promise<Inquiry[]> {
     .limit(1000);
   if (error) console.error("inquiries read failed:", error.message);
   return (data ?? []) as Inquiry[];
+}
+
+/** The signed-in, active staff member, or null. Never redirects: for public
+ *  pages (like /discover) that offer staff something extra. */
+export async function getStaffOrNull(): Promise<StaffMember | null> {
+  if (!isSorConfigured()) return null;
+  try {
+    const supabase = await getSorClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+    const { data } = await supabase
+      .from("staff")
+      .select("user_id, email, display_name, role, active")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (!data?.active) return null;
+    const { user_id, email, display_name, role } = data as StaffMember;
+    return { user_id, email, display_name, role };
+  } catch {
+    return null;
+  }
+}
+
+/** One inquiry and its pathway drafts (newest first). RLS: admin and admissions. */
+export async function getInquiry(id: string): Promise<{ inquiry: Inquiry; drafts: InquiryPathway[] } | null> {
+  const supabase = await getSorClient();
+  const [{ data: inquiry }, { data: drafts }] = await Promise.all([
+    supabase.from("inquiries").select("*").eq("id", id).maybeSingle(),
+    supabase.from("inquiry_pathways").select("*").eq("inquiry_id", id).order("created_at", { ascending: false }),
+  ]);
+  if (!inquiry) return null;
+  return { inquiry: inquiry as Inquiry, drafts: (drafts ?? []) as InquiryPathway[] };
 }
