@@ -279,6 +279,24 @@
 }
 .spark-side.is-faded { opacity: 0.25; transform: scale(0.96); }
 
+/* "Both, honestly" — a real answer, but deliberately quieter than the two
+   sides so it reads as true rather than as the easy way out. */
+.spark-both {
+  display: block;
+  margin: 0 auto 14px;
+  border: 1px dashed #8fb3d955;
+  border-radius: 999px;
+  background: none;
+  color: var(--pacific);
+  font-size: 15px;
+  padding: 10px 22px;
+  cursor: pointer;
+  transition: transform 250ms ease, opacity 250ms ease, color 250ms ease, border-color 250ms ease;
+}
+.spark-both:hover { border-color: var(--pacific); color: #f7f9fb; }
+.spark-both.is-chosen { border-style: solid; border-color: var(--gold); color: var(--gold); transform: scale(1.04); }
+.spark-both.is-faded { opacity: 0.25; transform: scale(0.96); }
+
 .spark-drop {
   position: relative;
   display: block;

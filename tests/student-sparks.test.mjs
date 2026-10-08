@@ -31,6 +31,62 @@ test("sparks read as first-person evidence for the prompt", () => {
   assert.match(text, /obsessed with: Music/);
   assert.match(text, /Figure it out as you go \(over Plan every step\)/);
   assert.match(text, /Mark Rober/);
+  // Two picks is not a wide file; don't editorialize about shape.
+  assert.doesNotMatch(text, /The shape of that/);
+});
+
+// The jack-of-all-trades case: without this the draft reads a long flat list
+// as a thin file and crowns one item "their passion".
+test("a wide set of picks with no obsession is named as breadth, not as a gap", () => {
+  const text = sparksForPrompt({
+    answers: [],
+    picks: ["Music", "Being outdoors", "Welding", "Debate", "Film", "Fishing"].map((label) => ({ label, obsessed: false })),
+    leanings: [],
+    channels: [],
+  });
+  assert.match(text, /6 things tapped/);
+  assert.match(text, /none of them marked an obsession/);
+  assert.match(text, /not a gap in it/);
+  assert.doesNotMatch(text, /obsessed with/);
+});
+
+test("many picks still reports shape when some are obsessions", () => {
+  const text = sparksForPrompt({
+    answers: [],
+    picks: ["Music", "Welding", "Debate", "Film", "Fishing", "Robotics", "Cooking", "Running"].map((label, i) => ({
+      label,
+      obsessed: i === 0,
+    })),
+    leanings: [],
+    channels: [],
+  });
+  assert.match(text, /8 things tapped/);
+  assert.doesNotMatch(text, /none of them marked an obsession/);
+});
+
+test('"both" is kept as a real leaning and reported as both, never as a side', () => {
+  const r = validateStudentSparks({
+    picks: [{ label: "Music", obsessed: false }],
+    leanings: [
+      { a: "Quiet focus", b: "A room full of energy", choice: "" },
+      { a: "Plan every step", b: "Figure it out as you go", choice: "Plan every step" },
+      { a: "x", b: "y", choice: "nonsense" },
+    ],
+  });
+  assert.equal(r.ok, true);
+  // The "both" survives; only the unknown label is dropped.
+  assert.deepEqual(r.sparks.leanings, [
+    { a: "Quiet focus", b: "A room full of energy", choice: "" },
+    { a: "Plan every step", b: "Figure it out as you go", choice: "Plan every step" },
+  ]);
+
+  const text = sparksForPrompt(r.sparks);
+  assert.match(text, /would not pick a side on: Quiet focus vs A room full of energy/);
+  assert.match(text, /genuinely both/);
+  assert.match(text, /How they lean: Plan every step \(over Figure it out as you go\)/);
+  // Must never assert a lean on the pair they refused.
+  assert.doesNotMatch(text, /Quiet focus \(over/);
+  assert.doesNotMatch(text, /A room full of energy \(over/);
 });
 
 const inPerson = {

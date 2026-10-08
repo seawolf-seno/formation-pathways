@@ -27,21 +27,30 @@ export function SparkSurvey({
   existing: SparkResponse | null;
 }) {
   const [picked, setPicked] = useState<string[]>(existing?.interests ?? []);
-  const [choices, setChoices] = useState<string[]>(existing?.choices ?? []);
+  const [choices, setChoices] = useState<(string | null)[]>(existing?.choices ?? []);
   const [note, setNote] = useState(existing?.note ?? "");
   const [step, setStep] = useState<Step>("interests");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   function toggle(label: string) {
+    setError(null);
     setPicked((cur) => {
       if (cur.includes(label)) return cur.filter((l) => l !== label);
-      if (cur.length >= MAX_INTERESTS) return cur;
+      // Never swallow the tap in silence — a student who is into many things
+      // reads that as the quiz being broken, or as being told to pick a lane.
+      if (cur.length >= MAX_INTERESTS) {
+        setError(
+          `That's ${MAX_INTERESTS} already, which is plenty to go on. Untap one if this is more you than that.`
+        );
+        return cur;
+      }
       return [...cur, label];
     });
   }
 
-  function pickChoice(index: number, value: string) {
+  // `null` is a real answer: both sides are true of them. Recorded, not skipped.
+  function pickChoice(index: number, value: string | null) {
     setChoices((cur) => {
       const next = [...cur];
       next[index] = value;
@@ -97,8 +106,8 @@ export function SparkSurvey({
       {step === "interests" && (
         <>
           <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
-            Tap {MIN_INTERESTS}–{MAX_INTERESTS}. There&apos;s no wrong answer, and this isn&apos;t
-            graded.
+            Tap at least {MIN_INTERESTS} — and then keep going if more than {MIN_INTERESTS} are
+            true. Being into a lot of things is a real answer here, not a failure to pick.
           </p>
           <div className="mt-5 flex flex-wrap gap-2">
             {interests.map((opt) => {
@@ -121,6 +130,11 @@ export function SparkSurvey({
               );
             })}
           </div>
+          {error && (
+            <p role="alert" className="mt-3 text-sm text-[var(--color-ink-muted)]">
+              {error}
+            </p>
+          )}
           <button
             type="button"
             onClick={() => setStep(0)}
@@ -150,6 +164,13 @@ export function SparkSurvey({
                 {option}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => pickChoice(step, null)}
+              className="rounded-xl border border-dashed border-[var(--color-border)] px-5 py-3 text-left text-sm text-[var(--color-ink-muted)] hover:border-[var(--color-navy)] hover:text-[var(--color-navy-ink)]"
+            >
+              Honestly, both — it depends on the day
+            </button>
           </div>
           <button
             type="button"

@@ -135,7 +135,8 @@ export function SparkSky({
     () => [
       ...answers.map((a, i) => ({ id: `a${i}`, label: short(a.text), bright: true })),
       ...[...picks.entries()].map(([label, obsessed]) => ({ id: `p:${label}`, label, bright: obsessed })),
-      ...leanings.map((l, i) => ({ id: `l${i}`, label: l.choice, bright: false })),
+      // A pair they would not split still earns its star — it says both are them.
+      ...leanings.map((l, i) => ({ id: `l${i}`, label: l.choice || `${l.a} + ${l.b}`, bright: false })),
       ...[...channels].map((c) => ({ id: `c:${c}`, label: c, bright: false })),
     ],
     [answers, picks, leanings, channels]
@@ -177,10 +178,13 @@ export function SparkSky({
     setCustom("");
   }
 
+  // `""` is a real answer: both sides are true of them. Recorded, not skipped.
+  // `chosen` holds a sentinel for it so the double-tap guard and the fade still
+  // work — an empty string is falsy and would defeat both.
   function lean(choice: string) {
     if (chosen) return;
     const pair = pairs[pi];
-    setChosen(choice);
+    setChosen(choice || "\u0000both");
     setLeanings((l) => [...l, { a: pair.a, b: pair.b, choice }]);
     setTimeout(() => {
       setChosen(null);
@@ -384,7 +388,13 @@ export function SparkSky({
                 </button>
               ))}
             </div>
-            <p className="spark-sub">No wrong side. Go with your gut.</p>
+            <button
+              className={`spark-both ${chosen === "\u0000both" ? "is-chosen" : chosen ? "is-faded" : ""}`}
+              onClick={() => lean("")}
+            >
+              Both, honestly
+            </button>
+            <p className="spark-sub">No wrong side — and &ldquo;both&rdquo; counts as an answer.</p>
           </div>
         )}
 
