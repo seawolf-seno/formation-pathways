@@ -117,7 +117,23 @@ export interface GeneratedPathway {
 
 /** How many pathways a draft offers. Many, so staff can keep the ones that
  *  are unmistakably this student's; editing can trim down to the minimum. */
-export const PATHWAY_COUNT = { draft: 6, min: 3 } as const;
+/** How many pathways each audience gets. Less known, fewer pathways: an
+ *  inquiry gets two (more come with the application), a complete
+ *  application three, a current student six to choose from. `keepMin` is
+ *  the fewest staff may sign. */
+export type PathwayAudience = "inquiry" | "application" | "student";
+export const PATHWAY_PLAN: Record<PathwayAudience, { draft: number; keepMin: number; expectSeconds: number }> = {
+  inquiry: { draft: 2, keepMin: 1, expectSeconds: 50 },
+  application: { draft: 3, keepMin: 1, expectSeconds: 60 },
+  student: { draft: 6, keepMin: 3, expectSeconds: 120 },
+};
+/** Applicants and admitted students get the application plan; everyone
+ *  already here (or who was) gets the student plan. */
+export function audienceForStage(stage: string): PathwayAudience {
+  return stage === "applicant" || stage === "admitted" ? "application" : "student";
+}
+/** The student plan, kept for callers that predate audiences. */
+export const PATHWAY_COUNT = { draft: PATHWAY_PLAN.student.draft, min: PATHWAY_PLAN.student.keepMin } as const;
 
 import type { SparkResponse } from "./spark";
 

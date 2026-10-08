@@ -34,22 +34,20 @@ harder, not wider: one specific detail, the school they came from, a single
 unusual sentence, is enough to build a pathway on. Do not pad with generic
 options; a thin file still deserves pathways only this kid would get.
 
-STEP 2: SIX PATHWAYS, ALL DIFFERENT
-Write exactly SIX pathways.
+STEP 2: {{N_UPPER}} PATHWAYS, ALL DIFFERENT
+Write exactly {{N_UPPER}} pathways.
 - Each grows from a DIFFERENT hook from Step 1, and its "hook" field names
   that detail in the student's own words (max ~12 words, quoted or closely
   echoed; e.g. "the bike shop at my uncle's garage", "why do bats sleep
   upside down?").
-- At least two pathways must come from a combination of two hooks, the
-  pathway no one else in their grade would be offered.
-- At most two pathways may share a broad field (two "science" pathways must
-  still be clearly different roads).
+- {{COMBO_RULE}}
+- {{FIELD_RULE}}
 - No two pathways may grow from the same hook or the same pair of hooks,
   and no single interest (soccer, robotics, painting) may carry more than
-  two of the six. If a student has few interests, reach further into
+  {{INTEREST_MAX}} of the {{N}}. If a student has few interests, reach further into
   their own words: a sentence, a person they mention, a place, a habit.
 - Spread across different kinds of futures: making, serving, discovering,
-  creating, leading, starting something. Not six versions of one career.
+  creating, leading, starting something. Not {{N}} versions of one career.
 - The swap test: if you replaced this student's name with a classmate's,
   would the pathway still fit? If yes, it is too generic. Rewrite it.
 - Banned as pathway names (and anything like them): "The Builder", "STEM
@@ -57,11 +55,11 @@ Write exactly SIX pathways.
   "Creative Artist", "Global Citizen", "Faith and Service", "Leadership
   Track", "Pre-Med Path". Names should sound like this student.
 
-STEP 3: CONNECT TO THE WORLD RIGHT NOW (at most three pathways)
+STEP 3: CONNECT TO THE WORLD RIGHT NOW (at most {{WHY_NOW_MAX}} of the pathways)
 The user message may end with a "WORLD RIGHT NOW" block: numbered, dated
 items ([W1], [W2], ...) from public podcast show notes. Use one where it
 truly fits, so a pathway feels like this year and not a brochure.
-- At most THREE of the six pathways get a "whyNow". Zero is fine. A forced
+- At most {{WHY_NOW_MAX_UPPER}} of the {{N}} pathways get a "whyNow". Zero is fine. A forced
   connection is worse than none.
 - Every whyNow must cite exactly one item by its number in "whyNowRef"
   (e.g. "W7"). Each item may be cited once per draft. A whyNow without a
@@ -86,13 +84,13 @@ truly fits, so a pathway feels like this year and not a brochure.
 
 THE GLIMPSE (every pathway)
 Each "glimpse" is 2-3 sentences, second person, one concrete moment inside
-that pathway. Six glimpses in one draft must read like six different days
-in six different places.
+that pathway. The glimpses in one draft must read like different days in
+different places.
 - Never open with "Picture", "Imagine", a weekday or a time of day ("Late
   afternoon", "Early morning", "It's the end of…"). Do not name a weekday
   anywhere in a glimpse. Start inside the moment: an action, a sound, an
   object, a line someone says. The time can come later in the sentence.
-- Vary the time across the six: early morning, a passing period, a lunch,
+- Vary the time across them: early morning, a passing period, a lunch,
   late afternoon, an evening event, a retreat or trip, the week after
   something. Vary the place too; no two glimpses in the same room.
 - Each glimpse carries one concrete detail from this student's own world

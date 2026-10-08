@@ -11,6 +11,7 @@ import fs from "fs";
 import path from "path";
 import { draftAdmissionsPathways, draftRuakhPathways, type RuakhInput } from "../lib/claude";
 import { Pseudonymizer } from "../lib/sor/anonymize";
+import { audienceForStage, PATHWAY_PLAN } from "../lib/types";
 import { getWorldSignals } from "../lib/world-signals";
 import type { GeneratedPathway } from "../lib/types";
 
@@ -197,7 +198,8 @@ async function main() {
     });
     const sent = { ...anon.scrubDeep(input), firstName: "[STUDENT]" };
     anon.assertNoNames(JSON.stringify(sent));
-    const draft = anon.restoreDeep(await draftRuakhPathways(sent));
+    // Same counts as the app: three for an applicant, six for a current student.
+    const draft = anon.restoreDeep(await draftRuakhPathways(sent, PATHWAY_PLAN[audienceForStage(p.stage)].draft));
     const unrestored = JSON.stringify(draft.pathways).match(/\[(?:STUDENT|FAMILY|PARENT|PERSON|STAFF)[^\]]*\]?/gi) ?? [];
     if (unrestored.length) console.log(`${input.firstName}: ${unrestored.length} placeholder(s) the model mangled: ${unrestored.slice(0, 3).join(", ")}`);
     const secs = Math.round((Date.now() - started) / 1000);

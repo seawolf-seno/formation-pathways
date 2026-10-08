@@ -5,7 +5,7 @@ import fs from "fs";
 import path from "path";
 import {
   FORMATION_TAGS,
-  PATHWAY_COUNT,
+  PATHWAY_PLAN,
   type ApplicantAnswer,
   type CourseSkill,
   type DraftObservationResult,
@@ -20,6 +20,7 @@ import {
 } from "./types";
 import type { CanvasSyncResult } from "./integrations/canvas";
 import { formatWorldSignals, getWorldSignals, groundWhyNows, type WorldSignal } from "./world-signals";
+import { pathwayMaxTokens, renderPathwayCount, whyNowMax } from "./pathway-count";
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-4-6";
 const PROMPTS_DIR = path.join(process.cwd(), "prompts");
@@ -32,7 +33,8 @@ let client: Anthropic | null | undefined;
 function getClient(): Anthropic | null {
   if (client !== undefined) return client;
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  client = apiKey ? new Anthropic({ apiKey }) : null;
+  // Short calls: a minute each, two retries (overloaded, network blips).
+  client = apiKey ? new Anthropic({ apiKey, timeout: 60_000, maxRetries: 2 }) : null;
   return client;
 }
 
@@ -54,8 +56,9 @@ function extractJson(text: string): unknown {
 
 /** Both pathway generators share one system prompt tail: the distinctiveness
  *  and world-signal rules (prompts/unique-pathways.txt), then the school. */
-function pathwaySystemPrompt(lead: string): string {
-  return [lead, "unique-pathways.txt", "pacifica-context.txt", "placeholders.txt"].map(readPrompt).join("\n\n---\n\n");
+function pathwaySystemPrompt(lead: string, count: number): string {
+  const text = [lead, "unique-pathways.txt", "pacifica-context.txt", "placeholders.txt"].map(readPrompt).join("\n\n---\n\n");
+  return renderPathwayCount(text, count);
 }
 
 /** "The world right now" appended to a pathway prompt's user message. Public
@@ -69,16 +72,19 @@ async function withWorldSignals(user: string): Promise<{ user: string; signals: 
 /** The model's pathways, each "why now" checked against the signals it was
  *  shown (lib/world-signals.ts groundWhyNows), then cleaned, capped and
  *  tidied of the phrasing tics the prompt bans (lib/draft-style.ts). */
-function finishPathways(raw: unknown, signals: WorldSignal[]): GeneratedPathway[] {
+function finishPathways(raw: unknown, signals: WorldSignal[], count: number): GeneratedPathway[] {
   if (!Array.isArray(raw)) return [];
-  return groundWhyNows(raw.filter(isGeneratedPathway), signals)
-    .slice(0, PATHWAY_COUNT.draft)
+  return groundWhyNows(raw.filter(isGeneratedPathway), signals, whyNowMax(count))
+    .slice(0, count)
     .map(withJourneyFields)
     .map(tidyDraftPathway);
 }
 
-// Six pathways with journeys, hooks and why-nows are long; leave headroom.
-const PATHWAY_MAX_TOKENS = 9000;
+// A six-pathway draft takes about two minutes (fewer pathways, less time;
+// output room scales with the count: pathwayMaxTokens). Give up at 230s, once, so the
+// canned fallback still returns inside Vercel's 300s function limit
+// (maxDuration on the pages that draft) instead of the request dying.
+const PATHWAY_REQUEST = { timeout: 230_000, maxRetries: 0 };
 
 function fallbackCleanText(rawText: string): string {
   return rawText.trim().replace(/\s+/g, " ").replace(/\b(um|uh),?\s+/gi, "");
@@ -285,14 +291,15 @@ const FALLBACK_EMPHASES: FallbackEmphasis[] = [
 
 function fallbackAdmissionsPathways(
   answers: ApplicantAnswer[],
-  sparkContext?: string | null
+  sparkContext: string | null | undefined,
+  count: number
 ): GeneratedPathwaysResult {
   // When an essay is still blank, quote the Spark context instead so the
   // fallback pathway isn't built entirely on "something they're still
   // discovering" while real signal already exists.
   const a = (i: number) => answers[i]?.answer?.trim() || sparkContext || "";
 
-  const pathways: GeneratedPathway[] = FALLBACK_EMPHASES.map(
+  const pathways: GeneratedPathway[] = FALLBACK_EMPHASES.slice(0, count).map(
     (emphasis, i) => ({
       name: emphasis.name,
       firstSemester: emphasis.firstSemester(quoteSnippet(a(i % answers.length))),
@@ -333,7 +340,8 @@ function isGeneratedPathway(value: unknown): value is GeneratedPathway {
 }
 
 /**
- * Generates six named admissions Pathways plus seed observations from an
+ * Generates named admissions Pathways (three for an application, two for an
+ * inquiry: lib/types.ts PATHWAY_PLAN) plus seed observations from an
  * applicant's five short-answer responses. Always resolves — falls back to a
  * canned-but-still-quoting response if Claude is unreachable.
  */
@@ -345,14 +353,15 @@ export async function draftAdmissionsPathways(
    * essay text — appended, not blended into the Q/A block, so the model can
    * tell the two apart and lean on Spark only where essays are thin or empty.
    */
-  sparkContext?: string | null
+  sparkContext?: string | null,
+  count: number = PATHWAY_PLAN.application.draft
 ): Promise<{ result: GeneratedPathwaysResult; usedFallback: boolean }> {
   const anthropic = getClient();
-  const fallback = fallbackAdmissionsPathways(answers, sparkContext);
+  const fallback = fallbackAdmissionsPathways(answers, sparkContext, count);
   if (!anthropic) return { result: fallback, usedFallback: true };
 
   try {
-    const system = pathwaySystemPrompt("admissions-pathways.txt");
+    const system = pathwaySystemPrompt("admissions-pathways.txt", count);
     const answerBlock = answers
       .map((a, i) => `Q${i + 1}: ${a.question}\nA${i + 1}: ${a.answer}`)
       .join("\n\n");
@@ -363,10 +372,10 @@ export async function draftAdmissionsPathways(
     );
     const message = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: PATHWAY_MAX_TOKENS,
+      max_tokens: pathwayMaxTokens(count),
       system,
       messages: [{ role: "user", content: user }],
-    });
+    }, PATHWAY_REQUEST);
     const textBlock = message.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") {
       return { result: fallback, usedFallback: true };
@@ -377,7 +386,7 @@ export async function draftAdmissionsPathways(
       seedObservations?: unknown;
     };
 
-    const pathways = finishPathways(parsed.pathways, signals);
+    const pathways = finishPathways(parsed.pathways, signals, count);
 
     const seedObservations: SeedObservationDraft[] = Array.isArray(
       parsed.seedObservations
@@ -665,7 +674,7 @@ const RUAKH_FALLBACK_STEPS: Record<string, { step: (when: string) => string; str
   },
 };
 
-function fallbackRuakh(input: RuakhInput): RuakhDraft {
+function fallbackRuakh(input: RuakhInput, count: number): RuakhDraft {
   const evidence =
     input.applicationResponses.length + input.teacherComments.length + input.observations.length;
   const where = input.previousSchool
@@ -688,7 +697,7 @@ function fallbackRuakh(input: RuakhInput): RuakhDraft {
     input.stage === "applicant" || input.stage === "admitted" ? "First semester" : "Next semester";
   return {
     portrait,
-    pathways: FALLBACK_EMPHASES.map((e) => ({
+    pathways: FALLBACK_EMPHASES.slice(0, count).map((e) => ({
       name: e.name,
       firstSemester: RUAKH_FALLBACK_STEPS[e.name].step(when),
       mentorArchetype: e.mentor,
@@ -703,33 +712,37 @@ function fallbackRuakh(input: RuakhInput): RuakhDraft {
 }
 
 /**
- * Drafts "who this student is today" plus six Ruakh 2.0 pathways from the
+ * Drafts "who this student is today" plus Ruakh 2.0 pathways (six for a
+ * current student, three for an applicant: lib/types.ts PATHWAY_PLAN) from the
  * system of record. Always resolves — canned fallback if Claude is
  * unreachable. Callers must check ai_drafting consent BEFORE calling (the
  * pathway_drafts insert trigger enforces it again on save).
  */
-export async function draftRuakhPathways(input: RuakhInput): Promise<RuakhDraft> {
+export async function draftRuakhPathways(
+  input: RuakhInput,
+  count: number = PATHWAY_PLAN.student.draft
+): Promise<RuakhDraft> {
   const anthropic = getClient();
-  const fallback = fallbackRuakh(input);
+  const fallback = fallbackRuakh(input, count);
   if (!anthropic) return fallback;
 
   try {
-    const system = pathwaySystemPrompt("ruakh-today.txt");
+    const system = pathwaySystemPrompt("ruakh-today.txt", count);
     // Courses last: nearly every classmate shares them, so they're backdrop
     // (see prompts/ruakh-today.txt), not the first thing the model reads.
     const { courses, ...distinctive } = input;
     const { user, signals } = await withWorldSignals(JSON.stringify({ ...distinctive, courses }, null, 2));
     const message = await anthropic.messages.create({
       model: MODEL,
-      max_tokens: PATHWAY_MAX_TOKENS,
+      max_tokens: pathwayMaxTokens(count),
       system,
       messages: [{ role: "user", content: user }],
-    });
+    }, PATHWAY_REQUEST);
     const textBlock = message.content.find((b) => b.type === "text");
     if (!textBlock || textBlock.type !== "text") return fallback;
     const parsed = extractJson(textBlock.text) as { portrait?: unknown; pathways?: unknown };
-    const pathways = finishPathways(parsed.pathways, signals);
-    if (typeof parsed.portrait !== "string" || pathways.length < PATHWAY_COUNT.min) return fallback;
+    const pathways = finishPathways(parsed.pathways, signals, count);
+    if (typeof parsed.portrait !== "string" || pathways.length < Math.min(PATHWAY_PLAN.student.keepMin, count)) return fallback;
     return { portrait: parsed.portrait, pathways, usedFallback: false };
   } catch {
     return fallback;

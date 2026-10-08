@@ -4,10 +4,14 @@ import { getPersonProfile, getRoster, logAccess, requireStaff } from "@/lib/sor/
 import { describeSent, pathwayInput } from "@/lib/sor/ai-input";
 import { SentToAi } from "@/components/sor/SentToAi";
 import { displayName } from "@/lib/sor/types";
+import { audienceForStage, PATHWAY_PLAN } from "@/lib/types";
 import { PathwaysDisplay } from "@/components/PathwaysDisplay";
 import { TagChip } from "@/components/TagChips";
 import { SparkResults } from "@/components/sor/SparkResults";
 import { ApproveButton, ConsentPanel, DraftButton, EditPathwaysPanel, ExternalIdsPanel, SparkLinkButton, WithdrawButton } from "@/components/sor/PersonControls";
+
+// Drafting runs here as a Server Action and takes about two minutes.
+export const maxDuration = 300;
 
 /** A small labeled fact chip: grade, class year, advisor. */
 function Fact({ label, value }: { label: string; value: string }) {
@@ -59,6 +63,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   const canReadSparks = canDraft || staff.role === "teacher";
   const aiConsent = person.is_sample || consents.some((c) => c.scope === "ai_drafting" && !c.revoked_at);
   const latest = drafts[0];
+  const plan = PATHWAY_PLAN[audienceForStage(person.stage)];
   // What a draft would send, for staff to check (names removed).
   let sentToAi: ReturnType<typeof describeSent> | null = null;
   if (canDraft && aiConsent) {
@@ -266,9 +271,11 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h2 className="font-display text-xl text-[var(--color-navy-ink)]">Who {person.preferred_name || person.first_name} is today, and roads to Ruakh 2.0</h2>
-                  <p className="text-xs text-[var(--color-ink-muted)]">Drafted from everything above. Staff only until a named adult edits and signs it; then the pathways you keep (never this portrait) can be opened with the student. Six are drafted so you can remove the ones that aren&apos;t unmistakably theirs.</p>
+                  <p className="text-xs text-[var(--color-ink-muted)]">Drafted from everything above. Staff only until a named adult edits and signs it; then the pathways you keep (never this portrait) can be opened with the student. {plan.draft > 3
+                      ? ` ${plan.draft} are drafted so you can remove the ones that aren't unmistakably theirs.`
+                      : ` An applicant gets ${plan.draft}; a current student gets ${PATHWAY_PLAN.student.draft} to choose from.`}</p>
                 </div>
-                <DraftButton personId={person.id} hasDraft={Boolean(latest)} allowed={aiConsent} />
+                <DraftButton personId={person.id} hasDraft={Boolean(latest)} allowed={aiConsent} count={plan.draft} expectSeconds={plan.expectSeconds} />
               </div>
               {sentToAi && <div className="mb-4"><SentToAi {...sentToAi} /></div>}
               {latest && (
@@ -279,7 +286,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                     </span>
                     {latest.used_fallback && (
                       <p className="mb-3 rounded bg-[var(--color-gold-light)] px-3 py-2 text-xs text-[var(--color-navy-ink)]">
-                        AI assist is offline (no API key). This is a template, not a real synthesis.
+                        AI assist was unavailable or too slow, so this is a template, not a real synthesis. Draft again for a full one.
                       </p>
                     )}
                     {latest.portrait.split(/\n\n+/).map((para, i) => (
@@ -300,7 +307,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                       </p>
                     ) : (
                       <div className="space-y-3">
-                        <EditPathwaysPanel key={latest.id} draftId={latest.id} personId={person.id} pathways={latest.pathways} />
+                        <EditPathwaysPanel key={latest.id} draftId={latest.id} personId={person.id} pathways={latest.pathways} minKeep={plan.keepMin} />
                         <div>
                           <ApproveButton draftId={latest.id} personId={person.id} />
                         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { DRAFT_LOST, DraftWait, useElapsed } from "./DraftWait";
 import {
   approveDraftAction,
   draftPathwaysAction,
@@ -18,9 +19,12 @@ const button = "rounded-lg bg-[var(--color-navy)] px-3 py-2 text-sm font-medium 
 const quiet =
   "rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-navy-ink)] disabled:opacity-50";
 
-export function DraftButton({ personId, hasDraft, allowed }: { personId: string; hasDraft: boolean; allowed: boolean }) {
+export function DraftButton({
+  personId, hasDraft, allowed, count, expectSeconds,
+}: { personId: string; hasDraft: boolean; allowed: boolean; count: number; expectSeconds: number }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const seconds = useElapsed(pending);
   return (
     <div>
       <button
@@ -28,15 +32,21 @@ export function DraftButton({ personId, hasDraft, allowed }: { personId: string;
         className={button}
         onClick={() =>
           start(async () => {
-            const res = await draftPathwaysAction(personId);
-            setError(res.ok ? null : res.error);
+            setError(null);
+            try {
+              const res = await draftPathwaysAction(personId);
+              setError(res.ok ? null : res.error);
+            } catch {
+              setError(DRAFT_LOST);
+            }
           })
         }
       >
-        {pending ? "Reading their story…" : hasDraft ? "Draft again from latest data" : "Draft who they are today + 6 pathways"}
+        {pending ? "Reading their story…" : hasDraft ? "Draft again from latest data" : `Draft who they are today + ${count} pathways`}
       </button>
+      {pending && <DraftWait seconds={seconds} expectSeconds={expectSeconds} />}
       {!allowed && <p className="mt-1 text-xs text-[var(--color-ink-muted)]">Needs AI-drafting consent.</p>}
-      {error && <p className="mt-2 text-sm text-red-700">{error}</p>}
+      {error && <p className="mt-2 max-w-md text-sm text-red-700">{error}</p>}
     </div>
   );
 }
@@ -218,7 +228,6 @@ type TextKey =
   | "hook"
   | "whyNow"
   | "whyNowSource";
-const MIN_PATHWAYS = 3; // PATHWAY_COUNT.min in lib/types.ts
 type Milestone = { when: string; title: string; detail: string; spark?: string };
 const EMPTY_STEPS: Milestone[] = Array.from({ length: 4 }, () => ({ when: "", title: "", detail: "", spark: "" }));
 
@@ -228,9 +237,12 @@ export function EditPathwaysPanel({
   draftId,
   personId,
   pathways,
+  minKeep,
 }: {
   draftId: string;
   personId: string;
+  /** PATHWAY_PLAN[audience].keepMin in lib/types.ts (3 for a student). */
+  minKeep: number;
   pathways: EditablePathway[];
 }) {
   const [open, setOpen] = useState(false);
@@ -293,10 +305,10 @@ export function EditPathwaysPanel({
             <span className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Pathway {i + 1}</span>
             <button
               type="button"
-              disabled={pending || rows.length <= MIN_PATHWAYS}
+              disabled={pending || rows.length <= minKeep}
               onClick={() => setRows((r) => r.filter((_, j) => j !== i))}
               className="text-xs text-[var(--color-ink-muted)] underline disabled:no-underline disabled:opacity-40"
-              title={rows.length <= MIN_PATHWAYS ? `Keep at least ${MIN_PATHWAYS}` : "Remove this pathway from the draft"}
+              title={rows.length <= minKeep ? `Keep at least ${minKeep}` : "Remove this pathway from the draft"}
             >
               Remove
             </button>

@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { DRAFT_LOST, DraftWait, useElapsed } from "./DraftWait";
 import {
   addDemoFamiliesAction, addSampleInquiryAction, draftInquiryPathwayAction, setInquiriesApprovalAction,
   signInquiryPathwayAction, updateInquiryStatusAction,
 } from "@/lib/sor/actions";
-import type { GeneratedPathway } from "@/lib/types";
+import { PATHWAY_PLAN, type GeneratedPathway } from "@/lib/types";
 import { INQUIRY_STATUSES, type InquiryStatus, type PilotSettings } from "@/lib/sor/types";
 
 const input = "w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm";
@@ -160,6 +161,7 @@ export function DemoFamiliesButton() {
 export function DraftInquiryPathwayButton({ inquiryId, again }: { inquiryId: string; again: boolean }) {
   const [msg, setMsg] = useState<string | null>(null);
   const [pending, start] = useTransition();
+  const seconds = useElapsed(pending);
   return (
     <span className="inline-flex flex-col gap-1">
       <button
@@ -167,26 +169,32 @@ export function DraftInquiryPathwayButton({ inquiryId, again }: { inquiryId: str
         disabled={pending}
         onClick={() => start(async () => {
           setMsg(null);
-          const res = await draftInquiryPathwayAction(inquiryId);
-          setMsg(res.ok ? (res.usedFallback ? "AI assist is offline, so this is a canned example draft." : null) : res.error);
+          try {
+            const res = await draftInquiryPathwayAction(inquiryId);
+            setMsg(res.ok ? (res.usedFallback ? "AI assist was unavailable or too slow, so this is a simple offline draft. Try again for a full one." : null) : res.error);
+          } catch {
+            setMsg(DRAFT_LOST);
+          }
         })}
       >
-        {pending ? "Drafting… (about a minute)" : again ? "Draft again" : "Draft a Formation Pathway"}
+        {pending ? "Drafting…" : again ? "Draft again" : "Draft a Formation Pathway"}
       </button>
+      {pending && <DraftWait seconds={seconds} expectSeconds={PATHWAY_PLAN.inquiry.expectSeconds} />}
       {msg && <span className="max-w-md text-xs text-[var(--color-ink-muted)]">{msg}</span>}
     </span>
   );
 }
 
-/** Review a draft: keep up to three pathways, then sign. */
+/** Review a draft: keep the ones that sound like this child (up to three), then sign. */
 export function InquiryDraftReview({
   inquiryId, pathwayId, pathways,
 }: { inquiryId: string; pathwayId: string; pathways: GeneratedPathway[] }) {
-  const [keep, setKeep] = useState<number[]>(pathways.map((_, i) => i).slice(0, 3));
+  const max = Math.min(3, pathways.length);
+  const [keep, setKeep] = useState<number[]>(pathways.map((_, i) => i).slice(0, max));
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const toggle = (i: number) =>
-    setKeep((k) => (k.includes(i) ? k.filter((x) => x !== i) : k.length >= 3 ? k : [...k, i]));
+    setKeep((k) => (k.includes(i) ? k.filter((x) => x !== i) : k.length >= max ? k : [...k, i]));
   return (
     <div className="space-y-3">
       <ol className="grid gap-3 md:grid-cols-2">
@@ -198,7 +206,7 @@ export function InquiryDraftReview({
                 className={`block h-full cursor-pointer rounded-lg border p-4 text-sm ${on ? "border-[var(--color-navy)] bg-[var(--color-surface,#fff)]" : "border-[var(--color-border)] opacity-70"}`}
               >
                 <span className="flex items-start gap-2">
-                  <input type="checkbox" className="mt-1" checked={on} onChange={() => toggle(i)} disabled={!on && keep.length >= 3} />
+                  <input type="checkbox" className="mt-1" checked={on} onChange={() => toggle(i)} disabled={!on && keep.length >= max} />
                   <span className="font-display text-base text-[var(--color-navy-ink)]">{p.name}</span>
                 </span>
                 {p.hook && <span className="mt-1 block text-xs text-[var(--color-ink-muted)]">Grows from “{p.hook.replace(/^["“]|["”]$/g, "")}”</span>}
@@ -221,7 +229,10 @@ export function InquiryDraftReview({
         >
           {pending ? "Signing…" : `Sign ${keep.length === 1 ? "this pathway" : `these ${keep.length}`}`}
         </button>
-        <span className="text-xs text-[var(--color-ink-muted)]">Keep up to three. Signing records your name; a signed pathway can&apos;t be edited.</span>
+        <span className="text-xs text-[var(--color-ink-muted)]">
+          {pathways.length > max ? `Keep up to ${max}.` : "Untick any that don't sound like this child."} Signing records your name; a signed
+          pathway can&apos;t be edited.
+        </span>
       </div>
       {error && <p className="text-xs text-red-700">{error}</p>}
     </div>

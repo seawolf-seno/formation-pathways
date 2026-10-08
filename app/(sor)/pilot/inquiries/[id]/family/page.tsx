@@ -47,6 +47,7 @@ export default async function FamilyPreviewPage({ params }: { params: Promise<{ 
         pathways={signed?.pathways ?? null}
         cardUrl={`/pilot/inquiries/${i.id}/card`}
         referralUrl={`${origin}/discover?ref=${i.share_code}`}
+        moreWithApplication
       />
     </>
   );

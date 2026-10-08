@@ -5,14 +5,17 @@ import { DraftInquiryPathwayButton, InquiryDraftReview, InquiryStatusPicker } fr
 import { describeSent, inquiryInput } from "@/lib/sor/ai-input";
 import { SentToAi } from "@/components/sor/SentToAi";
 
+// Drafting runs here as a Server Action and takes about two minutes.
+export const maxDuration = 300;
+
 export const metadata = { title: "Inquiry · Formation Pathways" };
 
 const when = (iso: string) =>
   new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 /**
- * One inquiring family: what they told us, their Formation Pathway (draft,
- * keep up to three, sign) and a link to what the family will see. AI drafting
+ * One inquiring family: what they told us, their Formation Pathway (two
+ * drafted from what they shared; untick any that don't fit, sign) and a link to what the family will see. AI drafting
  * runs for fictional samples now; for real families it waits on
  * AI_REAL_STUDENTS, the same switch as students (card #22).
  */
@@ -84,7 +87,7 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
           <div className="space-y-4">
             <p className="text-sm text-[var(--color-ink-muted)]">
               <span className="font-semibold text-[var(--color-navy-ink)]">Draft</span> from {when(latestDraft.created_at)}
-              {latestDraft.used_fallback && " (AI assist was offline: canned example)"}. Keep the ones that sound like this child, then sign.
+              {latestDraft.used_fallback && " (AI assist was unavailable or too slow: a simple offline draft)"}. Keep the ones that sound like this child, then sign.
             </p>
             <InquiryDraftReview inquiryId={i.id} pathwayId={latestDraft.id} pathways={latestDraft.pathways} />
             <DraftInquiryPathwayButton inquiryId={i.id} again />

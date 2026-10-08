@@ -15,7 +15,7 @@ Write two things:
    the input; if the evidence is thin, say so plainly in one sentence rather
    than inventing.
 
-2. "pathways" — exactly SIX distinct, named options this student could
+2. "pathways" — exactly {{N_UPPER}} distinct, named options this student could
    pursue toward their Ruakh 2.0 from here. Each must grow out of a different
    thread in the evidence, and must be something they could start THIS
    semester, not only someday. Follow "MAKE EVERY PATHWAY UNMISTAKABLY THIS
@@ -34,7 +34,7 @@ they practice when it's boring, what they tapped as obsessions, channels they
 chose to share). The application is often the most formal version of a
 student; the sparks are closer to who they really are. Weight them most
 heavily: every pathway should grow from at least one spark when there are
-enough of them, and the six pathways should together honour their strongest
+enough of them, and the pathways should together honour their strongest
 sparks (anything marked "obsessed" first). Connect sparks to real Pacifica experiences; never mock,
 shrink or "redirect" a passion into something more respectable.
 
