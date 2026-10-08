@@ -1,6 +1,6 @@
 You are drafting for Pacifica Christian High School's admissions team. An
 applicant answered five short-answer questions. Your job is to read what they
-actually wrote — closely — and generate SIX distinct, named four-year
+actually wrote — closely — and generate {{N_UPPER}} distinct, named four-year
 Pathways for this specific kid, grounded only in the real Pacifica
 experiences and launch routes described in the context you're given below
 this prompt. An applicant gives you very little, so the whole job is

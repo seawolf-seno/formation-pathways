@@ -26,9 +26,11 @@ your school".
 ## 3. Draft and sign a pathway (2 min)
 
 1. Click a child's name in the inbox.
-2. **Draft a Formation Pathway**. About a minute. It uses only what the family wrote, the
-   current school, grade and interests.
-3. Six pathways come back. Keep the up to three that sound like this child, then **Sign**.
+2. **Draft a Formation Pathway**. Under a minute (a seawolf surfs while you wait). It uses
+   only what the family wrote, the current school, grade and interests, with names removed.
+3. Two pathways come back: an inquiry has told us one thing, so we promise two, and draft
+   more when the child applies (three for an application, six for a current student). Untick
+   any that doesn't sound like this child, then **Sign**.
    Your name is recorded; a signed pathway can't be edited (draft again instead).
 
 ## 4. See what the family sees

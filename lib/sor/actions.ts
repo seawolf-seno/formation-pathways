@@ -10,7 +10,7 @@ import { revalidatePath } from "next/cache";
 import { draftAdmissionsPathways, draftObservation, draftRuakhPathways } from "@/lib/claude";
 import { inquiryInput, pathwayInput, personPseudonymizer } from "./ai-input";
 import { DEMO_FAMILIES } from "@/lib/discover-demo";
-import { FORMATION_TAGS, PATHWAY_COUNT, type FormationTag, type GeneratedPathway } from "@/lib/types";
+import { audienceForStage, FORMATION_TAGS, PATHWAY_PLAN, type FormationTag, type GeneratedPathway } from "@/lib/types";
 import { sanitizeGlimpse, sanitizeMilestones, sanitizeUniqueness } from "@/lib/pathway-journey";
 import { getSorClient } from "./supabase-server";
 import { getCaptureRoster, getInquiry, getPersonProfile, getRoster, logAccess, requireStaff } from "./queries";
@@ -640,7 +640,8 @@ export async function draftInquiryPathwayAction(inquiryId: string): Promise<Resu
     if (!inquiry.is_sample && !realStudentAiOn()) throw new Error(AI_OFF_FOR_REAL);
     const { answers, context, anon } = inquiryInput(inquiry);
     anon.assertNoNames(JSON.stringify({ answers, context }));
-    const drafted = await draftAdmissionsPathways(answers, context);
+    // Two for an inquiry: they've told us one thing. More come with the application.
+    const drafted = await draftAdmissionsPathways(answers, context, PATHWAY_PLAN.inquiry.draft);
     const result = anon.restoreDeep(drafted.result);
     const usedFallback = drafted.usedFallback;
     if (!result.pathways.length) throw new Error("No pathway came back. Try again.");
@@ -830,7 +831,8 @@ export async function draftPathwaysAction(personId: string): Promise<Result> {
     // Names out before it leaves, back in after (lib/sor/anonymize.ts).
     const { input, anon } = pathwayInput(profile, await getRoster(), staff.display_name);
     anon.assertNoNames(JSON.stringify(input));
-    const draft = anon.restoreDeep(await draftRuakhPathways(input));
+    const plan = PATHWAY_PLAN[audienceForStage(profile.person.stage)];
+    const draft = anon.restoreDeep(await draftRuakhPathways(input, plan.draft));
     const sources = [
       profile.admissions && "finalsite",
       profile.enrollment && "blackbaud",
@@ -865,7 +867,11 @@ export async function updateDraftPathwaysAction(input: {
   try {
     const staff = await requireRole("admin", "admissions");
     const clip = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
-    const pathways = input.pathways.slice(0, PATHWAY_COUNT.draft).map((p) => {
+    const supabase = await getSorClient();
+    const { data: who } = await supabase.from("people").select("stage").eq("id", input.personId).maybeSingle();
+    if (!who) throw new Error("Student not found.");
+    const plan = PATHWAY_PLAN[audienceForStage(who.stage)];
+    const pathways = input.pathways.slice(0, plan.draft).map((p) => {
       // Fewer than three complete milestones, or an empty glimpse, means
       // "none": the journey visual then derives its steps.
       const milestones = sanitizeMilestones(p.milestones);
@@ -882,13 +888,12 @@ export async function updateDraftPathwaysAction(input: {
         ...sanitizeUniqueness(p as unknown as Record<string, unknown>),
       };
     });
-    if (pathways.length < PATHWAY_COUNT.min) {
-      throw new Error(`Keep at least ${PATHWAY_COUNT.min} pathways.`);
+    if (pathways.length < plan.keepMin) {
+      throw new Error(`Keep at least ${plan.keepMin} ${plan.keepMin === 1 ? "pathway" : "pathways"}.`);
     }
     if (pathways.some((p) => !p.name || !p.firstSemester)) {
       throw new Error("Each pathway needs a name and a first-semester description.");
     }
-    const supabase = await getSorClient();
     const { data, error } = await supabase
       .from("pathway_drafts")
       .update({ pathways })

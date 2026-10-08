@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { SeawolfSurf } from "./SeawolfSurf";
 
 /** Seconds since `pending` turned on (0 when idle). */
 export function useElapsed(pending: boolean): number {
@@ -19,15 +20,21 @@ export function useElapsed(pending: boolean): number {
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
-/** What a staff member sees while a pathway draft runs (about two minutes). */
-export function DraftWait({ seconds }: { seconds: number }) {
+const about = (s: number) => (s <= 60 ? `under a minute` : `about ${Math.round(s / 60)} minutes`);
+
+/** What a staff member sees while a pathway draft runs: the seawolf, a
+ *  clock, and an honest estimate (PATHWAY_PLAN[audience].expectSeconds). */
+export function DraftWait({ seconds, expectSeconds }: { seconds: number; expectSeconds: number }) {
   return (
-    <p className="mt-2 max-w-md text-xs text-[var(--color-ink-muted)]" aria-live="polite">
-      <span className="font-semibold tabular-nums text-[var(--color-navy-ink)]">{clock(seconds)}</span>{" "}
-      {seconds < 150
-        ? "Writing six pathways usually takes about two minutes. Keep this page open."
-        : "Taking longer than usual. It stops by itself at about four minutes and saves a simple offline draft instead."}
-    </p>
+    <div className="mt-3 flex max-w-md items-center gap-3" aria-live="polite">
+      <SeawolfSurf />
+      <p className="text-xs text-[var(--color-ink-muted)]">
+        <span className="font-semibold tabular-nums text-[var(--color-navy-ink)]">{clock(seconds)}</span>{" "}
+        {seconds < expectSeconds * 1.5
+          ? `This usually takes ${about(expectSeconds)}. Keep this page open.`
+          : "Taking longer than usual. It stops by itself at about four minutes and saves a simple offline draft instead."}
+      </p>
+    </div>
   );
 }
 

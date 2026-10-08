@@ -193,6 +193,13 @@ adults behind the scenes; students stay present, in person, with people.
   Staff see the exact payload under "What the AI sees" on person and inquiry pages. Names
   not in our records can't be caught: `docs/ai-anonymization.md`. Never add an AI call on
   real data that bypasses `ai-input.ts`.
+- **Pathways per audience (2026-10-08, PR #53)**: `PATHWAY_PLAN` in `lib/types.ts`: an
+  inquiry gets **2** (the family page says more come with the application), an application
+  (`applicant`/`admitted`, `audienceForStage`) **3**, a current student **6** (keep at least 3).
+  Prompts carry `{{N}}`-style tokens rendered by `lib/pathway-count.ts` (also scales the
+  combination/why-now rules and max tokens). Measured on sonnet-4-6: 2 pathways ≈ 49s,
+  6 ≈ 108s. While drafting, staff see `components/sor/SeawolfSurf.tsx` (original SVG, not
+  the mascot artwork) with a clock; pathway calls stop at 230s inside `maxDuration = 300`.
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)

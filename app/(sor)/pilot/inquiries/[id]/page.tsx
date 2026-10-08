@@ -14,8 +14,8 @@ const when = (iso: string) =>
   new Date(iso).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
 /**
- * One inquiring family: what they told us, their Formation Pathway (draft,
- * keep up to three, sign) and a link to what the family will see. AI drafting
+ * One inquiring family: what they told us, their Formation Pathway (two
+ * drafted from what they shared; untick any that don't fit, sign) and a link to what the family will see. AI drafting
  * runs for fictional samples now; for real families it waits on
  * AI_REAL_STUDENTS, the same switch as students (card #22).
  */

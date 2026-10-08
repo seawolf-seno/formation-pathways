@@ -7,6 +7,8 @@ import type { GeneratedPathway } from "@/lib/types";
 import "@/components/family-pathways.css";
 import "./family-welcome.css";
 
+const WORDS = ["", "One", "Two", "Three", "Four", "Five", "Six"];
+
 export interface WelcomeStory {
   firstName: string;
   gradYear: number;
@@ -24,7 +26,7 @@ export interface WelcomeStory {
  */
 export function FamilyWelcome({
   familyName, parentFirstName, childFirstName, currentSchool, oneThing, matches,
-  stories, sameSchool, pathways, cardUrl, referralUrl,
+  stories, sameSchool, pathways, cardUrl, referralUrl, moreWithApplication = false,
 }: {
   familyName: string;
   parentFirstName: string;
@@ -38,6 +40,8 @@ export function FamilyWelcome({
   /** Base URL of the share-card image; ?p=<index>&format=<feed|story|og> is added. */
   cardUrl: string;
   referralUrl: string;
+  /** An inquiry gets two pathways; say more come with the application. */
+  moreWithApplication?: boolean;
 }) {
   const [selected, setSelected] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -119,9 +123,22 @@ export function FamilyWelcome({
         <div className="family-section-heading">
           <div>
             <p className="family-eyebrow">{childFirstName}&apos;s Formation Pathway</p>
-            <h2>{pathways ? `${pathways.length} ways ${childFirstName} could grow here` : "Being prepared"}</h2>
+            <h2>
+              {pathways
+                ? pathways.length === 1
+                  ? `One way ${childFirstName} could grow here`
+                  : `${WORDS[pathways.length] ?? pathways.length} ways ${childFirstName} could grow here`
+                : "Being prepared"}
+            </h2>
           </div>
-          {pathways && <p>Invitations, not predictions. Start with the one that makes {childFirstName} curious.</p>}
+          {pathways && (
+            <p>
+              Invitations, not predictions.
+              {moreWithApplication
+                ? ` From one thing you told us. When ${childFirstName} applies, we'll draft more from everything you share.`
+                : ` Start with the one that makes ${childFirstName} curious.`}
+            </p>
+          )}
         </div>
         {pathways && pathway ? (
           <>
