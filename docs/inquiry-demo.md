@@ -1,5 +1,7 @@
 # Inquiry demo: a walkthrough for admissions
 
+> For the phone-first test script admissions should run now, see `docs/admissions-phone-test.md`.
+
 Try the whole family inquiry flow on fictional families before anything goes
 public. Nothing here is sent to Finalsite or to a family.
 
@@ -64,5 +66,5 @@ referral link.
 - **AI for real families is off** until the Anthropic terms for student data are
   confirmed (`AI_REAL_STUDENTS=on`, Fizzy #22). Until then a real inquiry can be
   received and sent to Finalsite, but not drafted.
-- **The referral thank-you** needs leadership. Staff send the family's link from their own email for now.
+- **The referral thank-you** is off for real families until an admin records leadership's decision (`docs/referrals.md`). Samples can go the whole way.
 - The graduate stories are the demo's fictional set; real ones need graduates' consent.

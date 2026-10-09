@@ -68,12 +68,14 @@ To check the file's shape without real families, an admin can add a fictional sa
 - **Only admin and admissions can read inquiries.** Teachers and other staff cannot.
 - **What a family sent can't be edited.** Only follow-up fields can change: status, Finalsite fields, and the date to delete by.
 - **Each inquiry carries a delete-by date** (18 months by default).
-- **Spam:** a hidden field and a minimum time to fill catch simple bots. Add a Vercel Firewall rate limit on `POST /discover` before opening it widely.
+- **Spam:** a hidden field and a minimum time to fill catch simple bots. The database refuses a fourth inquiry from one email in a day and pauses past 40 in ten minutes (`20261012000000_referral_thanks.sql`). Add a Vercel Firewall rate limit on `POST /discover` before opening it widely.
 - **No AI touches an inquiry yet.** Pathways for inquiring families come in a later PR, and AI on real families waits on card #22.
 
-## Not built yet (card #29)
+## The rest of the flow
 
-- the welcome page built from the family's own words;
-- the staff-signed pathway sent by email link;
-- sharing with referral codes, the referred-inquiry view, and recording thank-yous;
-- the counts-only report.
+- Straight after the form, the family sees a welcome built from what they wrote, with no AI
+  (`components/discover/DiscoverFlow.tsx`).
+- Pathways, the family's link and sharing: `docs/family-sharing.md`.
+- Referrals, thank-yous and the counts-only report: `docs/referrals.md`.
+- Testing it on a phone: `docs/admissions-phone-test.md`. What's left before opening:
+  `docs/inquiry-launch.md`.

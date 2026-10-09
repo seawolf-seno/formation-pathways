@@ -39,3 +39,11 @@
 .fw-journey-name { margin: 0 0 18px; font-family: var(--font-display), Georgia, serif; font-size: 28px; font-weight: 500; }
 
 .fw-jump { display: inline-block; margin-right: 6px; font-weight: 600; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+
+/* Straight after the form: what happens next. */
+.fw-steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; max-width: 46rem; }
+.fw-steps li { display: grid; grid-template-columns: 28px 1fr; gap: 10px; font-size: 16px; line-height: 1.55; }
+.fw-steps b { font-family: var(--font-display), Georgia, serif; font-weight: 500; font-size: 19px; color: var(--gold); line-height: 1.2; }
+.fw-test { margin: 22px 0 0; padding: 10px 14px; max-width: 46rem; background: #efe3c8; border-left: 3px solid var(--gold); font-size: 14px; line-height: 1.5; }
+.fw-test a { color: var(--ink); font-weight: 600; }
+.dsc .family-experience { min-height: 0; }

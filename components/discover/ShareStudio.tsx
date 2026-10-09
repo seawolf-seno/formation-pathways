@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { CARD_STYLES, PALETTES, defaultCaption, shareTargets, type CardStyle } from "@/lib/family-share";
+import { CARD_STYLES, PALETTES, SHARE_DISCLOSURE, defaultCaption, shareTargets, withDisclosure, type CardStyle } from "@/lib/family-share";
 import "./share-studio.css";
 
-export type ShareAction = (index: number, style: CardStyle) => Promise<{ ok: true; url: string } | { ok: false; error: string }>;
+export type ShareAction = (index: number, style: CardStyle, guardian: boolean) => Promise<{ ok: true; url: string } | { ok: false; error: string }>;
 type Size = "feed" | "story";
 
 const noop = () => () => {};
@@ -26,11 +26,14 @@ function canShareImages(): boolean {
  * Pick a pathway, a look and a size, then one Share button. On a phone that
  * opens the phone's own share sheet with the image and link attached
  * (Instagram, Messages, WhatsApp…); everywhere, the link, the networks, a
- * saved image and the caption are one tap away. The public link is made as
- * soon as a choice is made, so the Share tap itself is instant.
+ * saved image and the caption are one tap away. Nothing is public until the
+ * person on the page confirms they're the child's parent or guardian; after
+ * that the public link is made as soon as a choice is made, so the Share tap
+ * itself is instant. While Pacifica thanks families for referrals, the
+ * shared words always end with the disclosure (withDisclosure).
  */
 export function ShareStudio({
-  childFirstName, pathwayNames, selected, onSelect, cardBase, share, stopSharing,
+  childFirstName, pathwayNames, selected, onSelect, cardBase, share, stopSharing, thanks = false,
 }: {
   childFirstName: string;
   pathwayNames: string[];
@@ -39,7 +42,10 @@ export function ShareStudio({
   cardBase: string;
   share?: ShareAction;
   stopSharing?: () => Promise<{ ok: boolean }>;
+  /** Thank-yous are on: the shared words carry the disclosure. */
+  thanks?: boolean;
 }) {
+  const [guardian, setGuardian] = useState(false);
   const [style, setStyle] = useState<CardStyle>("tide");
   const [size, setSize] = useState<Size>("feed");
   const [link, setLink] = useState<{ key: string; url: string } | null>(null);
@@ -54,15 +60,16 @@ export function ShareStudio({
   const image = (format: string, extra = "") => `${cardBase}?p=${selected}&style=${style}&format=${format}${extra}`;
   const url = link?.key === key ? link.url : null;
   const pathwayName = pathwayNames[selected] ?? "";
-  const text = caption ?? (url ? defaultCaption(childFirstName, pathwayName, url) : "");
+  const text = caption ?? (url ? defaultCaption(childFirstName, pathwayName, url, thanks) : "");
+  const shared = withDisclosure(text, thanks);
 
   // Make (or find) the public link for this choice, and fetch the image, so
   // the Share tap can open the share sheet straight away.
   useEffect(() => {
-    if (!share || stopped) return;
+    if (!share || stopped || !guardian) return;
     let live = true;
     const t = setTimeout(async () => {
-      const res = await share(selected, style).catch(() => ({ ok: false as const, error: "We couldn't make your link just now. Try again in a minute." }));
+      const res = await share(selected, style, true).catch(() => ({ ok: false as const, error: "We couldn't make your link just now. Try again in a minute." }));
       if (!live) return;
       if (res.ok) {
         setLink({ key, url: res.url });
@@ -74,7 +81,7 @@ export function ShareStudio({
       live = false;
       clearTimeout(t);
     };
-  }, [share, selected, style, key, stopped]);
+  }, [share, selected, style, key, stopped, guardian]);
 
   useEffect(() => {
     if (!canShareFiles) return;
@@ -107,9 +114,9 @@ export function ShareStudio({
     const file = blob.current?.key === `${key}:${size}` ? blob.current.file : null;
     try {
       if (file && navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], text });
+        await navigator.share({ files: [file], text: shared });
       } else if (typeof navigator.share === "function") {
-        await navigator.share({ text, url });
+        await navigator.share({ text: shared, url });
       } else {
         await copy("link", url);
       }
@@ -177,6 +184,14 @@ export function ShareStudio({
 
           {!share ? (
             <p className="ss-note">Staff preview: families share from their own link.</p>
+          ) : !guardian ? (
+            <label className="ss-guardian">
+              <input type="checkbox" checked={guardian} onChange={(e) => setGuardian(e.target.checked)} />
+              <span>
+                I&apos;m {childFirstName}&apos;s parent or guardian, and I choose to share this pathway with {childFirstName}&apos;s first
+                name. I can stop sharing at any time.
+              </span>
+            </label>
           ) : stopped ? (
             <p className="ss-note">You&apos;ve stopped sharing. Links you posted no longer open {childFirstName}&apos;s pathway.</p>
           ) : (
@@ -189,7 +204,7 @@ export function ShareStudio({
               {url && (
                 <div className="ss-more">
                   <div className="ss-targets">
-                    {shareTargets(url, text, childFirstName).map((t) => (
+                    {shareTargets(url, shared, childFirstName).map((t) => (
                       <a key={t.id} className="ss-target" href={t.href} target="_blank" rel="noopener noreferrer">{t.label}</a>
                     ))}
                     <a className="ss-target" href={image(size, "&download=1")} download>Save image</a>
@@ -202,7 +217,7 @@ export function ShareStudio({
                   <label className="ss-label" htmlFor="ss-caption">Your words</label>
                   <textarea id="ss-caption" className="ss-caption" rows={4} value={text} onChange={(e) => setCaption(e.target.value)} />
                   <div className="ss-row">
-                    <button type="button" className="ss-secondary" onClick={() => copy("caption", text)}>
+                    <button type="button" className="ss-secondary" onClick={() => copy("caption", shared)}>
                       {copied === "caption" ? "Copied" : "Copy words"}
                     </button>
                     <button type="button" className="ss-secondary" onClick={() => copy("link", url)}>
@@ -210,8 +225,9 @@ export function ShareStudio({
                     </button>
                   </div>
                   <p className="ss-fine">
+                    {thanks && <><span className="ss-disclosure">We always add this line: {SHARE_DISCLOSURE}</span>{" "}</>}
                     Your link opens a page with {childFirstName}&apos;s first name and this pathway. Families who inquire through it
-                    are connected to yours, so we can thank you.{" "}
+                    are connected to yours{thanks ? ", so we can thank you" : ""}.{" "}
                     {stopSharing && (
                       <button
                         type="button"

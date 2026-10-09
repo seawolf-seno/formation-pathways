@@ -183,6 +183,16 @@ export const PROGRAM_MATCHES: Record<string, { program: string; line: string }> 
   },
 };
 
+/** A first week at Pacifica, for every welcome page. Written by people, the
+ *  same for every family, never generated. DRAFT: built only from what
+ *  prompts/pacifica-context.txt says is real; admissions should rewrite it
+ *  in their own words with true first-week details (docs/admissions-phone-test.md). */
+export const FIRST_WEEK: { moment: string; line: string }[] = [
+  { moment: "A home game", line: "The Wolfpack, Pacifica's student section, turns out for home games." },
+  { moment: "The Wolf Shack", line: "A campus store run by students, from what to stock to what to charge." },
+  { moment: "A real question", line: "Open, honest conversation about faith is welcome here, whatever a student's background." },
+];
+
 /** The programs to show for what a family picked; a sport counts as Athletics. */
 export function welcomeMatches(interests: string[]): { program: string; line: string }[] {
   const areas = new Set(interests.filter((i) => i in PROGRAM_MATCHES));

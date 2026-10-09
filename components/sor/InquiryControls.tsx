@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react";
 import { DRAFT_LOST, DraftWait, useElapsed } from "./DraftWait";
 import {
-  addDemoFamiliesAction, addSampleInquiryAction, createFamilyLinkAction, draftInquiryPathwayAction, endFamilyLinksAction,
-  setInquiriesApprovalAction, signInquiryPathwayAction, updateInquiryStatusAction,
+  addDemoFamiliesAction, addSampleInquiryAction, confirmReferralAction, createFamilyLinkAction, draftInquiryPathwayAction,
+  endFamilyLinksAction, setInquiriesApprovalAction, setReferralThanksDecisionAction, signInquiryPathwayAction,
+  stepReferralThanksAction, updateInquiryStatusAction,
 } from "@/lib/sor/actions";
 import { PATHWAY_PLAN, type GeneratedPathway } from "@/lib/types";
-import { INQUIRY_STATUSES, type InquiryStatus, type PilotSettings } from "@/lib/sor/types";
+import { INQUIRY_STATUSES, type InquiryStatus, type PilotSettings, type ReferralThanks } from "@/lib/sor/types";
 
 const input = "w-full rounded-lg border border-[var(--color-border)] bg-white px-3 py-2 text-sm";
 const button = "rounded-lg bg-[var(--color-navy)] px-3 py-2 text-sm font-medium text-white disabled:opacity-50";
@@ -243,11 +244,12 @@ const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { mo
 
 /** After signing: make the family's private link, and the email to send it in. */
 export function FamilyLinkPanel({
-  inquiryId, parentFirstName, parentEmail, childFirstName, pathwayCount, staffName, links,
+  inquiryId, parentFirstName, parentEmail, parentPhone, childFirstName, pathwayCount, staffName, links,
 }: {
   inquiryId: string;
   parentFirstName: string;
   parentEmail: string;
+  parentPhone?: string | null;
   childFirstName: string;
   pathwayCount: number;
   staffName: string;
@@ -298,20 +300,36 @@ export function FamilyLinkPanel({
         </div>
       ) : (
         <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-pacific-light,#eaf1f8)] p-4">
-          <p className="font-medium text-[var(--color-navy-ink)]">The family&apos;s link (shown once, works until {longDate(made.expiresAt)})</p>
+          <p className="font-medium text-[var(--color-navy-ink)]">
+            The family&apos;s link is ready. Send it now: it&apos;s shown only once, and works until {longDate(made.expiresAt)}.
+          </p>
           <div className="flex flex-wrap items-center gap-2">
-            <code className="max-w-full break-all rounded bg-white px-2 py-1 text-xs">{made.url}</code>
+            <a
+              className={button}
+              href={`mailto:${encodeURIComponent(parentEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`}
+            >
+              Email it to {parentFirstName}
+            </a>
+            {parentPhone && (
+              <a
+                className={quiet}
+                href={`sms:${parentPhone.replace(/[^\d+]/g, "")}?&body=${encodeURIComponent(`Hi ${parentFirstName}, it's ${staffName} from Pacifica. ${childFirstName}'s Formation Pathway is ready: ${made.url}`)}`}
+              >
+                Text it
+              </a>
+            )}
             <button className={quiet} onClick={() => copy("link", made.url)}>{copied === "link" ? "Copied" : "Copy link"}</button>
             <a className={quiet} href={made.url} target="_blank" rel="noopener noreferrer">Open it</a>
           </div>
+          <p className="text-xs text-[var(--color-ink-muted)]">
+            Email opens your own mail app, addressed to {parentEmail}, with the message below. It goes from you, by name.
+          </p>
+          <code className="block max-w-full break-all rounded bg-white px-2 py-1 text-xs">{made.url}</code>
           <details>
-            <summary className="cursor-pointer font-medium text-[var(--color-navy-ink)]">An email to send it in</summary>
+            <summary className="cursor-pointer font-medium text-[var(--color-navy-ink)]">Read the email first</summary>
             <pre className="mt-2 whitespace-pre-wrap rounded bg-white p-3 font-sans text-sm leading-relaxed">{`To: ${parentEmail}\nSubject: ${subject}\n\n${body}`}</pre>
             <div className="mt-2 flex flex-wrap gap-2">
               <button className={quiet} onClick={() => copy("email", body)}>{copied === "email" ? "Copied" : "Copy the email"}</button>
-              <a className={quiet} href={`mailto:${encodeURIComponent(parentEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`}>
-                Open in my email
-              </a>
             </div>
           </details>
         </div>
@@ -328,6 +346,179 @@ export function FamilyLinkPanel({
         >
           End this family&apos;s links
         </button>
+      )}
+      {error && <p className="text-xs text-red-700">{error}</p>}
+    </div>
+  );
+}
+
+/** Admin: record leadership's decision on referral thank-yous, or turn them off. */
+export function ReferralThanksDecision({ settings }: { settings: PilotSettings }) {
+  const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [pending, start] = useTransition();
+  const act = (fd: FormData) =>
+    start(async () => {
+      const res = await setReferralThanksDecisionAction(fd);
+      setError(res.ok ? null : res.error);
+      if (res.ok) setEditing(false);
+    });
+
+  if (settings.referral_thanks_open && !editing) {
+    return (
+      <div className="space-y-2 text-sm">
+        <p>
+          <span className="font-semibold text-[var(--color-navy-ink)]">On.</span> {settings.referral_thanks_what}, once the family
+          they brought has {settings.referral_thanks_on}; at most {settings.referral_thanks_cap} per family. Approved by{" "}
+          {settings.referral_thanks_approved_by} ({settings.referral_thanks_approval_reference}),{" "}
+          {settings.referral_thanks_approved_at?.slice(0, 10)}.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button className={quiet} onClick={() => setEditing(true)}>Record a new decision</button>
+          <form action={act}>
+            <input type="hidden" name="open" value="false" />
+            <button className={quiet} disabled={pending}>Turn thank-yous off</button>
+          </form>
+        </div>
+        {error && <p className="text-xs text-red-700">{error}</p>}
+      </div>
+    );
+  }
+  return (
+    <form action={act} className="space-y-3 text-sm">
+      <p className="text-[var(--color-ink-muted)]">
+        Off for real families until leadership decides what the thank-you is, when it&apos;s given and how many. Samples can go
+        the whole way so you can try it. No cash or gift cards (the database refuses them).
+      </p>
+      <input type="hidden" name="open" value="true" />
+      <label className="block space-y-1">
+        <span className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">The thank-you</span>
+        <input name="what" className={input} defaultValue={settings.referral_thanks_what ?? ""} placeholder="e.g. A handwritten note from the Head of School" maxLength={200} />
+      </label>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="block space-y-1">
+          <span className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Given once they&apos;ve</span>
+          <select name="on" className={input} defaultValue={settings.referral_thanks_on}>
+            <option value="applied">applied</option>
+            <option value="enrolled">enrolled</option>
+          </select>
+        </label>
+        <label className="block space-y-1">
+          <span className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">At most, per family</span>
+          <input name="cap" type="number" min={1} max={10} className={input} defaultValue={settings.referral_thanks_cap} />
+        </label>
+        <input name="approved_by" className={input} placeholder="Approved by (name, role)" aria-label="Approved by" />
+        <input name="approval_reference" className={input} placeholder="Where it's recorded (meeting, email)" aria-label="Where the approval is recorded" />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <button className={button} disabled={pending}>Turn thank-yous on</button>
+        {editing && <button type="button" className={quiet} onClick={() => setEditing(false)}>Cancel</button>}
+      </div>
+      {error && <p className="text-xs text-red-700">{error}</p>}
+    </form>
+  );
+}
+
+const shortDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+/**
+ * One referred family: confirm the referral, then approve the thank-you once
+ * they've applied (or enrolled), then record who sent it. Each step records
+ * the signed-in staff member; the database enforces the rules.
+ */
+export function ReferralSteps({
+  referredId, referral, referredStatus, thanksOn, thanksAllowed, thanksWhat, referrerName,
+}: {
+  referredId: string;
+  referral: ReferralThanks | null;
+  referredStatus: InquiryStatus;
+  thanksOn: "applied" | "enrolled";
+  /** Thank-yous are on, or this is a sample. */
+  thanksAllowed: boolean;
+  thanksWhat: string | null;
+  referrerName: string;
+}) {
+  const [error, setError] = useState<string | null>(null);
+  const [declining, setDeclining] = useState(false);
+  const [note, setNote] = useState("");
+  const [pending, start] = useTransition();
+  const run = (fn: () => Promise<{ ok: boolean; error?: string }>) =>
+    start(async () => {
+      const res = await fn();
+      setError(res.ok ? null : (res as { error: string }).error);
+      if (res.ok) setDeclining(false);
+    });
+  const ready = thanksOn === "applied" ? referredStatus === "applied" || referredStatus === "enrolled" : referredStatus === "enrolled";
+
+  let body: React.ReactNode;
+  if (!referral) {
+    body = (
+      <div className="flex flex-wrap items-center gap-3">
+        <button className={button} disabled={pending} onClick={() => run(() => confirmReferralAction(referredId))}>
+          {pending ? "Confirming…" : "Confirm the referral"}
+        </button>
+        <span className="text-xs text-[var(--color-ink-muted)]">Check it&apos;s a different family who really heard about us from {referrerName}.</span>
+      </div>
+    );
+  } else if (referral.status === "confirmed") {
+    body = (
+      <div className="space-y-2">
+        <p>Confirmed by {referral.confirmed_by}, {shortDate(referral.confirmed_at)}.</p>
+        {!thanksAllowed ? (
+          <p className="text-xs text-[var(--color-ink-muted)]">Thank-yous are off until an admin records leadership&apos;s decision.</p>
+        ) : !ready ? (
+          <p className="text-xs text-[var(--color-ink-muted)]">
+            A thank-you can be approved once this family has {thanksOn}. Change their status above when they do.
+          </p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-3">
+            <button className={button} disabled={pending} onClick={() => run(() => stepReferralThanksAction(referral.id, "approved"))}>
+              {pending ? "Approving…" : "Approve the thank-you"}
+            </button>
+            <span className="text-xs text-[var(--color-ink-muted)]">{thanksWhat ?? "A handwritten note (sample)"}, for {referrerName}.</span>
+          </div>
+        )}
+      </div>
+    );
+  } else if (referral.status === "approved") {
+    body = (
+      <div className="space-y-2">
+        <p>
+          Thank-you approved by {referral.approved_by}, {referral.approved_at ? shortDate(referral.approved_at) : ""}: {referral.what}.
+        </p>
+        <div className="flex flex-wrap items-center gap-3">
+          <button className={button} disabled={pending} onClick={() => run(() => stepReferralThanksAction(referral.id, "sent"))}>
+            {pending ? "Recording…" : "I've sent it"}
+          </button>
+          <span className="text-xs text-[var(--color-ink-muted)]">Send it yourself, then record it here with your name.</span>
+        </div>
+      </div>
+    );
+  } else if (referral.status === "sent") {
+    body = (
+      <p>
+        Thanked: {referral.what}. Approved by {referral.approved_by}, sent by {referral.sent_by}
+        {referral.sent_at ? `, ${shortDate(referral.sent_at)}` : ""}.
+      </p>
+    );
+  } else {
+    body = <p>Declined: {referral.note}</p>;
+  }
+
+  const canDecline = referral && (referral.status === "confirmed" || referral.status === "approved");
+  return (
+    <div className="space-y-2 text-sm">
+      {body}
+      {canDecline && !declining && (
+        <button className="text-xs text-[var(--color-ink-muted)] underline" onClick={() => setDeclining(true)}>No thank-you for this one</button>
+      )}
+      {canDecline && declining && (
+        <div className="flex flex-wrap items-center gap-2">
+          <input className={`${input} max-w-sm`} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Why (e.g. same family, already thanked)" maxLength={500} />
+          <button className={quiet} disabled={pending || !note.trim()} onClick={() => run(() => stepReferralThanksAction(referral.id, "declined", note))}>
+            Record it
+          </button>
+        </div>
       )}
       {error && <p className="text-xs text-red-700">{error}</p>}
     </div>

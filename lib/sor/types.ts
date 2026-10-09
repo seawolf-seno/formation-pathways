@@ -58,6 +58,14 @@ export interface PilotSettings {
   inquiries_approved_by: string | null;
   inquiries_approval_reference: string | null;
   inquiries_approved_at: string | null;
+  /** Referral thank-yous for real families (needs leadership's recorded decision). */
+  referral_thanks_open: boolean;
+  referral_thanks_what: string | null;
+  referral_thanks_on: "applied" | "enrolled";
+  referral_thanks_cap: number;
+  referral_thanks_approved_by: string | null;
+  referral_thanks_approval_reference: string | null;
+  referral_thanks_approved_at: string | null;
 }
 
 export type InquiryStatus = "new" | "contacted" | "applied" | "enrolled" | "closed";
@@ -117,6 +125,24 @@ export interface InquiryFamilyLink {
   id: string;
   created_at: string;
   expires_at: string;
+}
+
+/** A confirmed referral and its thank-you (20261012000000_referral_thanks.sql). */
+export type ReferralStatus = "confirmed" | "approved" | "sent" | "declined";
+export interface ReferralThanks {
+  id: string;
+  referred_inquiry_id: string;
+  referrer_inquiry_id: string;
+  is_sample: boolean;
+  status: ReferralStatus;
+  confirmed_by: string;
+  confirmed_at: string;
+  what: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  sent_by: string | null;
+  sent_at: string | null;
+  note: string | null;
 }
 
 /** A pathway a family shared publicly at /w/[code]. */

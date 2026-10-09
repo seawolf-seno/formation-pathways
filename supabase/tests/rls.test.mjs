@@ -213,7 +213,7 @@ await expect("admin opens inquiries with the approval recorded", "admin", `updat
 await expectAnon("...and now open", `select inquiries_open() as open`, true, r => r.rows[0].open === true);
 let firstCode = null;
 await expectAnon("a family inquires and gets their own share code", submit(), true, r => { firstCode = r.rows[0]?.code; return /^[A-Z0-9]{8}$/.test(firstCode ?? ""); });
-await expectAnon("an inquiry through a family's link is credited to them", submit({ ref: firstCode?.toLowerCase(), parent_email: "lee@example.com", child_first_name: "Lee" }), true, r => /^[A-Z0-9]{8}$/.test(r.rows[0]?.code ?? ""));
+await expectAnon("an inquiry through a family's link is credited to them", submit({ ref: firstCode?.toLowerCase(), parent_email: "lee@example.com", child_first_name: "Lee", address_1: "9 Bay St" }), true, r => /^[A-Z0-9]{8}$/.test(r.rows[0]?.code ?? ""));
 await expect("...recorded as a share, by that code", "adm", `select source, referred_by_code from inquiries where child_first_name = 'Lee'`, true, r => r.rows[0]?.source === "share" && r.rows[0]?.referred_by_code === firstCode);
 await expectAnon("an unknown referral code is ignored, not trusted", submit({ ref: "ZZZZZZZZ", parent_email: "kai@example.com", child_first_name: "Kai" }), true);
 await expect("...and that inquiry isn't credited to anyone", "adm", `select source, referred_by_code from inquiries where child_first_name = 'Kai'`, true, r => r.rows[0]?.source === "website" && r.rows[0]?.referred_by_code === null);
@@ -264,16 +264,17 @@ await expectAnon("the family's page: their own words and signed pathway, no cont
 });
 await expectAnon("a wrong token gets nothing", `select family_page('fam-guess') as p`, true, r => r.rows[0].p === null);
 await expectAnon("an expired token gets nothing", `select family_page('fam-old') as p`, true, r => r.rows[0].p === null);
-await expectAnon("a share needs a real card look", `select family_share('fam-good', 0, 'neon') as c`, true, r => r.rows[0].c === null);
-await expectAnon("...and a pathway that exists", `select family_share('fam-good', 3, 'tide') as c`, true, r => r.rows[0].c === null);
-await expectAnon("a wrong token can't share", `select family_share('fam-guess', 0, 'tide') as c`, true, r => r.rows[0].c === null);
-await expectAnon("the family shares a pathway", `select family_share('fam-good', 0, 'tide') as c`, true, r => /^[0-9a-f]{12}$/.test(r.rows[0].c));
+await expectAnon("a share needs a real card look", `select family_share('fam-good', 0, 'neon', true) as c`, true, r => r.rows[0].c === null);
+await expectAnon("...and a pathway that exists", `select family_share('fam-good', 3, 'tide', true) as c`, true, r => r.rows[0].c === null);
+await expectAnon("a wrong token can't share", `select family_share('fam-guess', 0, 'tide', true) as c`, true, r => r.rows[0].c === null);
+await expectAnon("no share until a parent or guardian confirms", `select family_share('fam-good', 0, 'tide', false) as c`, true, r => r.rows[0].c === null);
+await expectAnon("the family shares a pathway", `select family_share('fam-good', 0, 'tide', true) as c`, true, r => /^[0-9a-f]{12}$/.test(r.rows[0].c));
 const code = (await db.query(`select code from inquiry_shares where style = 'tide' and stopped_at is null`)).rows[0]?.code ?? "none";
-await expectAnon("the same choice gives the same code", `select family_share('fam-good', 0, 'tide') as c`, true, r => r.rows[0].c === code);
+await expectAnon("the same choice gives the same code", `select family_share('fam-good', 0, 'tide', true) as c`, true, r => r.rows[0].c === code);
 await expectAnon("anon can't read or write shares directly", `insert into inquiry_shares (inquiry_id, inquiry_pathway_id, pathway_index, style, code) select inquiry_id, id, 0, 'sky', 'aaaaaaaaaaaa' from inquiry_pathways`, false);
 await expectAnon("the public share: first name and the pathway only", `select public_share('${code}') as s`, true, (r) => {
   const s = r.rows[0].s;
-  return s && s.first_name === "Robin" && s.pathway.name === "x" && s.ref === "TESTMODE" && Object.keys(s).sort().join() === "first_name,pathway,ref,style";
+  return s && s.first_name === "Robin" && s.pathway.name === "x" && s.ref === "TESTMODE" && Object.keys(s).sort().join() === "first_name,pathway,ref,style,thanks" && s.thanks === true;
 });
 await expect("admissions sees the family's shares", "adm", `select * from inquiry_shares`, true, r => r.rows.length === 1);
 await expect("a teacher doesn't", "teach", `select * from inquiry_shares`, true, r => r.rows.length === 0);
@@ -288,6 +289,49 @@ await expectAnon("...stops the link", `select family_page('fam-good') as p`, tru
 await expect("reactivating them", "admin", `update staff set active = true where user_id = '${ids.adm}' returning user_id`, true, r => r.rows.length === 1);
 await expect("admissions can end a family's link", "adm", `delete from inquiry_family_links where token_hash = ${hash("fam-good")} returning id`, true, r => r.rows.length === 1);
 await expectAnon("...and it's gone", `select family_page('fam-good') as p`, true, r => r.rows[0].p === null);
+
+// Referrals and thank-yous (docs/referrals.md): confirmed only for the family
+// whose link brought them, never self-referral, nothing approved for a real
+// family until leadership's decision is recorded, a cap, no cash.
+const admName = (await db.query(`select display_name from staff where user_id = '${ids.adm}'`)).rows[0].display_name;
+const inqId = (where) => `(select id from inquiries where ${where})`;
+const refer = (referred, referrer) => `insert into referral_thanks (referred_inquiry_id, referrer_inquiry_id) values (${inqId(referred)}, ${inqId(referrer)}) returning confirmed_by`;
+const sampleInq = (code, email, ref, status = "new") => `insert into inquiries (share_code, parent_first_name, parent_last_name, parent_relationship, parent_email, address_1, city, state, zip, child_first_name, child_last_name, child_grade, entry_year, consent_contact, consent_version, is_sample, referred_by_code, source, status) values ('${code}','F','R','Mother','${email}','${code} Lane','City','CA','90001','Kid','R',9,2027,true,'v1',true,'${ref}','share','${status}')`;
+await expect("a teacher can't confirm a referral", "teach", refer("child_first_name = 'Lee'", "child_first_name = 'Sam' and referred_by_code is null"), false);
+await expect("admissions confirms a real referral, as themselves", "adm", refer("child_first_name = 'Lee'", "child_first_name = 'Sam' and referred_by_code is null"), true, r => r.rows[0]?.confirmed_by === admName);
+await expect("a family that didn't come through the link can't be credited", "adm", refer("child_first_name = 'Kai'", "child_first_name = 'Sam' and referred_by_code is null"), false);
+for (const [c, e, st] of [["SELFREF1", "t@example.com"], ["FRIEND01", "friend1@example.com"], ["FRIEND02", "friend2@example.com", "applied"]]) {
+  await expect(`a sample family for trying it (${c})`, "admin", sampleInq(c, e, "TESTMODE", st), true);
+}
+await expect("a family can't refer itself", "adm", refer("share_code = 'SELFREF1'", "share_code = 'TESTMODE'"), false);
+await expect("admissions confirms a sample referral", "adm", refer("share_code = 'FRIEND01'", "share_code = 'TESTMODE'"), true);
+const thanks = (code) => `(select id from referral_thanks where referred_inquiry_id = ${inqId(`share_code = '${code}'`)})`;
+await expect("no thank-you before the family they brought applies", "adm", `update referral_thanks set status = 'approved' where id = ${thanks("FRIEND01")}`, false);
+await expect("the referred family applies", "adm", `update inquiries set status = 'applied' where share_code = 'FRIEND01' returning id`, true, r => r.rows.length === 1);
+await expect("then the thank-you is approved, by the signed-in staff member", "adm", `update referral_thanks set status = 'approved', approved_by = 'Head of School' where id = ${thanks("FRIEND01")} returning approved_by, what`, true, r => r.rows[0]?.approved_by === admName && /note/.test(r.rows[0]?.what ?? ""));
+await expect("and recorded as sent by whoever sent it", "admin", `update referral_thanks set status = 'sent' where id = ${thanks("FRIEND01")} returning sent_by`, true, r => r.rows[0]?.sent_by === "Admin");
+await expect("a sent thank-you is settled", "adm", `update referral_thanks set note = 'changed' where id = ${thanks("FRIEND01")}`, false);
+await expect("a referral can't be moved to another family", "adm", `update referral_thanks set referrer_inquiry_id = ${inqId("share_code = 'SAMPLE01'")} where id = ${thanks("FRIEND01")}`, false);
+await expect("the referred real family applies", "adm", `update inquiries set status = 'applied' where child_first_name = 'Lee' returning id`, true, r => r.rows.length === 1);
+await expect("no thank-you for a real family until leadership decides", "adm", `update referral_thanks set status = 'approved' where referred_inquiry_id = ${inqId("child_first_name = 'Lee'")}`, false);
+await expect("thank-yous can't open without the decision recorded", "admin", `update pilot_settings set referral_thanks_open = true`, false);
+await expect("a thank-you can't be cash", "admin", `update pilot_settings set referral_thanks_open = true, referral_thanks_what = 'A $50 gift card', referral_thanks_approved_by = 'Head', referral_thanks_approval_reference = 'mtg', referral_thanks_approved_at = now()`, false);
+await expect("a teacher can't record the decision", "teach", `update pilot_settings set referral_thanks_open = true, referral_thanks_what = 'A note', referral_thanks_approved_by = 'Head', referral_thanks_approval_reference = 'mtg', referral_thanks_approved_at = now() returning *`, true, r => r.rows.length === 0);
+await expect("admin records leadership's decision", "admin", `update pilot_settings set referral_thanks_open = true, referral_thanks_what = 'A handwritten note and a Pacifica sweatshirt', referral_thanks_approved_by = 'Head of School', referral_thanks_approval_reference = 'Leadership mtg 2026-10-21', referral_thanks_approved_at = now(), referral_thanks_cap = 1 returning *`, true, r => r.rows.length === 1);
+await expect("then a real thank-you is approved with what leadership chose", "adm", `update referral_thanks set status = 'approved' where referred_inquiry_id = ${inqId("child_first_name = 'Lee'")} returning what`, true, r => /sweatshirt/.test(r.rows[0]?.what ?? ""));
+await expect("admissions confirms a second sample referral", "adm", refer("share_code = 'FRIEND02'", "share_code = 'TESTMODE'"), true);
+await expect("no more thank-yous than the cap", "adm", `update referral_thanks set status = 'approved' where id = ${thanks("FRIEND02")}`, false);
+await expect("declining needs a note", "adm", `update referral_thanks set status = 'declined' where id = ${thanks("FRIEND02")}`, false);
+await expect("declined with a note", "adm", `update referral_thanks set status = 'declined', note = 'Already thanked this year' where id = ${thanks("FRIEND02")} returning id`, true, r => r.rows.length === 1);
+await expect("nobody deletes a thank-you record", "admin", `delete from referral_thanks returning id`, true, r => r.rows.length === 0);
+await expect("a teacher can't read referrals", "teach", `select * from referral_thanks`, true, r => r.rows.length === 0);
+await expectAnon("anon can't read referrals", `select * from referral_thanks`, false, r => r.rows.length === 0);
+
+// The public form's backstop throttle.
+await expect("inquiries open again", "admin", `update pilot_settings set inquiries_open = true, inquiries_approved_by = 'Head of School', inquiries_approval_reference = 'mtg', inquiries_approved_at = now() returning *`, true, r => r.rows.length === 1);
+await expectAnon("a second child from the same family", submit({ child_first_name: "Sib" }), true);
+await expectAnon("a third", submit({ child_first_name: "Sib2" }), true);
+await expectAnon("but not a fourth in a day", submit({ child_first_name: "Sib3" }), false);
 
 const exposed = await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef");
 const noneExposed = exposed.rows.length === 0; if (noneExposed) pass++; else fail++;

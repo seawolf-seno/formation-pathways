@@ -14,6 +14,7 @@ import type {
   InquiryFamilyLink,
   InquiryPathway,
   InquiryShare,
+  ReferralThanks,
 } from "./types";
 import type { FunnelCount } from "./funnel";
 import { validateStudentSparks } from "./sparks";
@@ -70,6 +71,13 @@ export async function getPilotSettings(): Promise<PilotSettings> {
     inquiries_approved_by: null,
     inquiries_approval_reference: null,
     inquiries_approved_at: null,
+    referral_thanks_open: false,
+    referral_thanks_what: null,
+    referral_thanks_on: "applied",
+    referral_thanks_cap: 3,
+    referral_thanks_approved_by: null,
+    referral_thanks_approval_reference: null,
+    referral_thanks_approved_at: null,
   };
 }
 
@@ -266,6 +274,28 @@ export async function getInquiries(): Promise<Inquiry[]> {
     .limit(1000);
   if (error) console.error("inquiries read failed:", error.message);
   return (data ?? []) as Inquiry[];
+}
+
+/** Every confirmed referral and its thank-you. RLS: admin and admissions.
+ *  Empty (not an error) until 20261012000000_referral_thanks.sql is applied. */
+export async function getReferralThanks(): Promise<ReferralThanks[]> {
+  const supabase = await getSorClient();
+  const { data, error } = await supabase.from("referral_thanks").select("*").order("confirmed_at", { ascending: false });
+  if (error) console.error("referral_thanks read failed:", error.message);
+  return (data ?? []) as ReferralThanks[];
+}
+
+/** What happened after families inquired, for the counts-only report: which
+ *  inquiries have a signed pathway, a family link, and live or past shares. */
+export async function getInquiryActivity(): Promise<{ signed: Set<string>; linked: Set<string>; shared: Set<string>; shares: number }> {
+  const supabase = await getSorClient();
+  const [{ data: signed }, { data: links }, { data: shares }] = await Promise.all([
+    supabase.from("inquiry_pathways").select("inquiry_id").eq("status", "approved"),
+    supabase.from("inquiry_family_links").select("inquiry_id"),
+    supabase.from("inquiry_shares").select("inquiry_id"),
+  ]);
+  const ids = (rows: { inquiry_id: string }[] | null) => new Set((rows ?? []).map((r) => r.inquiry_id));
+  return { signed: ids(signed), linked: ids(links), shared: ids(shares), shares: shares?.length ?? 0 };
 }
 
 /** The signed-in, active staff member, or null. Never redirects: for public
