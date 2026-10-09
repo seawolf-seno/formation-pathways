@@ -1,0 +1,71 @@
+/* A family's shared pathway (/w/[code], SharedPathway.tsx). Builds on family-pathways.css. */
+.wsh { width: 100%; max-width: 1120px; margin: 0 auto; padding: 40px 20px 64px; box-sizing: border-box; }
+.wsh-grid { display: grid; gap: 36px; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 900px) { .wsh-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 22rem); gap: 56px; padding-top: 24px; } }
+.wsh-title {
+  margin: 10px 0 0;
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 500;
+  font-size: clamp(38px, 6vw, 64px);
+  line-height: 1.06;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+.wsh-line {
+  margin: 26px 0 0;
+  padding-left: 18px;
+  border-left: 2px solid var(--gold);
+  max-width: 40rem;
+  font-family: var(--font-display), Georgia, serif;
+  font-style: italic;
+  font-size: clamp(19px, 2.3vw, 23px);
+  line-height: 1.55;
+}
+.wsh-program { margin: 18px 0 0; font-size: 15px; color: var(--muted); }
+.wsh-horizon { margin-top: 26px; }
+.wsh-label { margin: 0 0 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.wsh-horizon ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.wsh-horizon li { position: relative; padding-left: 20px; font-size: 16px; line-height: 1.5; }
+.wsh-horizon li::before { content: ""; position: absolute; left: 2px; top: 0.6em; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
+.wsh-fine { margin: 28px 0 0; max-width: 40rem; font-size: 13.5px; line-height: 1.55; color: var(--muted); }
+.wsh-card {
+  width: 100%;
+  max-width: 22rem;
+  height: auto;
+  aspect-ratio: 4 / 5;
+  justify-self: center;
+  border-radius: 10px;
+  box-shadow: 0 18px 40px -18px rgba(13, 34, 54, 0.45);
+  background: #e8eef5;
+}
+.wsh-invite {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px 28px;
+  align-items: center;
+  margin-top: 56px;
+  padding: 28px;
+  border-radius: 14px;
+  background: #16324f;
+  color: #fff;
+}
+.wsh-invite > div { flex: 1 1 18rem; min-width: 0; }
+.wsh-invite h2 { margin: 0; font-family: var(--font-display), Georgia, serif; font-weight: 500; font-size: clamp(24px, 3vw, 30px); line-height: 1.2; }
+.wsh-invite p { margin: 10px 0 0; font-size: 16px; line-height: 1.55; color: #c9d6e6; }
+.wsh-invite .sw { --color-navy: #c9d6e6; --color-navy-ink: #0b1a2a; }
+.wsh-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.wsh-primary, .wsh-secondary {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.wsh-primary { background: #d9b35c; color: #0f2338; }
+.wsh-secondary { border: 1px solid #ffffff66; color: #fff; }
+.wsh-primary:focus-visible, .wsh-secondary:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* On a phone the card repeats the words just above it; the invitation matters more. */
+@media (max-width: 899px) { .wsh-card { display: none; } .wsh-invite { margin-top: 36px; } }

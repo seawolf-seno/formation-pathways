@@ -687,6 +687,44 @@ export async function signInquiryPathwayAction(pathwayId: string, inquiryId: str
   }
 }
 
+/** Makes the private link an inquiring family opens their page with (after
+ *  signing). Shown once: only its hash is stored. Earlier links keep working
+ *  until they expire or are ended. */
+export async function createFamilyLinkAction(inquiryId: string): Promise<Result<{ url: string; expiresAt: string }>> {
+  try {
+    const staff = await requireRole("admin", "admissions");
+    const token = randomBytes(24).toString("base64url");
+    const supabase = await getSorClient();
+    const { data, error } = await supabase
+      .from("inquiry_family_links")
+      .insert({ inquiry_id: inquiryId, token_hash: createHash("sha256").update(token, "utf8").digest("hex"), created_by: staff.user_id })
+      .select("expires_at")
+      .single();
+    if (error) return fail(error);
+    await logAccess(staff, "inquiry_family_link", null, { inquiry: inquiryId });
+    revalidatePath(`/pilot/inquiries/${inquiryId}`);
+    return { ok: true, url: `${await requestOrigin()}/welcome/${token}`, expiresAt: data.expires_at };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Ends every private link for a family (their public shares are separate:
+ *  the family stops those, or the inquiry is closed). */
+export async function endFamilyLinksAction(inquiryId: string): Promise<Result> {
+  try {
+    const staff = await requireRole("admin", "admissions");
+    const supabase = await getSorClient();
+    const { error } = await supabase.from("inquiry_family_links").delete().eq("inquiry_id", inquiryId);
+    if (error) return fail(error);
+    await logAccess(staff, "inquiry_family_link_end", null, { inquiry: inquiryId });
+    revalidatePath(`/pilot/inquiries/${inquiryId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 export async function runFunnelImportAction(mode: "sample" | "live"): Promise<Result<{ outcome: FunnelImportOutcome }>> {
   try {
     const staff = await requireRole("admin");

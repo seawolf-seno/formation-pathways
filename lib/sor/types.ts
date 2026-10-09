@@ -112,6 +112,23 @@ export interface InquiryPathway {
   approved_at: string | null;
 }
 
+/** A private link admissions sent an inquiring family (only its hash is stored). */
+export interface InquiryFamilyLink {
+  id: string;
+  created_at: string;
+  expires_at: string;
+}
+
+/** A pathway a family shared publicly at /w/[code]. */
+export interface InquiryShare {
+  id: string;
+  pathway_index: number;
+  style: "tide" | "paper" | "sky";
+  code: string;
+  created_at: string;
+  stopped_at: string | null;
+}
+
 export interface Person {
   id: string;
   first_name: string;

@@ -5,6 +5,7 @@ import { PacificaLogo } from "@/components/PacificaLogo";
 import { PathwayJourney } from "@/components/PathwayJourney";
 import type { GeneratedPathway } from "@/lib/types";
 import "@/components/family-pathways.css";
+import { ShareStudio, type ShareAction } from "./ShareStudio";
 import "./family-welcome.css";
 
 const WORDS = ["", "One", "Two", "Three", "Four", "Five", "Six"];
@@ -26,7 +27,7 @@ export interface WelcomeStory {
  */
 export function FamilyWelcome({
   familyName, parentFirstName, childFirstName, currentSchool, oneThing, matches,
-  stories, sameSchool, pathways, cardUrl, referralUrl, moreWithApplication = false,
+  stories, sameSchool, pathways, cardBase, share, stopSharing, moreWithApplication = false,
 }: {
   familyName: string;
   parentFirstName: string;
@@ -37,18 +38,16 @@ export function FamilyWelcome({
   stories: WelcomeStory[];
   sameSchool: boolean;
   pathways: GeneratedPathway[] | null;
-  /** Base URL of the share-card image; ?p=<index>&format=<feed|story|og> is added. */
-  cardUrl: string;
-  referralUrl: string;
+  /** Base URL of the card image; ?p=&style=&format= are added. */
+  cardBase: string;
+  /** The family's own page: makes a public share. Absent in the staff preview. */
+  share?: ShareAction;
+  stopSharing?: () => Promise<{ ok: boolean }>;
   /** An inquiry gets two pathways; say more come with the application. */
   moreWithApplication?: boolean;
 }) {
   const [selected, setSelected] = useState(0);
-  const [copied, setCopied] = useState(false);
   const pathway = pathways?.[selected];
-  const [post, setPost] = useState(
-    `We're exploring Pacifica Christian for ${childFirstName}. Here's one way they could grow there. If you're curious about Pacifica for your own family, start here: ${referralUrl}`
-  );
 
   return (
     <div className="family-experience">
@@ -133,6 +132,7 @@ export function FamilyWelcome({
           </div>
           {pathways && (
             <p>
+              {share && <><a className="fw-jump" href="#share">Share it ↓</a>{" "}</>}
               Invitations, not predictions.
               {moreWithApplication
                 ? ` From one thing you told us. When ${childFirstName} applies, we'll draft more from everything you share.`
@@ -172,44 +172,15 @@ export function FamilyWelcome({
       </section>
 
       {pathways && pathway && (
-        <section className="family-choices fw-section">
-          <div className="family-section-heading">
-            <div>
-              <p className="family-eyebrow">If you&apos;d like to share it</p>
-              <h2>Share {childFirstName}&apos;s pathway</h2>
-            </div>
-            <p>First name only. You choose what to post.</p>
-          </div>
-          <div className="fw-share">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="fw-card" src={`${cardUrl}?p=${selected}&format=feed`} alt={`Share card: ${childFirstName}, ${pathway.name}`} />
-            <div className="fw-share-copy">
-              <label htmlFor="fw-post" className="fw-label">Your post</label>
-              <textarea id="fw-post" className="fw-post" value={post} onChange={(e) => setPost(e.target.value)} rows={6} />
-              <p className="fw-label">Your link</p>
-              <div className="fw-link">
-                <code>{referralUrl}</code>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(referralUrl);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 1500);
-                    } catch {
-                      setCopied(false);
-                    }
-                  }}
-                >
-                  {copied ? "Copied" : "Copy"}
-                </button>
-              </div>
-              <p className="fw-fine">
-                Families who inquire through your link are connected to yours, so we can thank you.
-              </p>
-            </div>
-          </div>
-        </section>
+        <ShareStudio
+          childFirstName={childFirstName}
+          pathwayNames={pathways.map((p) => p.name)}
+          selected={selected}
+          onSelect={setSelected}
+          cardBase={cardBase}
+          share={share}
+          stopSharing={stopSharing}
+        />
       )}
 
       <footer className="family-footer">

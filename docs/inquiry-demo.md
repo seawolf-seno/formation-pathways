@@ -39,6 +39,16 @@ your school".
 graduate stories, the signed pathway as a journey, and a share card with their own
 referral link.
 
+## 5. Send it and share it, as the family would
+
+1. On the inquiry page, **Make the family's link** and open it (no sign-in needed: try it on
+   your phone).
+2. Scroll to **Share**: pick a look and a size. On a phone, **Share** opens your share sheet
+   with the image attached. Try saving the Story image and posting it to a private account.
+3. Open the shared link (`/w/…`) in another browser: that's what friends see. **Tell us
+   about your child** opens the form with the family's code, and a test inquiry from there
+   shows "Shared by…" in the inbox.
+
 ## Questions to answer while you test
 
 - Does the pathway sound like the child the parent described, or like any child?
@@ -54,5 +64,5 @@ referral link.
 - **AI for real families is off** until the Anthropic terms for student data are
   confirmed (`AI_REAL_STUDENTS=on`, Fizzy #22). Until then a real inquiry can be
   received and sent to Finalsite, but not drafted.
-- **Sending the page to a family** (emailed link) and the referral thank-you are the next PR.
+- **The referral thank-you** needs leadership. Staff send the family's link from their own email for now.
 - The graduate stories are the demo's fictional set; real ones need graduates' consent.

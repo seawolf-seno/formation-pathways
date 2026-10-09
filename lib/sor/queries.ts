@@ -11,7 +11,9 @@ import type {
   StaffListEntry,
   StaffMember,
   Inquiry,
+  InquiryFamilyLink,
   InquiryPathway,
+  InquiryShare,
 } from "./types";
 import type { FunnelCount } from "./funnel";
 import { validateStudentSparks } from "./sparks";
@@ -290,12 +292,25 @@ export async function getStaffOrNull(): Promise<StaffMember | null> {
 }
 
 /** One inquiry and its pathway drafts (newest first). RLS: admin and admissions. */
-export async function getInquiry(id: string): Promise<{ inquiry: Inquiry; drafts: InquiryPathway[] } | null> {
+export async function getInquiry(id: string): Promise<{
+  inquiry: Inquiry;
+  drafts: InquiryPathway[];
+  familyLinks: InquiryFamilyLink[];
+  shares: InquiryShare[];
+} | null> {
   const supabase = await getSorClient();
-  const [{ data: inquiry }, { data: drafts }] = await Promise.all([
+  const [{ data: inquiry }, { data: drafts }, { data: links }, { data: shares }] = await Promise.all([
     supabase.from("inquiries").select("*").eq("id", id).maybeSingle(),
     supabase.from("inquiry_pathways").select("*").eq("inquiry_id", id).order("created_at", { ascending: false }),
+    // Empty (not an error) until 20261011000000_family_share.sql is applied.
+    supabase.from("inquiry_family_links").select("id, created_at, expires_at").eq("inquiry_id", id).order("created_at", { ascending: false }),
+    supabase.from("inquiry_shares").select("id, pathway_index, style, code, created_at, stopped_at").eq("inquiry_id", id).order("created_at"),
   ]);
   if (!inquiry) return null;
-  return { inquiry: inquiry as Inquiry, drafts: (drafts ?? []) as InquiryPathway[] };
+  return {
+    inquiry: inquiry as Inquiry,
+    drafts: (drafts ?? []) as InquiryPathway[],
+    familyLinks: (links ?? []) as InquiryFamilyLink[],
+    shares: (shares ?? []) as InquiryShare[],
+  };
 }

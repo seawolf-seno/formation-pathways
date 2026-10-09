@@ -3,8 +3,8 @@
 import { useState, useTransition } from "react";
 import { DRAFT_LOST, DraftWait, useElapsed } from "./DraftWait";
 import {
-  addDemoFamiliesAction, addSampleInquiryAction, draftInquiryPathwayAction, setInquiriesApprovalAction,
-  signInquiryPathwayAction, updateInquiryStatusAction,
+  addDemoFamiliesAction, addSampleInquiryAction, createFamilyLinkAction, draftInquiryPathwayAction, endFamilyLinksAction,
+  setInquiriesApprovalAction, signInquiryPathwayAction, updateInquiryStatusAction,
 } from "@/lib/sor/actions";
 import { PATHWAY_PLAN, type GeneratedPathway } from "@/lib/types";
 import { INQUIRY_STATUSES, type InquiryStatus, type PilotSettings } from "@/lib/sor/types";
@@ -234,6 +234,101 @@ export function InquiryDraftReview({
           pathway can&apos;t be edited.
         </span>
       </div>
+      {error && <p className="text-xs text-red-700">{error}</p>}
+    </div>
+  );
+}
+
+const longDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "long", day: "numeric" });
+
+/** After signing: make the family's private link, and the email to send it in. */
+export function FamilyLinkPanel({
+  inquiryId, parentFirstName, parentEmail, childFirstName, pathwayCount, staffName, links,
+}: {
+  inquiryId: string;
+  parentFirstName: string;
+  parentEmail: string;
+  childFirstName: string;
+  pathwayCount: number;
+  staffName: string;
+  links: { id: string; created_at: string; expires_at: string }[];
+}) {
+  const [made, setMade] = useState<{ url: string; expiresAt: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState<"link" | "email" | null>(null);
+  const [pending, start] = useTransition();
+  const live = links.filter((l) => new Date(l.expires_at) > new Date());
+
+  const subject = `${childFirstName}'s Formation Pathway from Pacifica`;
+  const body = made
+    ? `Dear ${parentFirstName},\n\nThank you for telling us about ${childFirstName}. From what you shared, we drafted ${pathwayCount === 1 ? "a way" : `${pathwayCount} ways`} ${childFirstName} could grow at Pacifica, and I read and signed ${pathwayCount === 1 ? "it" : "them"} myself:\n\n${made.url}\n\nThe page is just for your family and works until ${longDate(made.expiresAt)}. If you'd like to share ${childFirstName}'s pathway with friends, there's a Share button on the page. When ${childFirstName} applies, we'll draft more from everything you tell us.\n\nWarmly,\n${staffName}`
+    : "";
+  const copy = async (what: "link" | "email", text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(what);
+      setTimeout(() => setCopied(null), 1600);
+    } catch {
+      setCopied(null);
+    }
+  };
+
+  return (
+    <div className="space-y-3 text-sm">
+      {!made ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            className={button}
+            disabled={pending}
+            onClick={() => start(async () => {
+              const res = await createFamilyLinkAction(inquiryId);
+              if (res.ok) {
+                setMade({ url: res.url, expiresAt: res.expiresAt });
+                setError(null);
+              } else setError(res.error);
+            })}
+          >
+            {pending ? "Making the link…" : live.length ? "Make a new link" : "Make the family's link"}
+          </button>
+          <span className="text-xs text-[var(--color-ink-muted)]">
+            {live.length
+              ? `${live.length} link${live.length === 1 ? "" : "s"} already sent, the newest until ${longDate(live[0].expires_at)}. A link is shown once; make a new one to send again.`
+              : "A private page for this family: no sign-in, works for 60 days."}
+          </span>
+        </div>
+      ) : (
+        <div className="space-y-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-pacific-light,#eaf1f8)] p-4">
+          <p className="font-medium text-[var(--color-navy-ink)]">The family&apos;s link (shown once, works until {longDate(made.expiresAt)})</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <code className="max-w-full break-all rounded bg-white px-2 py-1 text-xs">{made.url}</code>
+            <button className={quiet} onClick={() => copy("link", made.url)}>{copied === "link" ? "Copied" : "Copy link"}</button>
+            <a className={quiet} href={made.url} target="_blank" rel="noopener noreferrer">Open it</a>
+          </div>
+          <details>
+            <summary className="cursor-pointer font-medium text-[var(--color-navy-ink)]">An email to send it in</summary>
+            <pre className="mt-2 whitespace-pre-wrap rounded bg-white p-3 font-sans text-sm leading-relaxed">{`To: ${parentEmail}\nSubject: ${subject}\n\n${body}`}</pre>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button className={quiet} onClick={() => copy("email", body)}>{copied === "email" ? "Copied" : "Copy the email"}</button>
+              <a className={quiet} href={`mailto:${encodeURIComponent(parentEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`}>
+                Open in my email
+              </a>
+            </div>
+          </details>
+        </div>
+      )}
+      {live.length > 0 && (
+        <button
+          className="text-xs text-[var(--color-ink-muted)] underline"
+          disabled={pending}
+          onClick={() => start(async () => {
+            const res = await endFamilyLinksAction(inquiryId);
+            if (res.ok) setMade(null);
+            setError(res.ok ? null : res.error);
+          })}
+        >
+          End this family&apos;s links
+        </button>
+      )}
       {error && <p className="text-xs text-red-700">{error}</p>}
     </div>
   );

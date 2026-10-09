@@ -200,6 +200,16 @@ adults behind the scenes; students stay present, in person, with people.
   combination/why-now rules and max tokens). Measured on sonnet-4-6: 2 pathways ≈ 49s,
   6 ≈ 108s. While drafting, staff see `components/sor/SeawolfSurf.tsx` (original SVG, not
   the mascot artwork) with a clock; pathway calls stop at 230s inside `maxDuration = 300`.
+- **Family page and sharing (2026-10-08, branch `seno/family-share`, card #29)**: after
+  signing, admissions makes a private family link (`inquiry_family_links`, hash only, 60
+  days) from the inquiry page, with a ready email. `/welcome/[token]` (public, no sign-in)
+  is the family's page with a share studio: pathway, look (tide/paper/sky), post/story,
+  one Share button (native share sheet with the image on phones), network links, saved
+  image, editable words, Stop sharing. Public `/w/[code]` (GET-only) shows first name + one
+  signed pathway, unfurls with an OG card, and links to `/discover?ref=`. All reads/writes
+  through `family_page`/`family_share`/`family_stop_sharing`/`public_share`. Cards:
+  `lib/family-card.tsx`. **Needs seno to apply `20261011000000_family_share.sql`.**
+  `docs/family-sharing.md`.
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)

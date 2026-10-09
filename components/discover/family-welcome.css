@@ -38,34 +38,4 @@
 .fw-journey { margin-top: 32px; max-width: 820px; }
 .fw-journey-name { margin: 0 0 18px; font-family: var(--font-display), Georgia, serif; font-size: 28px; font-weight: 500; }
 
-.fw-share { display: grid; grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); gap: 32px; align-items: start; }
-@media (max-width: 760px) { .fw-share { grid-template-columns: 1fr; } }
-.fw-card { width: 100%; max-width: 100%; height: auto; aspect-ratio: 4 / 5; border: 1px solid #16324f26; background: #fff; }
-.fw-label { display: block; margin: 0 0 6px; font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-.fw-post {
-  width: 100%;
-  font: inherit;
-  font-size: 15.5px;
-  line-height: 1.55;
-  color: var(--ink);
-  background: #fffdf8;
-  border: 1px solid #16324f40;
-  border-radius: 3px;
-  padding: 12px;
-  margin-bottom: 18px;
-  resize: vertical;
-}
-.fw-link { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.fw-link code { font-size: 14px; padding: 8px 10px; background: #fffdf8; border: 1px solid #16324f26; border-radius: 3px; overflow-wrap: anywhere; }
-.fw-link button {
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 8px 14px;
-  border: 0;
-  border-radius: 3px;
-  background: var(--ink);
-  color: #fff;
-  cursor: pointer;
-}
-.fw-fine { margin: 12px 0 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.fw-jump { display: inline-block; margin-right: 6px; font-weight: 600; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
