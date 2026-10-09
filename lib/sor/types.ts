@@ -249,6 +249,8 @@ export interface ImportRun {
 /** Everything the system of record knows about one person, as far as the
  *  signed-in staff member's role allows (RLS returns nothing otherwise). */
 export interface PersonProfile {
+  /** Same person identity; STEM contributions update this profile directly. */
+  stem?: { member: import("../stem").StemMember | null; work: import("../stem").StemWork[]; mentorNames: string[] };
   person: Person;
   externalIds: ExternalId[];
   consents: Consent[];

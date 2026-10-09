@@ -109,6 +109,18 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
 
       <div className="grid gap-6 lg:grid-cols-[1fr_20rem]">
         <div className="space-y-6">
+          {profile.stem?.member && (
+            <Section title="STEM Scholars" source="Projects and mentor conversations">
+              <p className="mb-3 text-sm">{profile.stem.member.status === "distinction" ? `Distinction reviewed by ${profile.stem.member.distinction_by}` : profile.stem.member.status === "active" ? "Active STEM Scholar" : "Application in progress"}</p>
+              {profile.stem.work.filter(w => w.kind === "project" || w.kind === "evidence").slice(0, 4).map(w => (
+                <div className="mb-3 rounded-lg bg-[var(--color-canvas)] p-3 text-sm" key={w.id}>
+                  <strong>{w.title}</strong><p>{w.body}</p>{w.next_step && <p className="mt-1">Next: {w.next_step}</p>}
+                  {w.approved_by && <p className="mt-1 text-xs">Evidence reviewed by {w.approved_by}</p>}
+                </div>
+              ))}
+              <Link href={`/stem?person=${id}`} className="text-sm font-semibold underline">Open STEM Scholars work →</Link>
+            </Section>
+          )}
           <div id="spark" className="scroll-mt-6">
             <Section title="What lights them up" source="Spark, in their words">
               {!canReadSparks ? (

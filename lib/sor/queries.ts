@@ -17,6 +17,7 @@ import type {
 } from "./types";
 import type { FunnelCount } from "./funnel";
 import { validateStudentSparks } from "./sparks";
+import { getStemProfile } from "./stem-queries";
 
 /** The signed-in, active staff member, or a redirect to /login. Signed in
  *  and waiting for an admin → /login?error=pending; not on the staff table at
@@ -169,6 +170,7 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
   // A failed read must never pass for "nothing there": say so in the logs.
   if (sparks.error) console.error("student_sparks read failed:", sparks.error.message);
   return {
+    stem: await getStemProfile(id),
     person: person as Person,
     externalIds: externalIds.data ?? [],
     consents: consents.data ?? [],

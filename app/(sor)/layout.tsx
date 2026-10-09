@@ -16,6 +16,9 @@ export default async function SorLayout({ children }: { children: React.ReactNod
             <span className="hidden font-display text-lg text-white sm:inline">Formation Pathways</span>
           </Link>
           <nav className="flex items-center gap-4 text-sm">
+            {["admin", "admissions", "teacher"].includes(staff.role) && (
+              <Link href="/stem" className="font-medium text-[var(--color-pacific)] hover:text-white">STEM</Link>
+            )}
             <Link href="/capture" className="font-medium text-[var(--color-pacific)] hover:text-white">
               Capture
             </Link>
