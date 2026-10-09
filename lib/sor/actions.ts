@@ -549,6 +549,8 @@ export async function updateInquiryStatusAction(id: string, status: string): Pro
     if (!data?.length) throw new Error("That inquiry isn't available.");
     await logAccess(staff, "inquiry_status", null, { inquiry: id, status });
     revalidatePath("/pilot/inquiries");
+    revalidatePath("/pilot/inquiries/referrals");
+    revalidatePath(`/pilot/inquiries/${id}`);
     return { ok: true };
   } catch (e) {
     return fail(e);
@@ -704,6 +706,99 @@ export async function createFamilyLinkAction(inquiryId: string): Promise<Result<
     await logAccess(staff, "inquiry_family_link", null, { inquiry: inquiryId });
     revalidatePath(`/pilot/inquiries/${inquiryId}`);
     return { ok: true, url: `${await requestOrigin()}/welcome/${token}`, expiresAt: data.expires_at };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ---------------------------------------------------------------- referrals and thank-yous
+
+/** Admin records leadership's decision on referral thank-yous (what, when,
+ *  how many), or turns them off. The database refuses cash and an
+ *  unrecorded approval. docs/referrals.md. */
+export async function setReferralThanksDecisionAction(formData: FormData): Promise<Result> {
+  try {
+    const staff = await requireRole("admin");
+    const open = formData.get("open") === "true";
+    const what = String(formData.get("what") ?? "").trim();
+    const on = formData.get("on") === "enrolled" ? "enrolled" : "applied";
+    const cap = Number(formData.get("cap"));
+    const approvedBy = String(formData.get("approved_by") ?? "").trim();
+    const reference = String(formData.get("approval_reference") ?? "").trim();
+    if (open && (!what || !approvedBy || !reference)) {
+      return { ok: false, error: "Enter what the thank-you is, who approved it and where that approval lives." };
+    }
+    if (open && !(Number.isInteger(cap) && cap >= 1 && cap <= 10)) return { ok: false, error: "The cap is 1 to 10 per family." };
+    const supabase = await getSorClient();
+    const { error } = await supabase
+      .from("pilot_settings")
+      .update(
+        open
+          ? {
+              referral_thanks_open: true,
+              referral_thanks_what: what,
+              referral_thanks_on: on,
+              referral_thanks_cap: cap,
+              referral_thanks_approved_by: approvedBy,
+              referral_thanks_approval_reference: reference,
+              referral_thanks_approved_at: new Date().toISOString(),
+            }
+          : { referral_thanks_open: false }
+      )
+      .eq("id", true);
+    if (error) {
+      if (/referral_thanks_not_cash/.test(error.message)) return { ok: false, error: "A thank-you can't be cash or a cash equivalent." };
+      return fail(error);
+    }
+    await logAccess(staff, open ? "referral_thanks_open" : "referral_thanks_close", null, open ? { what, on, cap, approvedBy, reference } : {});
+    revalidatePath("/pilot/inquiries/referrals");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Admissions confirms that a family came through another family's link.
+ *  The database checks it's the code that brought them and not the same family. */
+export async function confirmReferralAction(referredInquiryId: string): Promise<Result> {
+  try {
+    const staff = await requireRole("admin", "admissions");
+    const supabase = await getSorClient();
+    const { data: referred } = await supabase.from("inquiries").select("id, referred_by_code").eq("id", referredInquiryId).maybeSingle();
+    if (!referred?.referred_by_code) throw new Error("This family didn't come through another family's link.");
+    const { data: referrer } = await supabase.from("inquiries").select("id").eq("share_code", referred.referred_by_code).maybeSingle();
+    if (!referrer) throw new Error("The family whose link it was isn't available.");
+    const { error } = await supabase
+      .from("referral_thanks")
+      .insert({ referred_inquiry_id: referred.id, referrer_inquiry_id: referrer.id });
+    if (error) return fail(error.code === "23505" ? new Error("Already confirmed.") : error);
+    await logAccess(staff, "referral_confirm", null, { inquiry: referred.id, referrer: referrer.id });
+    revalidatePath("/pilot/inquiries/referrals");
+    revalidatePath(`/pilot/inquiries/${referred.id}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** The next step for a thank-you: approve, record it sent, or decline with a
+ *  note. The database records who did each step and enforces the rules. */
+export async function stepReferralThanksAction(id: string, step: "approved" | "sent" | "declined", note?: string): Promise<Result> {
+  try {
+    const staff = await requireRole("admin", "admissions");
+    if (!["approved", "sent", "declined"].includes(step)) throw new Error("Unknown step.");
+    const supabase = await getSorClient();
+    const { data, error } = await supabase
+      .from("referral_thanks")
+      .update({ status: step, ...(step === "declined" ? { note: (note ?? "").trim().slice(0, 500) } : {}) })
+      .eq("id", id)
+      .select("id, referred_inquiry_id");
+    if (error) return fail(error);
+    if (!data?.length) throw new Error("That referral isn't available.");
+    await logAccess(staff, `referral_thanks_${step}`, null, { referral: id });
+    revalidatePath("/pilot/inquiries/referrals");
+    revalidatePath(`/pilot/inquiries/${data[0].referred_inquiry_id}`);
+    return { ok: true };
   } catch (e) {
     return fail(e);
   }

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getInquiry, logAccess, requireStaff } from "@/lib/sor/queries";
-import { DraftInquiryPathwayButton, FamilyLinkPanel, InquiryDraftReview, InquiryStatusPicker } from "@/components/sor/InquiryControls";
+import { getInquiries, getInquiry, getPilotSettings, getReferralThanks, logAccess, requireStaff } from "@/lib/sor/queries";
+import { DraftInquiryPathwayButton, FamilyLinkPanel, InquiryDraftReview, InquiryStatusPicker, ReferralSteps } from "@/components/sor/InquiryControls";
 import { PALETTES } from "@/lib/family-share";
 import { describeSent, inquiryInput } from "@/lib/sor/ai-input";
 import { SentToAi } from "@/components/sor/SentToAi";
@@ -28,6 +28,11 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
   if (!found) notFound();
   const { inquiry: i, drafts, familyLinks, shares } = found;
   await logAccess(staff, "view_inquiry", null, { inquiry: i.id });
+  // Referrals: the family whose link brought this one, and the families this one brought.
+  const [settings, all, referrals] = await Promise.all([getPilotSettings(), getInquiries(), getReferralThanks()]);
+  const referrer = i.referred_by_code ? all.find((x) => x.share_code === i.referred_by_code) : undefined;
+  const brought = all.filter((x) => x.referred_by_code === i.share_code);
+  const referral = referrals.find((r) => r.referred_inquiry_id === i.id) ?? null;
 
   const signed = drafts.find((d) => d.status === "approved");
   const latestDraft = drafts.find((d) => d.status === "draft");
@@ -110,6 +115,7 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
             inquiryId={i.id}
             parentFirstName={i.parent_first_name}
             parentEmail={i.parent_email}
+            parentPhone={i.parent_phone}
             childFirstName={i.child_first_name}
             pathwayCount={signed.pathways.length}
             staffName={staff.display_name}
@@ -131,6 +137,44 @@ export default async function InquiryPage({ params }: { params: Promise<{ id: st
                 ))}
               </ul>
             </div>
+          )}
+        </section>
+      )}
+      {(referrer || brought.length > 0) && (
+        <section className="rounded-xl border border-[var(--color-border)] bg-white p-5">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="font-display text-lg text-[var(--color-navy-ink)]">Referral</h2>
+            <Link href="/pilot/inquiries/referrals" className="text-sm font-medium text-[var(--color-navy-ink)] underline">All referrals →</Link>
+          </div>
+          {referrer && (
+            <div className="space-y-3">
+              <p className="text-sm">
+                Inquired through{" "}
+                <Link href={`/pilot/inquiries/${referrer.id}`} className="underline">the {referrer.parent_last_name} family&apos;s</Link> shared
+                pathway ({i.referred_by_code}).
+              </p>
+              <ReferralSteps
+                referredId={i.id}
+                referral={referral}
+                referredStatus={i.status}
+                thanksOn={settings.referral_thanks_on}
+                thanksAllowed={i.is_sample || settings.referral_thanks_open}
+                thanksWhat={settings.referral_thanks_what}
+                referrerName={`the ${referrer.parent_last_name} family`}
+              />
+            </div>
+          )}
+          {brought.length > 0 && (
+            <p className={`text-sm ${referrer ? "mt-4 border-t border-[var(--color-border)] pt-3" : ""}`}>
+              Brought {brought.length} {brought.length === 1 ? "family" : "families"}:{" "}
+              {brought.map((b, n) => (
+                <span key={b.id}>
+                  {n > 0 && ", "}
+                  <Link href={`/pilot/inquiries/${b.id}`} className="underline">{b.child_first_name} {b.child_last_name}</Link>
+                </span>
+              ))}
+              .
+            </p>
           )}
         </section>
       )}

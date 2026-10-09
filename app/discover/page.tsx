@@ -1,6 +1,8 @@
 import { connection } from "next/server";
 import { PacificaLogo } from "@/components/PacificaLogo";
-import { InquiryForm } from "@/components/discover/InquiryForm";
+import { DiscoverFlow } from "@/components/discover/DiscoverFlow";
+import "@/components/family-pathways.css";
+import "@/components/discover/family-welcome.css";
 import { cleanRef, cleanSource, entryYears } from "@/lib/discover";
 import { getSorClient, isSorConfigured } from "@/lib/sor/supabase-server";
 import { getStaffOrNull } from "@/lib/sor/queries";
@@ -47,6 +49,26 @@ export default async function DiscoverPage({
   // Signed-in admissions always get test mode: their inquiries are samples.
   const testMode = staff?.role === "admin" || staff?.role === "admissions";
 
+  const intro = (
+    <header className="dsc-intro">
+      <p className="dsc-eyebrow">Discover Pacifica</p>
+      <h1>
+        Tell us about your child. <em>We&apos;ll show you where they could grow.</em>
+      </h1>
+      <p className="dsc-lede">
+        Every student at Pacifica starts somewhere particular: a project, a question, a team, a habit nobody else
+        has. Start there.
+      </p>
+      {!embed && (
+        <ol className="dsc-promise">
+          <li><b>1</b><span>Tell us a little about your child, in your own words.</span></li>
+          <li><b>2</b><span>Our admissions team reads it and gets in touch.</span></li>
+          <li><b>3</b><span>If you&apos;d like, we prepare a Formation Pathway: where your child could grow here, built from what you shared.</span></li>
+        </ol>
+      )}
+    </header>
+  );
+
   return (
     <main className={`dsc${embed ? " is-embed" : ""}`}>
       {!embed && (
@@ -58,28 +80,17 @@ export default async function DiscoverPage({
           </div>
         </div>
       )}
-      <div className="dsc-wrap">
-        <header className="dsc-intro">
-          <p className="dsc-eyebrow">Discover Pacifica</p>
-          <h1>
-            Tell us about your child. <em>We&apos;ll show you where they could grow.</em>
-          </h1>
-          <p className="dsc-lede">
-            Every student at Pacifica starts somewhere particular: a project, a question, a team, a habit nobody else
-            has. Start there.
-          </p>
-          {!embed && (
-            <ol className="dsc-promise">
-              <li><b>1</b><span>Tell us a little about your child, in your own words.</span></li>
-              <li><b>2</b><span>Our admissions team reads it and gets in touch.</span></li>
-              <li><b>3</b><span>If you&apos;d like, we prepare a Formation Pathway: where your child could grow here, built from what you shared.</span></li>
-            </ol>
-          )}
-        </header>
-
-        {open || testMode ? (
-          <InquiryForm years={entryYears()} source={cleanSource(q.src)} referral={cleanRef(q.ref)} testMode={testMode} />
-        ) : (
+      {open || testMode ? (
+        <DiscoverFlow
+          intro={intro}
+          years={entryYears()}
+          source={cleanSource(q.src)}
+          referral={cleanRef(q.ref)}
+          testMode={testMode}
+        />
+      ) : (
+        <div className="dsc-wrap">
+          {intro}
           <section className="dsc-thanks">
             <p className="dsc-eyebrow" style={{ marginTop: 0 }}>Opening soon</p>
             <h2>This form isn&apos;t open yet.</h2>
@@ -90,8 +101,8 @@ export default async function DiscoverPage({
               <a className="dsc-link" href={WEBSITE_INQUIRY} target="_top">Request information from Pacifica</a>
             </p>
           </section>
-        )}
-      </div>
+        </div>
+      )}
     </main>
   );
 }

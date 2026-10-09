@@ -210,6 +210,18 @@ adults behind the scenes; students stay present, in person, with people.
   through `family_page`/`family_share`/`family_stop_sharing`/`public_share`. Cards:
   `lib/family-card.tsx`. **Needs seno to apply `20261011000000_family_share.sql`.**
   `docs/family-sharing.md`.
+- **Inquiry flow complete (2026-10-09, branch `seno/inquiry-complete`, card #29)**: instant
+  welcome right after `/discover` (no AI: their words, programs, `FIRST_WEEK` placeholder for
+  admissions to rewrite, what happens next); "Email it to …" / "Text it" from the inquiry page
+  (staff's own mail app, by name; no email service); guardian confirmation before any share
+  (`family_share(…, p_guardian)`); reward disclosure on shares and `/w` while thank-yous are on
+  (`withDisclosure`); referrals at `/pilot/inquiries/referrals` (`referral_thanks`: confirm →
+  approve → sent/declined, DB-enforced real referral, no self-referral, cap, no cash, off for
+  real families until an admin records leadership's decision); counts-only "How it's going"
+  report (`lib/inquiry-report.ts`, 1–4 hidden); phone-card inbox; DB throttle on
+  `submit_inquiry`. **Needs seno to apply `20261012000000_referral_thanks.sql`.** Phone test
+  for admissions: `docs/admissions-phone-test.md`; what's left (decisions, drafts, shot list,
+  design review, 5-family pilot, Vercel Firewall rule): `docs/inquiry-launch.md`.
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)

@@ -3,7 +3,7 @@ import { getInquiry, logAccess, requireStaff } from "@/lib/sor/queries";
 import { getConsentedAlumniStories } from "@/lib/queries";
 import { syncDemoDb } from "@/lib/demo-persist";
 import { pickStories } from "@/lib/inquiry";
-import { welcomeMatches } from "@/lib/discover";
+import { FIRST_WEEK, welcomeMatches } from "@/lib/discover";
 import { FamilyWelcome } from "@/components/discover/FamilyWelcome";
 
 export const metadata = { title: "What the family sees · Formation Pathways" };
@@ -48,6 +48,8 @@ export default async function FamilyPreviewPage({ params }: { params: Promise<{ 
         pathways={signed?.pathways ?? null}
         cardBase={`/pilot/inquiries/${i.id}/card`}
         moreWithApplication
+        firstWeek={FIRST_WEEK}
+        pathwayRequested={i.consent_pathway}
       />
     </>
   );

@@ -10,11 +10,52 @@
 import { randomBytes } from "crypto";
 import { getSorClient, isSorConfigured } from "@/lib/sor/supabase-server";
 import { getStaffOrNull, logAccess } from "@/lib/sor/queries";
-import { validateInquiry, type InquiryErrors } from "@/lib/discover";
+import { validateInquiry, welcomeMatches, type InquiryErrors, type InquiryPayload } from "@/lib/discover";
+import { getConsentedAlumniStories } from "@/lib/queries";
+import { syncDemoDb } from "@/lib/demo-persist";
+import { pickStories } from "@/lib/inquiry";
+import type { WelcomeStory } from "@/components/discover/FamilyWelcome";
 
-export type InquiryResult =
-  | { ok: true; childFirstName: string; parentFirstName: string; oneThing: string; testInquiryId?: string }
-  | { ok: false; error: string; errors?: InquiryErrors };
+/** Everything the welcome page straight after the form needs: built from
+ *  what the family just sent, with no AI. */
+export interface InquiryWelcome {
+  childFirstName: string;
+  parentFirstName: string;
+  familyName: string;
+  currentSchool: string | null;
+  oneThing: string;
+  consentPathway: boolean;
+  matches: { program: string; line: string }[];
+  stories: WelcomeStory[];
+  sameSchool: boolean;
+  testInquiryId?: string;
+}
+
+export type InquiryResult = ({ ok: true } & InquiryWelcome) | { ok: false; error: string; errors?: InquiryErrors };
+
+/** Graduate stories are the demo's invented set, so only fictional samples
+ *  (test mode) get them; a real family sees none until real ones are consented. */
+async function welcome(p: InquiryPayload, sample: boolean): Promise<InquiryWelcome> {
+  let stories: WelcomeStory[] = [];
+  let sameSchool = false;
+  if (sample) {
+    await syncDemoDb();
+    const picked = pickStories(getConsentedAlumniStories(), p.current_school);
+    sameSchool = picked.sameSchool;
+    stories = picked.stories.map((s) => ({ firstName: s.first_name, gradYear: s.grad_year, headline: s.headline, story: s.story, whereNow: s.where_now }));
+  }
+  return {
+    childFirstName: p.child_first_name,
+    parentFirstName: p.parent_first_name,
+    familyName: p.parent_last_name,
+    currentSchool: p.current_school || null,
+    oneThing: p.one_thing,
+    consentPathway: p.consent_pathway,
+    matches: welcomeMatches(p.interests),
+    stories,
+    sameSchool,
+  };
+}
 
 /** Humans take longer than this to read and fill the form. */
 const MIN_FILL_MS = 4000;
@@ -38,15 +79,13 @@ export async function submitInquiryAction(input: Record<string, unknown>): Promi
     if (/aren't open yet/.test(error.message)) {
       return { ok: false, error: "We're not taking inquiries here just yet. Please use the school website for now." };
     }
+    if (/already have your inquiry/.test(error.message)) {
+      return { ok: false, error: "We already have your inquiries from today. Our admissions team will be in touch soon." };
+    }
     console.error("submit_inquiry refused:", error.code);
     return { ok: false, error: "We couldn't save that just now. Please try again in a minute." };
   }
-  return {
-    ok: true,
-    childFirstName: checked.payload.child_first_name,
-    parentFirstName: checked.payload.parent_first_name,
-    oneThing: checked.payload.one_thing,
-  };
+  return { ok: true, ...(await welcome(checked.payload, false)) };
 }
 
 /**
@@ -85,11 +124,5 @@ export async function submitTestInquiryAction(input: Record<string, unknown>): P
     return { ok: false, error: "We couldn't save that test inquiry." };
   }
   await logAccess(staff, "inquiry_test_submit", null, { inquiry: data.id });
-  return {
-    ok: true,
-    childFirstName: fields.child_first_name,
-    parentFirstName: fields.parent_first_name,
-    oneThing: fields.one_thing,
-    testInquiryId: data.id,
-  };
+  return { ok: true, ...(await welcome(checked.payload, true)), testInquiryId: data.id };
 }

@@ -44,6 +44,8 @@ export function isCardStyle(v: unknown): v is CardStyle {
 
 export interface PublicShare {
   firstName: string;
+  /** Pacifica thanks families for referrals: the post must say so. */
+  thanks: boolean;
   style: CardStyle;
   /** The family's referral code: /discover?ref=… */
   ref: string;
@@ -69,6 +71,7 @@ export function parsePublicShare(raw: unknown): PublicShare | null {
   if (!firstName || !name || !/^[A-Z0-9]{8}$/.test(ref) || !isCardStyle(r.style)) return null;
   return {
     firstName,
+    thanks: r.thanks === true,
     style: r.style,
     ref,
     pathway: {
@@ -117,9 +120,23 @@ export function cardContent(share: PublicShare, lineMax = 230): CardContent {
   };
 }
 
+// DRAFT for comms/legal (card #29): a post made for a reward has to say so
+// plainly (the FTC's endorsement rules). Shown only while thank-yous are on.
+export const SHARE_DISCLOSURE = "(Pacifica may send our family a thank-you if you inquire through this link.)";
+export const PAGE_DISCLOSURE =
+  "The family who shared this may receive a small thank-you from Pacifica if you inquire through their link.";
+
 /** The post a family starts from; they can rewrite it. */
-export function defaultCaption(firstName: string, pathwayName: string, url: string): string {
-  return `We're exploring Pacifica Christian, and they drew up a few ways ${firstName} could grow there. This one is "${pathwayName}." Wondering about Pacifica for your own family? Start here: ${url}`;
+export function defaultCaption(firstName: string, pathwayName: string, url: string, thanks = false): string {
+  const post = `We're exploring Pacifica Christian, and they drew up a few ways ${firstName} could grow there. This one is "${pathwayName}." Wondering about Pacifica for your own family? Start here: ${url}`;
+  return withDisclosure(post, thanks);
+}
+
+/** What's actually shared: the family's words, with the disclosure kept even
+ *  if they edited it out. */
+export function withDisclosure(text: string, thanks: boolean): string {
+  if (!thanks || text.includes(SHARE_DISCLOSURE)) return text;
+  return `${text.trimEnd()}\n\n${SHARE_DISCLOSURE}`;
 }
 
 export interface ShareTarget {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { submitInquiryAction, submitTestInquiryAction, type InquiryResult } from "@/lib/discover-actions";
+import { submitInquiryAction, submitTestInquiryAction, type InquiryWelcome } from "@/lib/discover-actions";
 import { AREAS, CONSENT_CONTACT, CONSENT_PATHWAY, GRADES, RELATIONSHIPS, SPORTS, type InquiryErrors } from "@/lib/discover";
 
 type Values = Record<string, string>;
@@ -38,13 +38,15 @@ function Field({
 }
 
 export function InquiryForm({
-  years, source, referral, testMode = false,
+  years, source, referral, testMode = false, onDone,
 }: {
   years: number[];
   source: "website" | "direct";
   referral: string | null;
   /** Signed-in admissions: saved as a fictional sample, never sent to Finalsite. */
   testMode?: boolean;
+  /** Sent: the page swaps the form for the family's welcome. */
+  onDone: (welcome: InquiryWelcome) => void;
 }) {
   const [values, setValues] = useState<Values>({ entry_year: String(years[0]), child_grade: "9", country: "United States" });
   const [interests, setInterests] = useState<Set<string>>(new Set());
@@ -52,7 +54,6 @@ export function InquiryForm({
   const [consentPathway, setConsentPathway] = useState(true);
   const [errors, setErrors] = useState<InquiryErrors>({});
   const [message, setMessage] = useState<string | null>(null);
-  const [done, setDone] = useState<Extract<InquiryResult, { ok: true }> | null>(null);
   const [pending, start] = useTransition();
   const startedAt = useRef(0);
   useEffect(() => {
@@ -84,48 +85,13 @@ export function InquiryForm({
         started_at: startedAt.current,
       });
       if (res.ok) {
-        setDone(res);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        onDone(res);
+        window.scrollTo({ top: 0 });
       } else {
         setErrors(res.errors ?? {});
         setMessage(res.error);
       }
     });
-  }
-
-  if (done) {
-    return (
-      <section className="dsc-thanks is-sent" aria-live="polite">
-        <p className="dsc-eyebrow" style={{ marginTop: 0 }}>Inquiry received</p>
-        <h2>Thank you, {done.parentFirstName}. We can&apos;t wait to meet {done.childFirstName}.</h2>
-        {done.oneThing && (
-          <blockquote className="dsc-quote">
-            {done.oneThing}
-            <cite>What you told us about {done.childFirstName}</cite>
-          </blockquote>
-        )}
-        <ol className="dsc-next">
-          <li><b>1</b><span>Someone from our admissions team reads every inquiry, and will be in touch by email.</span></li>
-          {consentPathway && (
-            <li><b>2</b><span>We&apos;ll prepare a Formation Pathway for {done.childFirstName}: where they could grow here, built from what you shared. A member of our team reviews it before it reaches you.</span></li>
-          )}
-          <li>
-            <b>{consentPathway ? 3 : 2}</b>
-            <span>
-              In the meantime, come and see us.{" "}
-              <a className="dsc-link" href="https://www.pacificachristian.org/admissions/visit-pacifica" target="_top">Visit Pacifica</a>.
-            </span>
-          </li>
-        </ol>
-        {done.testInquiryId && (
-          <p className="dsc-test">
-            Test mode: saved as a fictional sample.{" "}
-            <a className="dsc-link" href={`/pilot/inquiries/${done.testInquiryId}`} target="_top">Open it in the inbox</a>{" "}
-            to draft and sign the pathway, then see what the family gets.
-          </p>
-        )}
-      </section>
-    );
   }
 
   const err = (name: keyof InquiryErrors) =>

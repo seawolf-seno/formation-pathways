@@ -13,6 +13,8 @@ their own page and can share it in a couple of taps. Every share links back to
    and works for 60 days. Copy it, or open the ready-written email.
 2. **The family** opens `/welcome/[token]`, with no sign-in: their words back, where their child
    could start, the signed pathway, then **Share**:
+   - tick "I'm [child]'s parent or guardian, and I choose to share…": nothing is public until
+     they do (`family_share(…, p_guardian)`, stored as `guardian_confirmed_at`);
    - pick the pathway, a look (Night tide, Paper, Morning sky) and a size (Post 4:5, Story 9:16);
    - the public link is made as soon as they choose, so **Share** opens the phone's own
      share sheet at once, with the image and their words attached (Instagram, Messages,
@@ -51,7 +53,6 @@ text stays clear of the top and bottom 250px that Instagram covers.
 
 ## Open decisions for leadership
 
-1. **Guardian consent to share.** The page says what's public and offers Stop sharing, but
-   the inquiry consent wording doesn't mention sharing yet.
-2. **The referral thank-you.** The page promises only that "we can thank you".
-3. **Email delivery.** Staff send the link from their own email for now.
+See `docs/inquiry-launch.md`: consent wording, the referral thank-you and its disclosure
+(`docs/referrals.md`), and the social media policy check. Staff send the family's link from their
+own mail app ("Email it to …"), so it comes from a named person.

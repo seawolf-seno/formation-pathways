@@ -13,12 +13,14 @@ export async function familyShareAction(
   token: string,
   index: number,
   style: CardStyle,
+  guardian: boolean,
 ): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
+  if (guardian !== true) return { ok: false, error: "Only a parent or guardian can share." };
   if (!isFamilyToken(token) || !Number.isInteger(index) || index < 0 || index > 5 || !isCardStyle(style) || !isSorConfigured()) {
     return { ok: false, error: "That link isn't working. Ask admissions for a new one." };
   }
   const supabase = await getSorClient();
-  const { data, error } = await supabase.rpc("family_share", { p_token: token, p_index: index, p_style: style });
+  const { data, error } = await supabase.rpc("family_share", { p_token: token, p_index: index, p_style: style, p_guardian: true });
   if (error || typeof data !== "string") {
     if (error) console.error("family_share refused:", error.code);
     return { ok: false, error: "That link isn't working any more. Ask admissions for a new one." };
