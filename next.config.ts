@@ -63,7 +63,7 @@ const nextConfig: NextConfig = {
   // runtime, so the deployment trace can't see them. Ship them with every
   // server route.
   outputFileTracingIncludes: {
-    "/*": ["./prompts/**/*", "./fixtures/sample/**/*", "./fixtures/world-signals.json", "./supabase/migrations/**/*", "./public/brand/**/*", "./assets/fonts/**/*"],
+    "/*": ["./prompts/**/*", "./fixtures/sample/**/*", "./fixtures/world-signals.json", "./fixtures/study-library.json", "./supabase/migrations/**/*", "./public/brand/**/*", "./assets/fonts/**/*"],
   },
 };
 

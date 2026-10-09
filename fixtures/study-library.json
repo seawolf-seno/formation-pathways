@@ -1,0 +1,702 @@
+{
+  "_note": "The shared study library: free, public study links for each subject, shown beside a student's own classes at /pathway/[personId]/study. Started from Study Commons, a Pacifica student's project (github.com/TheEnigmaticPhilosopher/study-commons); links only, nothing is mirrored or stored. Faculty can edit this file. A class gets the FIRST subject whose `match` phrase appears in its title (lowercase, order matters: put the more specific subject first). A resource with `courses` shows only for classes whose title contains one of those phrases. `kind` is one of: Past exam, Practice, Open reading, Reference. URLs must start with https://. Nothing about any student belongs here.",
+  "subjects": [
+    {
+      "id": "algebra",
+      "name": "Algebra and precalculus",
+      "match": [
+        "precalc",
+        "algebra",
+        "math assessment"
+      ],
+      "resources": [
+        {
+          "title": "Algebra and Trigonometry 2e",
+          "url": "https://openstax.org/details/books/algebra-and-trigonometry-2e",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        }
+      ]
+    },
+    {
+      "id": "calculus",
+      "name": "Calculus",
+      "match": [
+        "calc"
+      ],
+      "resources": [
+        {
+          "title": "Official course archive: questions, scoring guides and sample responses",
+          "url": "https://apcentral.collegeboard.org/courses/ap-calculus-ab/exam/past-exam-questions",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Free access; copyrighted, not public domain",
+          "courses": [
+            "ap calculus ab",
+            "ap calc ab"
+          ]
+        },
+        {
+          "title": "Official course archive: questions, scoring guides and sample responses",
+          "url": "https://apcentral.collegeboard.org/courses/ap-calculus-bc/exam/past-exam-questions",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Free access; copyrighted, not public domain",
+          "courses": [
+            "ap calculus bc",
+            "ap calc bc"
+          ]
+        },
+        {
+          "title": "2026 question paper (FRQ PDF)",
+          "url": "https://apcentral.collegeboard.org/media/pdf/ap26-frq-calculus-ab.pdf",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Official released material; copyrighted, free access",
+          "courses": [
+            "ap calculus ab",
+            "ap calc ab"
+          ]
+        },
+        {
+          "title": "2026 scoring guidelines (PDF)",
+          "url": "https://apcentral.collegeboard.org/media/pdf/ap26-sg-calculus-ab.pdf",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Official released material; copyrighted, free access",
+          "courses": [
+            "ap calculus ab",
+            "ap calc ab"
+          ]
+        },
+        {
+          "title": "2025 question paper (FRQ PDF)",
+          "url": "https://apcentral.collegeboard.org/media/pdf/ap25-frq-calculus-ab.pdf",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Official released material; copyrighted, free access",
+          "courses": [
+            "ap calculus ab",
+            "ap calc ab"
+          ]
+        },
+        {
+          "title": "2025 scoring guidelines (PDF)",
+          "url": "https://apcentral.collegeboard.org/media/pdf/ap25-sg-calculus-ab.pdf",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Official released material; copyrighted, free access",
+          "courses": [
+            "ap calculus ab",
+            "ap calc ab"
+          ]
+        },
+        {
+          "title": "Calculus Volume 1",
+          "url": "https://openstax.org/details/books/calculus-volume-1",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        },
+        {
+          "title": "Calculus Volume 2",
+          "url": "https://openstax.org/details/books/calculus-volume-2",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        },
+        {
+          "title": "Related rates: lesson and exercises",
+          "url": "https://openstax.org/books/calculus-volume-1/pages/4-1-related-rates",
+          "kind": "Practice",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        },
+        {
+          "title": "Chain rule: lesson and exercises",
+          "url": "https://openstax.org/books/calculus-volume-1/pages/3-6-the-chain-rule",
+          "kind": "Practice",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        },
+        {
+          "title": "Implicit differentiation: lesson and exercises",
+          "url": "https://openstax.org/books/calculus-volume-1/pages/3-8-implicit-differentiation",
+          "kind": "Practice",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        },
+        {
+          "title": "Optimization: lesson and exercises",
+          "url": "https://openstax.org/books/calculus-volume-1/pages/4-7-applied-optimization-problems",
+          "kind": "Practice",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        }
+      ]
+    },
+    {
+      "id": "chemistry",
+      "name": "Chemistry",
+      "match": [
+        "chem"
+      ],
+      "resources": [
+        {
+          "title": "Official course archive: questions, scoring guides and sample responses",
+          "url": "https://apcentral.collegeboard.org/courses/ap-chemistry/exam/past-exam-questions",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Free access; copyrighted, not public domain",
+          "courses": [
+            "ap chemistry"
+          ]
+        },
+        {
+          "title": "2026 question paper (FRQ PDF)",
+          "url": "https://apcentral.collegeboard.org/media/pdf/ap26-frq-chemistry.pdf",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Official released material; copyrighted, free access",
+          "courses": [
+            "ap chemistry"
+          ]
+        },
+        {
+          "title": "2026 scoring guidelines (PDF)",
+          "url": "https://apcentral.collegeboard.org/media/pdf/ap26-sg-chemistry.pdf",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Official released material; copyrighted, free access",
+          "courses": [
+            "ap chemistry"
+          ]
+        },
+        {
+          "title": "2025 question paper (FRQ PDF)",
+          "url": "https://apcentral.collegeboard.org/media/pdf/ap25-frq-chemistry.pdf",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Official released material; copyrighted, free access",
+          "courses": [
+            "ap chemistry"
+          ]
+        },
+        {
+          "title": "2025 scoring guidelines (PDF)",
+          "url": "https://apcentral.collegeboard.org/media/pdf/ap25-sg-chemistry.pdf",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Official released material; copyrighted, free access",
+          "courses": [
+            "ap chemistry"
+          ]
+        },
+        {
+          "title": "Chemistry 2e",
+          "url": "https://openstax.org/details/books/chemistry-2e",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        },
+        {
+          "title": "Atoms, molecules and ions: chapter and exercises",
+          "url": "https://openstax.org/books/chemistry-2e/pages/2-introduction",
+          "kind": "Open reading",
+          "source": "OpenStax Chemistry 2e",
+          "rights": "Free online textbook; see this edition's license",
+          "courses": [
+            "ap chemistry"
+          ],
+          "group": "Unit 1: Atomic structure and properties"
+        },
+        {
+          "title": "Chemical bonding and molecular geometry: chapter and exercises",
+          "url": "https://openstax.org/books/chemistry-2e/pages/7-introduction",
+          "kind": "Open reading",
+          "source": "OpenStax Chemistry 2e",
+          "rights": "Free online textbook; see this edition's license",
+          "courses": [
+            "ap chemistry"
+          ],
+          "group": "Unit 2: Compound structure and properties"
+        },
+        {
+          "title": "Liquids and solids: chapter and exercises",
+          "url": "https://openstax.org/books/chemistry-2e/pages/10-introduction",
+          "kind": "Open reading",
+          "source": "OpenStax Chemistry 2e",
+          "rights": "Free online textbook; see this edition's license",
+          "courses": [
+            "ap chemistry"
+          ],
+          "group": "Unit 3: Properties of substances and mixtures"
+        },
+        {
+          "title": "Stoichiometry of chemical reactions: chapter and exercises",
+          "url": "https://openstax.org/books/chemistry-2e/pages/4-introduction",
+          "kind": "Open reading",
+          "source": "OpenStax Chemistry 2e",
+          "rights": "Free online textbook; see this edition's license",
+          "courses": [
+            "ap chemistry"
+          ],
+          "group": "Unit 4: Chemical reactions"
+        },
+        {
+          "title": "Kinetics: chapter and exercises",
+          "url": "https://openstax.org/books/chemistry-2e/pages/12-introduction",
+          "kind": "Open reading",
+          "source": "OpenStax Chemistry 2e",
+          "rights": "Free online textbook; see this edition's license",
+          "courses": [
+            "ap chemistry"
+          ],
+          "group": "Unit 5: Kinetics"
+        },
+        {
+          "title": "Thermochemistry: chapter and exercises",
+          "url": "https://openstax.org/books/chemistry-2e/pages/5-introduction",
+          "kind": "Open reading",
+          "source": "OpenStax Chemistry 2e",
+          "rights": "Free online textbook; see this edition's license",
+          "courses": [
+            "ap chemistry"
+          ],
+          "group": "Unit 6: Thermochemistry"
+        },
+        {
+          "title": "Fundamental equilibrium concepts: chapter and exercises",
+          "url": "https://openstax.org/books/chemistry-2e/pages/13-introduction",
+          "kind": "Open reading",
+          "source": "OpenStax Chemistry 2e",
+          "rights": "Free online textbook; see this edition's license",
+          "courses": [
+            "ap chemistry"
+          ],
+          "group": "Unit 7: Equilibrium"
+        },
+        {
+          "title": "Acid-base equilibria: chapter and exercises",
+          "url": "https://openstax.org/books/chemistry-2e/pages/14-introduction",
+          "kind": "Open reading",
+          "source": "OpenStax Chemistry 2e",
+          "rights": "Free online textbook; see this edition's license",
+          "courses": [
+            "ap chemistry"
+          ],
+          "group": "Unit 8: Acids and bases"
+        },
+        {
+          "title": "Thermodynamics: chapter and exercises",
+          "url": "https://openstax.org/books/chemistry-2e/pages/16-introduction",
+          "kind": "Open reading",
+          "source": "OpenStax Chemistry 2e",
+          "rights": "Free online textbook; see this edition's license",
+          "courses": [
+            "ap chemistry"
+          ],
+          "group": "Unit 9: Thermodynamics and electrochemistry"
+        },
+        {
+          "title": "Electrochemistry: chapter and exercises",
+          "url": "https://openstax.org/books/chemistry-2e/pages/17-introduction",
+          "kind": "Open reading",
+          "source": "OpenStax Chemistry 2e",
+          "rights": "Free online textbook; see this edition's license",
+          "courses": [
+            "ap chemistry"
+          ],
+          "group": "Unit 9: Thermodynamics and electrochemistry"
+        },
+        {
+          "title": "Buffers: lesson and exercises",
+          "url": "https://openstax.org/books/chemistry-2e/pages/14-6-buffers",
+          "kind": "Practice",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        },
+        {
+          "title": "Equilibrium constants: lesson and exercises",
+          "url": "https://openstax.org/books/chemistry-2e/pages/13-2-equilibrium-constants",
+          "kind": "Practice",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        },
+        {
+          "title": "Rate laws: lesson and exercises",
+          "url": "https://openstax.org/books/chemistry-2e/pages/12-3-rate-laws",
+          "kind": "Practice",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        }
+      ]
+    },
+    {
+      "id": "biology",
+      "name": "Biology",
+      "match": [
+        "biolog"
+      ],
+      "resources": [
+        {
+          "title": "Official course archive: questions, scoring guides and sample responses",
+          "url": "https://apcentral.collegeboard.org/courses/ap-biology/exam/past-exam-questions",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Free access; copyrighted, not public domain",
+          "courses": [
+            "ap biology"
+          ]
+        },
+        {
+          "title": "Biology for AP Courses",
+          "url": "https://openstax.org/details/books/biology-ap-courses",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        },
+        {
+          "title": "Biology 2e",
+          "url": "https://openstax.org/details/books/biology-2e",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        }
+      ]
+    },
+    {
+      "id": "physics",
+      "name": "Physics",
+      "match": [
+        "physics"
+      ],
+      "resources": [
+        {
+          "title": "College Physics 2e",
+          "url": "https://openstax.org/details/books/college-physics-2e",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        }
+      ]
+    },
+    {
+      "id": "statistics",
+      "name": "Statistics",
+      "match": [
+        "statistic"
+      ],
+      "resources": [
+        {
+          "title": "Official course archive: questions, scoring guides and sample responses",
+          "url": "https://apcentral.collegeboard.org/courses/ap-statistics/exam/past-exam-questions",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Free access; copyrighted, not public domain",
+          "courses": [
+            "ap statistics"
+          ]
+        },
+        {
+          "title": "Introductory Statistics 2e",
+          "url": "https://openstax.org/details/books/introductory-statistics-2e",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        }
+      ]
+    },
+    {
+      "id": "economics",
+      "name": "Economics",
+      "match": [
+        "econom"
+      ],
+      "resources": [
+        {
+          "title": "Macroeconomics: past questions and scoring",
+          "url": "https://apcentral.collegeboard.org/courses/ap-macroeconomics/exam/past-exam-questions",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Free access; copyrighted, not public domain",
+          "courses": [
+            "ap econ"
+          ]
+        },
+        {
+          "title": "Microeconomics: past questions and scoring",
+          "url": "https://apcentral.collegeboard.org/courses/ap-microeconomics/exam/past-exam-questions",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Free access; copyrighted, not public domain",
+          "courses": [
+            "ap econ"
+          ]
+        },
+        {
+          "title": "Principles of Economics 3e",
+          "url": "https://openstax.org/details/books/principles-economics-3e",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        }
+      ]
+    },
+    {
+      "id": "government",
+      "name": "Government",
+      "match": [
+        "government"
+      ],
+      "resources": [
+        {
+          "title": "American Government 4e",
+          "url": "https://openstax.org/details/books/american-government-4e",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        }
+      ]
+    },
+    {
+      "id": "ushistory",
+      "name": "U.S. History",
+      "match": [
+        "apush",
+        "us history",
+        "u.s. history"
+      ],
+      "resources": [
+        {
+          "title": "Official course archive: questions, scoring guides and sample responses",
+          "url": "https://apcentral.collegeboard.org/courses/ap-united-states-history/exam/past-exam-questions",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Free access; copyrighted, not public domain",
+          "courses": [
+            "ap us history",
+            "ap u.s. history",
+            "apush"
+          ]
+        },
+        {
+          "title": "U.S. History",
+          "url": "https://openstax.org/details/books/us-history",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        }
+      ]
+    },
+    {
+      "id": "history",
+      "name": "History",
+      "match": [
+        "history"
+      ],
+      "resources": [
+        {
+          "title": "Official course archive: questions, scoring guides and sample responses",
+          "url": "https://apcentral.collegeboard.org/courses/ap-european-history/exam/past-exam-questions",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Free access; copyrighted, not public domain",
+          "courses": [
+            "ap european history"
+          ]
+        },
+        {
+          "title": "World History Volume 1",
+          "url": "https://openstax.org/details/books/world-history-volume-1",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        },
+        {
+          "title": "World History Volume 2",
+          "url": "https://openstax.org/details/books/world-history-volume-2",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        }
+      ]
+    },
+    {
+      "id": "latin",
+      "name": "Latin",
+      "match": [
+        "latin"
+      ],
+      "resources": [
+        {
+          "title": "Latin texts, vocabulary and commentary",
+          "url": "https://dcc.dickinson.edu/",
+          "kind": "Reference",
+          "source": "Dickinson College Commentaries",
+          "rights": "Free scholarly editions; see each edition's license"
+        },
+        {
+          "title": "Greek and Roman texts and dictionaries",
+          "url": "https://www.perseus.tufts.edu/hopper/",
+          "kind": "Reference",
+          "source": "Perseus Digital Library",
+          "rights": "Free access; rights vary by text and edition"
+        }
+      ]
+    },
+    {
+      "id": "philosophy",
+      "name": "Philosophy",
+      "match": [
+        "philosophy"
+      ],
+      "resources": [
+        {
+          "title": "Stanford Encyclopedia of Philosophy",
+          "url": "https://plato.stanford.edu/",
+          "kind": "Reference",
+          "source": "Stanford University",
+          "rights": "Free access; publisher terms apply"
+        },
+        {
+          "title": "Introduction to Philosophy",
+          "url": "https://openstax.org/details/books/introduction-philosophy",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        }
+      ]
+    },
+    {
+      "id": "computing",
+      "name": "Computer science",
+      "match": [
+        "computer science"
+      ],
+      "resources": [
+        {
+          "title": "Computer Science A: past questions and scoring",
+          "url": "https://apcentral.collegeboard.org/courses/ap-computer-science-a/exam/past-exam-questions",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Free access; copyrighted, not public domain",
+          "courses": [
+            "ap computer science"
+          ]
+        },
+        {
+          "title": "Computer Science Principles: past assessments and scoring",
+          "url": "https://apcentral.collegeboard.org/courses/ap-computer-science-principles/exam/past-exam-questions",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Free access; copyrighted, not public domain",
+          "courses": [
+            "ap computer science"
+          ]
+        },
+        {
+          "title": "CS50: lectures and programming practice",
+          "url": "https://cs50.harvard.edu/x/",
+          "kind": "Reference",
+          "source": "Harvard University",
+          "rights": "Free course materials; course license applies"
+        }
+      ]
+    },
+    {
+      "id": "writing",
+      "name": "English, literature and writing",
+      "match": [
+        "english",
+        "literature",
+        "composition",
+        "reading"
+      ],
+      "resources": [
+        {
+          "title": "Official course archive: questions, scoring guides and sample responses",
+          "url": "https://apcentral.collegeboard.org/courses/ap-english-language-and-composition/exam/past-exam-questions",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Free access; copyrighted, not public domain",
+          "courses": [
+            "ap language"
+          ]
+        },
+        {
+          "title": "Official course archive: questions, scoring guides and sample responses",
+          "url": "https://apcentral.collegeboard.org/courses/ap-english-literature-and-composition/exam/past-exam-questions",
+          "kind": "Past exam",
+          "source": "College Board",
+          "rights": "Free access; copyrighted, not public domain",
+          "courses": [
+            "ap literature"
+          ]
+        },
+        {
+          "title": "Writing Guide with Handbook",
+          "url": "https://openstax.org/details/books/writing-guide",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        },
+        {
+          "title": "Classic literature and primary texts",
+          "url": "https://www.gutenberg.org/",
+          "kind": "Reference",
+          "source": "Project Gutenberg",
+          "rights": "Mostly U.S. public-domain works; check each book and your jurisdiction"
+        }
+      ]
+    },
+    {
+      "id": "science",
+      "name": "Science projects",
+      "match": [
+        "stem",
+        "olympiad"
+      ],
+      "resources": [
+        {
+          "title": "Biology 2e",
+          "url": "https://openstax.org/details/books/biology-2e",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        },
+        {
+          "title": "Chemistry 2e",
+          "url": "https://openstax.org/details/books/chemistry-2e",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        },
+        {
+          "title": "College Physics 2e",
+          "url": "https://openstax.org/details/books/college-physics-2e",
+          "kind": "Open reading",
+          "source": "OpenStax",
+          "rights": "Free online textbook; see this edition's license"
+        }
+      ]
+    },
+    {
+      "id": "religion",
+      "name": "New Testament",
+      "match": [
+        "new testament"
+      ],
+      "resources": [
+        {
+          "title": "New Testament history and literature: lectures",
+          "url": "https://oyc.yale.edu/religious-studies/rlst-152",
+          "kind": "Reference",
+          "source": "Open Yale Courses",
+          "rights": "Free lectures; historical and literary perspective; check course terms"
+        }
+      ]
+    }
+  ]
+}
