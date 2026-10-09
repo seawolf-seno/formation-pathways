@@ -222,6 +222,12 @@ adults behind the scenes; students stay present, in person, with people.
   `submit_inquiry`. **Needs seno to apply `20261012000000_referral_thanks.sql`.** Phone test
   for admissions: `docs/admissions-phone-test.md`; what's left (decisions, drafts, shot list,
   design review, 5-family pilot, Vercel Firewall rule): `docs/inquiry-launch.md`.
+- **Always a next step (2026-10-09, branch `seno/always-next-step`, card #29)**: every family
+  page ends with `components/discover/NextSteps.tsx`: the pathway (on its way / share it / ask for
+  one), invite a family with their referral code, start the application. `NEXT_STEP_LINKS` in
+  `lib/discover.ts` are **placeholders** until admissions gives the real application link;
+  staff and samples see a "Placeholder link" tag. **Needs seno to apply
+  `20261013000000_referral_thanks_public.sql`** (until then invites always carry the disclosure).
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)
@@ -304,6 +310,12 @@ Test for every screen: "would a parent trust this with their child's story?"
 - Existing pages/nav live under `app/(staff)/` with their own layout; `/apply`
   and `/applicant/[slugToken]` stay outside that group so public-facing pages
   never inherit the internal staff header/nav.
+- **Migrations: seno applies every one** (SQL editor or `supabase db push`). Contributors and
+  their agents write the migration file in their PR but never apply it, and never touch the
+  live database. Name it `YYYYMMDDHHMMSS_what_it_does.sql` with a timestamp later than the
+  newest on `main`; rebase before review. CI (`tests/migrations.test.mjs`) fails a reused
+  timestamp. Code that needs a new table must degrade gracefully until it exists (return
+  empty, hide the feature), because the deploy and the migration never land at the same moment.
 - From 2026-10-30 Supabase no longer auto-grants Data API access to new `public`
   tables (existing tables are unaffected). Every migration that creates a table must
   include its own `grant` statements in the same file, or the table is unreachable

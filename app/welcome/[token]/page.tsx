@@ -70,6 +70,8 @@ export default async function FamilyPage({ params }: { params: Promise<{ token: 
       moreWithApplication
       firstWeek={FIRST_WEEK}
       thanks={page.thanks}
+      referralCode={page.shareCode}
+      showPlaceholders={page.isSample}
     />
   );
 }

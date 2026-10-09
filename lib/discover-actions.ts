@@ -25,6 +25,10 @@ export interface InquiryWelcome {
   currentSchool: string | null;
   oneThing: string;
   consentPathway: boolean;
+  /** The family's own code, for inviting another family (/discover?ref=…). */
+  shareCode: string | null;
+  /** Thank-yous are on: an invite carries the disclosure. */
+  thanks: boolean;
   matches: { program: string; line: string }[];
   stories: WelcomeStory[];
   sameSchool: boolean;
@@ -35,7 +39,7 @@ export type InquiryResult = ({ ok: true } & InquiryWelcome) | { ok: false; error
 
 /** Graduate stories are the demo's invented set, so only fictional samples
  *  (test mode) get them; a real family sees none until real ones are consented. */
-async function welcome(p: InquiryPayload, sample: boolean): Promise<InquiryWelcome> {
+async function welcome(p: InquiryPayload, sample: boolean, shareCode: string | null, thanks: boolean): Promise<InquiryWelcome> {
   let stories: WelcomeStory[] = [];
   let sameSchool = false;
   if (sample) {
@@ -51,6 +55,8 @@ async function welcome(p: InquiryPayload, sample: boolean): Promise<InquiryWelco
     currentSchool: p.current_school || null,
     oneThing: p.one_thing,
     consentPathway: p.consent_pathway,
+    shareCode,
+    thanks,
     matches: welcomeMatches(p.interests),
     stories,
     sameSchool,
@@ -74,7 +80,7 @@ export async function submitInquiryAction(input: Record<string, unknown>): Promi
   if (!isSorConfigured()) return { ok: false, error: "Inquiries aren't available here." };
 
   const supabase = await getSorClient();
-  const { error } = await supabase.rpc("submit_inquiry", { p: checked.payload });
+  const { data: code, error } = await supabase.rpc("submit_inquiry", { p: checked.payload });
   if (error) {
     if (/aren't open yet/.test(error.message)) {
       return { ok: false, error: "We're not taking inquiries here just yet. Please use the school website for now." };
@@ -85,7 +91,11 @@ export async function submitInquiryAction(input: Record<string, unknown>): Promi
     console.error("submit_inquiry refused:", error.code);
     return { ok: false, error: "We couldn't save that just now. Please try again in a minute." };
   }
-  return { ok: true, ...(await welcome(checked.payload, false)) };
+  // Whether an invite needs the reward disclosure. If we can't tell
+  // (20261013000000 not applied yet), say it: disclosing is the safe side.
+  const { data: thanksOn, error: thanksError } = await supabase.rpc("referral_thanks_open");
+  const thanks = thanksError ? true : thanksOn === true;
+  return { ok: true, ...(await welcome(checked.payload, false, typeof code === "string" ? code : null, thanks)) };
 }
 
 /**
@@ -117,12 +127,13 @@ export async function submitTestInquiryAction(input: Record<string, unknown>): P
       source: referredBy ? "share" : source,
       referred_by_code: referredBy,
     })
-    .select("id")
+    .select("id, share_code")
     .single();
   if (error) {
     console.error("test inquiry refused:", error.code);
     return { ok: false, error: "We couldn't save that test inquiry." };
   }
   await logAccess(staff, "inquiry_test_submit", null, { inquiry: data.id });
-  return { ok: true, ...(await welcome(checked.payload, true)), testInquiryId: data.id };
+  // Samples always behave as if thank-yous were on (as on their family page).
+  return { ok: true, ...(await welcome(checked.payload, true, data.share_code, true)), testInquiryId: data.id };
 }
