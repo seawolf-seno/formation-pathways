@@ -53,7 +53,7 @@ it rather than in one of its parts:
 - A combination no one else would have. For a wide file this is the main
   event: two or three interests that rarely show up in the same person beat
   any one of them alone. Prefer combination hooks wherever the evidence
-  supports them, up to the limit set above.
+  supports them, staying inside the per-interest cap in Step 2.
 - What the breadth is good for: the specific kind of work that needs someone
   who can move between things. "Well-rounded" says nothing about anybody.
 Name the range out loud in at least one pathway, in plain words, so they
