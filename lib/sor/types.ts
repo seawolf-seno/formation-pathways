@@ -284,6 +284,8 @@ export interface PersonProfile {
   classHistory: ClassHistoryRow[];
   /** Every Spark session, newest first ([] if none, or the role can't read them). */
   sparks: import("./sparks").SparkSession[];
+  /** Every class-reflection sitting, newest first ([] if none, or the role can't read them). */
+  classReflections: import("./class-reflections").ClassReflectionSession[];
   evidence: AcademicEvidence[];
   observations: SorObservation[];
   drafts: PathwayDraft[];

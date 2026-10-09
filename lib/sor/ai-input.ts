@@ -5,6 +5,7 @@
 import type { RuakhInput } from "../claude";
 import { inquiryDraftInput } from "../discover.ts";
 import { Pseudonymizer } from "./anonymize.ts";
+import { latestReflections, reflectionsForPrompt } from "./class-reflections.ts";
 import { mergeSparks, sparksForPrompt } from "./sparks.ts";
 import type { Inquiry, Person, PersonProfile } from "./types";
 
@@ -63,6 +64,10 @@ function toRuakhInput(profile: PersonProfile): RuakhInput {
     // exist at all, and reaches Claude only under the same AI rules as the rest.
     // All sessions, so at-home answers add to the in-person ones.
     studentSparks: profile.sparks.length ? sparksForPrompt(mergeSparks(profile.sparks)!) : null,
+    // Which classes they enjoy and why, also their own voice under the same rules.
+    classReflections: profile.classReflections.length
+      ? reflectionsForPrompt(latestReflections(profile.classReflections))
+      : null,
   };
 }
 

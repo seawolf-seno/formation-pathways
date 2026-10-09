@@ -1,0 +1,17 @@
+# What can make a class good, shown as taps in class reflections
+# (/pathway/[personId]/classes). One per line: label|emoji. Faculty can edit
+# this list; lines starting with # are notes. Keep every line about what a
+# student enjoys, never about how well they are doing.
+Making or building something|🛠️
+Labs and hands-on work|🔬
+Solving hard problems|🧩
+Big discussions and debates|💬
+The stories and ideas|📖
+Writing in my own voice|✍️
+Working with other people|🤝
+Performing or presenting|🎤
+Competing or being pushed|🏁
+How the teacher explains things|💡
+Connecting it to real life|🌍
+Connecting it to my faith|🕊️
+Getting to choose my own direction|🧭
