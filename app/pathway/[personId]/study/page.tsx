@@ -52,7 +52,7 @@ export default async function StudyHubPage({ params }: { params: Promise<{ perso
       firstName={firstName}
       isSample={person.is_sample}
       classes={classes.map((c) => ({ ...c, shared: resourcesForClass(c.title, library), reflection: enjoyed.get(c.key) }))}
-      canReflect={person.is_sample || consents.some((c) => c.scope === "student_voice" && !c.revoked_at)}
+      canReflect={profile.classReflectionsReady && (person.is_sample || consents.some((c) => c.scope === "student_voice" && !c.revoked_at))}
     />
   );
 }

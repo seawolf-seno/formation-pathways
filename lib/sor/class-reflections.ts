@@ -41,6 +41,14 @@ export interface ClassReflectionSession {
   created_at: string;
 }
 
+/** True when a read or write failed only because the class_reflections table
+ *  isn't in the database yet. A deploy lands a few minutes before its
+ *  migration, so until then the feature hides itself instead of failing. */
+export function tableNotThereYet(error: { code?: string } | null | undefined): boolean {
+  // PostgREST: not in the schema cache. Postgres: undefined table.
+  return error?.code === "PGRST205" || error?.code === "42P01";
+}
+
 export const MAX_CLASSES = 20;
 export const MAX_LIKED = 6;
 export const MAX_NOTE_LENGTH = 600;

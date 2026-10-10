@@ -18,7 +18,7 @@ import type {
 } from "./types";
 import type { FunnelCount } from "./funnel";
 import { validateStudentSparks } from "./sparks";
-import { validateClassReflections } from "./class-reflections";
+import { tableNotThereYet, validateClassReflections } from "./class-reflections";
 
 /** The signed-in, active staff member, or a redirect to /login. Signed in
  *  and waiting for an admin → /login?error=pending; not on the staff table at
@@ -184,8 +184,8 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
     ]);
   // A failed read must never pass for "nothing there": say so in the logs.
   if (sparks.error) console.error("student_sparks read failed:", sparks.error.message);
-  // Empty, quietly, until the class_reflections migration is applied.
-  if (reflections.error && !["PGRST205", "42P01"].includes(reflections.error.code)) {
+  // Hidden, quietly, until the class_reflections migration is applied.
+  if (reflections.error && !tableNotThereYet(reflections.error)) {
     console.error("class_reflections read failed:", reflections.error.message);
   }
   return {
@@ -213,6 +213,7 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
         source: row.source === "family_link" ? ("family_link" as const) : ("in_person" as const),
       }];
     }),
+    classReflectionsReady: !tableNotThereYet(reflections.error),
     classReflections: (reflections.data ?? []).flatMap((row) => {
       const checked = validateClassReflections(row.reflections);
       return checked.ok ? [{ reflections: checked.reflections, created_at: row.created_at }] : [];

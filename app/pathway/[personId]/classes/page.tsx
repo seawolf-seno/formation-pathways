@@ -33,6 +33,15 @@ export default async function ClassReflectionsPage({ params }: { params: Promise
   const back = (
     <Link href={`/pilot/people/${personId}`} className="mt-4 inline-block text-sm underline">Back to {firstName}&apos;s page</Link>
   );
+  if (!profile.classReflectionsReady) {
+    return (
+      <main className="mx-auto max-w-lg px-6 py-24 text-center">
+        <p className="font-display text-xl text-[var(--color-navy-ink)]">Class reflections aren&apos;t switched on yet.</p>
+        <p className="mt-2 text-sm text-[var(--color-ink-muted)]">They arrive with the next database update. Nothing else is affected.</p>
+        {back}
+      </main>
+    );
+  }
   const consented = person.is_sample || consents.some((c) => c.scope === "student_voice" && !c.revoked_at);
   if (!consented) {
     return (

@@ -175,9 +175,11 @@ Enjoyment only. A class the student doesn't tap is not recorded, and there is
 no rating, number or "didn't like it" anywhere. Saving uses the same rules as
 Spark: the **`student_voice`** consent (database trigger), written as the
 signed-in adult (`class_reflections`, migration
-`20261012000000_class_reflections.sql`), readable by admin, admissions and
+`20261014000000_class_reflections.sql`), readable by admin, admissions and
 teachers. Only the student's own classes are kept, titled from their schedule
-rather than from the browser. The next draft gets them as `classReflections`
+rather than from the browser. Until the migration is applied the feature is
+hidden (no section on the person page, no prompt on the Study Hub) and
+nothing else changes. The next draft gets them as `classReflections`
 through the same name-removal step as everything else, and the prompt treats
 them like sparks: the signal is what they enjoy in a class, never the course
 itself, and a class they left out means nothing.

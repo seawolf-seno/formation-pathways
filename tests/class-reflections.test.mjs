@@ -4,6 +4,7 @@ import {
   classesForReflection,
   latestReflections,
   reflectionsForPrompt,
+  tableNotThereYet,
   validateClassReflections,
 } from "../lib/sor/class-reflections.ts";
 
@@ -90,4 +91,12 @@ test("reflections read as first-person evidence for the prompt, with no numbers"
     text,
     '- Loves Physics (2026 - 2027); what makes it good for them: Labs and hands-on work, Solving hard problems; in their words: "building the launcher from spare parts"\n- Enjoys Ceramics'
   );
+});
+
+test("only a missing table hides the feature; any other failure is still a failure", () => {
+  assert.equal(tableNotThereYet({ code: "PGRST205", message: "Could not find the table 'public.class_reflections' in the schema cache" }), true);
+  assert.equal(tableNotThereYet({ code: "42P01" }), true);
+  assert.equal(tableNotThereYet({ code: "42501", message: "permission denied for table class_reflections" }), false);
+  assert.equal(tableNotThereYet({ message: "fetch failed" }), false);
+  assert.equal(tableNotThereYet(null), false);
 });

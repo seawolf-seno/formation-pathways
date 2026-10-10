@@ -286,6 +286,8 @@ export interface PersonProfile {
   sparks: import("./sparks").SparkSession[];
   /** Every class-reflection sitting, newest first ([] if none, or the role can't read them). */
   classReflections: import("./class-reflections").ClassReflectionSession[];
+  /** False until the class_reflections migration is applied: hide the feature. */
+  classReflectionsReady: boolean;
   evidence: AcademicEvidence[];
   observations: SorObservation[];
   drafts: PathwayDraft[];

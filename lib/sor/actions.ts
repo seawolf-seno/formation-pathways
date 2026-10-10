@@ -23,7 +23,7 @@ import { checkBlackbaudUser } from "./importers/blackbaud";
 import { blackbaudConnection, FLOW_COOKIE, TOKEN_COOKIE } from "./blackbaud-auth";
 import { cookies } from "next/headers";
 import { validateStudentSparks } from "./sparks";
-import { classesForReflection, validateClassReflections } from "./class-reflections";
+import { classesForReflection, tableNotThereYet, validateClassReflections } from "./class-reflections";
 import {
   INQUIRY_STATUSES,
   displayName,
@@ -1092,6 +1092,9 @@ export async function saveClassReflectionsAction(input: { personId: string; refl
       .from("class_reflections")
       .insert({ person_id: input.personId, reflections: checked.reflections, created_by: staff.user_id });
     if (error) {
+      if (tableNotThereYet(error)) {
+        return { ok: false, error: "Class reflections aren't switched on yet. Nothing on this screen is lost; try again in a few minutes." };
+      }
       return {
         ok: false,
         error: /student_voice/.test(error.message)

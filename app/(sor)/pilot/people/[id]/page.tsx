@@ -157,6 +157,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               )}
             </Section>
           </div>
+          {profile.classReflectionsReady && (
           <div id="classes" className="scroll-mt-6">
             <Section title="Classes they enjoy" source="Class reflections, in their words">
               {!canReadSparks ? (
@@ -211,6 +212,7 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               )}
             </Section>
           </div>
+          )}
           <Section title="Where they've been" source="Finalsite">
             {!admissions ? (
               <Empty>{canDraft ? "No admissions data imported yet." : "Admissions files are visible to the admissions office."}</Empty>

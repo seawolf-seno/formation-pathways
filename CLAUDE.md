@@ -231,8 +231,8 @@ adults behind the scenes; students stay present, in person, with people.
   is not recorded, no ratings. `class_reflections` table (`student_voice` consent trigger,
   same RLS as sparks); shown on the person page ("Classes they enjoy") and sent to drafting as
   `classReflections` (`lib/sor/class-reflections.ts`, through `ai-input.ts`). **Needs seno to
-  apply `20261012000000_class_reflections.sql`**; until then the section is empty and saving
-  fails. Open for leadership: whether the signed `student_voice` form covers this, since its
+  apply `20261014000000_class_reflections.sql`**; until then the feature is hidden
+  (`classReflectionsReady`) and everything else works. Open for leadership: whether the signed `student_voice` form covers this, since its
   wording names Spark. Not yet tried against real Claude output.
 - **Study Hub (2026-10-09, same branch, card #32)**: `/pathway/[personId]/study`, staff-opened
   and read-only (no migration): the student's classes from the imported schedule, each with
