@@ -83,6 +83,19 @@ await expect("nobody saves sparks as someone else", "teach", `insert into studen
 await expect("staff can't label their own session as sent from home", "teach", `insert into student_sparks (person_id, sparks, created_by, source) values ('11111111-1111-1111-1111-111111111111', '{"answers":[]}', '${ids.teach}', 'family_link')`, false);
 await expect("admissions reads sparks", "adm", `select * from student_sparks`, true, r => r.rows.length === 1);
 await expect("non-staff cannot read sparks", "stranger", `select * from student_sparks`, true, r => r.rows.length === 0);
+// Class reflections (what they enjoy about their classes): the same rules as sparks.
+const refl = (who, body = `{"classes":[{"key":"blackbaud:s1","title":"Biology","loved":true}]}`) => `insert into class_reflections (person_id, reflections, created_by) values ('11111111-1111-1111-1111-111111111111', '${body}', '${ids[who]}') returning id`;
+await expect("admin revokes student_voice again", "admin", `update consents set revoked_at = now() where scope = 'student_voice' and revoked_at is null returning *`, true, r => r.rows.length === 1);
+await expect("class reflections refused without student_voice consent", "teach", refl("teach"), false);
+await expect("admin records student_voice consent again", "admin", `insert into consents (person_id, scope, granted_by, granted_on, evidence, recorded_by) values ('11111111-1111-1111-1111-111111111111','student_voice','Parent Kid','2026-10-09','Signed form','${ids.admin}')`, true);
+await expect("teacher saves a student's class reflections as themselves", "teach", refl("teach"), true);
+await expect("nobody saves class reflections as someone else", "teach", refl("admin"), false);
+await expect("non-staff cannot save class reflections", "stranger", refl("stranger"), false);
+await expect("a payload that isn't a list of classes is refused", "teach", refl("teach", `{"classes":"Biology"}`), false);
+await expect("a saved reflection can't be rewritten", "admin", `update class_reflections set reflections = '{"classes":[]}' returning id`, true, r => r.rows.length === 0);
+await expect("admissions reads class reflections", "adm", `select * from class_reflections`, true, r => r.rows.length === 1);
+await expect("non-staff cannot read class reflections", "stranger", `select * from class_reflections`, true, r => r.rows.length === 0);
+await expect("teacher cannot delete class reflections", "teach", `delete from class_reflections returning id`, true, r => r.rows.length === 0);
 // At-home Spark links: the one anonymous write path. Write-only, once, expiring.
 async function asAnon(sql) {
   await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false); set role anon;`);
@@ -112,6 +125,8 @@ await expectAnon("a deactivated staff member's link stops working", `select * fr
 await expectAnon("...and can't submit", `select spark_link_submit('tok-leaver', '{"answers":[]}'::jsonb) as ok`, true, r => r.rows[0].ok === false);
 await expectAnon("anon cannot read the links table", `select * from spark_links`, false, r => r.rows.length === 0);
 await expectAnon("anon cannot read sparks", `select * from student_sparks`, false, r => r.rows.length === 0);
+await expectAnon("anon cannot read class reflections", `select * from class_reflections`, false, r => r.rows.length === 0);
+await expectAnon("anon cannot write class reflections", `insert into class_reflections (person_id, reflections, created_by) values ('11111111-1111-1111-1111-111111111111', '{"classes":[]}', '${ids.teach}')`, false);
 await expectAnon("anon cannot write sparks directly", `insert into student_sparks (person_id, sparks, created_by) values ('11111111-1111-1111-1111-111111111111', '{}', '${ids.teach}')`, false);
 await expectAnon("anon cannot call other private helpers", `select private.has_role('admin')`, false);
 await expectAnon("a non-object payload is refused", `select spark_link_submit('tok-good', '[1,2]'::jsonb) as ok`, true, r => r.rows[0].ok === false);

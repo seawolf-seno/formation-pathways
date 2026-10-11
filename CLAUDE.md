@@ -233,6 +233,29 @@ adults behind the scenes; students stay present, in person, with people.
   `submit_inquiry`. **Needs seno to apply `20261012000000_referral_thanks.sql`.** Phone test
   for admissions: `docs/admissions-phone-test.md`; what's left (decisions, drafts, shot list,
   design review, 5-family pilot, Vercel Firewall rule): `docs/inquiry-launch.md`.
+- **Class reflections (2026-10-09, branch `samuel/class-reflections`, card #32)**: first step
+  of folding Study Hub (a student's separate `study-commons` app) into Formation Pathways.
+  `/pathway/[personId]/classes`, opened by staff with the student like Spark: tap the classes
+  they enjoy from their own schedule (`classesForReflection`: latest Blackbaud year plus
+  Canvas), twice for ones they love, then what makes each good
+  (`prompts/class-reflection-likes.txt`) and one sentence. Enjoyment only: an untapped class
+  is not recorded, no ratings. `class_reflections` table (`student_voice` consent trigger,
+  same RLS as sparks); shown on the person page ("Classes they enjoy") and sent to drafting as
+  `classReflections` (`lib/sor/class-reflections.ts`, through `ai-input.ts`). **Needs seno to
+  apply `20261014000000_class_reflections.sql`**; until then the feature is hidden
+  (`classReflectionsReady`) and everything else works. Open for leadership: whether the signed `student_voice` form covers this, since its
+  wording names Spark. Not yet tried against real Claude output.
+- **Study Hub (2026-10-09, same branch, card #32)**: `/pathway/[personId]/study`, staff-opened
+  and read-only (no migration): the student's classes from the imported schedule, each with
+  free study links from `fixtures/study-library.json` (faculty-editable; subjects matched by
+  explicit title phrases, first match wins, no guessing; `https://` only;
+  `lib/sor/study-library.ts`) and what they said they enjoy. Linked from the person page and
+  from class reflections. The library started from Study Commons' curated links
+  (github.com/TheEnigmaticPhilosopher/study-commons): **confirm the author's permission and
+  the name to credit** (the page says "a Pacifica student's project"). Not carried over from
+  Study Commons: fictional grades, grade-based practice, Canvas submission, discussions.
+  Next for #32, each needing a decision first: student sign-in (none exists), student uploads
+  with teacher approval, and open questions that build a no-numbers "where you are" narrative.
 - **Always a next step (2026-10-09, branch `seno/always-next-step`, card #29)**: every family
   page ends with `components/discover/NextSteps.tsx`: the pathway (on its way / share it / ask for
   one), invite a family with their referral code, start the application. `NEXT_STEP_LINKS` in

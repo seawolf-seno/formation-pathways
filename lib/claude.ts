@@ -642,6 +642,8 @@ export interface RuakhInput {
   observations: { author: string; text: string; tags: string[]; date: string }[];
   /** The student's own sparks from a Spark conversation, as plain text. */
   studentSparks: string | null;
+  /** Which classes they enjoy and what makes each one good, in their words, as plain text. */
+  classReflections: string | null;
 }
 
 export interface RuakhDraft {

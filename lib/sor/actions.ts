@@ -23,6 +23,7 @@ import { checkBlackbaudUser } from "./importers/blackbaud";
 import { blackbaudConnection, FLOW_COOKIE, TOKEN_COOKIE } from "./blackbaud-auth";
 import { cookies } from "next/headers";
 import { validateStudentSparks } from "./sparks";
+import { classesForReflection, tableNotThereYet, validateClassReflections } from "./class-reflections";
 import {
   INQUIRY_STATUSES,
   displayName,
@@ -1067,6 +1068,45 @@ export async function saveStudentSparksAction(input: { personId: string; sparks:
       answers: checked.sparks.answers.length,
       picks: checked.sparks.picks.length,
       channels: checked.sparks.channels.length,
+    });
+    revalidatePath(`/pilot/people/${input.personId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Save which classes a student enjoys and what makes each one good, as the
+ *  adult who's signed in. Only the student's own classes are kept, with the
+ *  titles from their schedule. The database refuses it without student_voice
+ *  consent. */
+export async function saveClassReflectionsAction(input: { personId: string; reflections: unknown }): Promise<Result> {
+  try {
+    const staff = await requireStaff();
+    const profile = await getPersonProfile(input.personId);
+    if (!profile) return { ok: false, error: "Student not found." };
+    const checked = validateClassReflections(input.reflections, classesForReflection(profile.courses, profile.classHistory));
+    if (!checked.ok) return { ok: false, error: checked.error };
+    const supabase = await getSorClient();
+    const { error } = await supabase
+      .from("class_reflections")
+      .insert({ person_id: input.personId, reflections: checked.reflections, created_by: staff.user_id });
+    if (error) {
+      if (tableNotThereYet(error)) {
+        return { ok: false, error: "Class reflections aren't switched on yet. Nothing on this screen is lost; try again in a few minutes." };
+      }
+      return {
+        ok: false,
+        error: /student_voice/.test(error.message)
+          ? "There's no student-voice consent on file for this student, so their class reflections can't be saved."
+          : error.message,
+      };
+    }
+    const { classes } = checked.reflections;
+    await logAccess(staff, "class_reflections", input.personId, {
+      classes: classes.length,
+      loved: classes.filter((c) => c.loved).length,
+      notes: classes.filter((c) => c.note).length,
     });
     revalidatePath(`/pilot/people/${input.personId}`);
     return { ok: true };

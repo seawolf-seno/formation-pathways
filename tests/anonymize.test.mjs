@@ -83,6 +83,13 @@ test("a pathway input carries no known name anywhere", () => {
   const profile = {
     person: person("p1", "Levi", "Okonkwo"),
     externalIds: [], consents: [], drafts: [], classHistory: [], sparks: [],
+    classReflections: [{
+      created_at: "2026-10-09T00:00:00Z",
+      reflections: { classes: [{
+        key: "canvas:1", title: "Physics", schoolYear: null, loved: true, liked: ["Labs and hands-on work"],
+        note: "Mr. Eno let Maya and me rebuild the launcher", via: "voice",
+      }] },
+    }],
     admissions: {
       person_id: "p1", entry_year: 2025, entering_grade: 9, application_status: null, previous_school: "Harbor View Middle",
       interests: ["Robotics"], activities: ["Built a go-kart with my brother Sam"],
@@ -102,6 +109,9 @@ test("a pathway input carries no known name anywhere", () => {
   assert.equal(input.firstName, "[STUDENT]");
   assert.match(sent, /\[STUDENT\]/);
   assert.match(sent, /Harbor View Middle/); // the previous school stays: it's what makes the pathway theirs
+  // What they enjoy about a class goes too, with the people in it replaced.
+  assert.match(input.classReflections, /Loves Physics; what makes it good for them: Labs and hands-on work/);
+  assert.match(input.classReflections, /rebuild the launcher/);
   assert.doesNotThrow(() => anon.assertNoNames(sent));
   // A name not in our records can't be known. Documented, and visible to staff.
   assert.match(sent, /brother Sam/);

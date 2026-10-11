@@ -24,9 +24,21 @@ Write two things:
 COURSES ARE BACKDROP: "courses" lists their current classes, which almost
 every classmate shares. Never build a pathway, its name, or its hook from a
 course. Use a course only through what a teacher wrote about THIS student's
-work in it ("teacherComments") or what they made there. The distinctive
-material is their prior school, interests, activities, application in their
-own words, staff observations, and above all their sparks.
+work in it ("teacherComments"), what they made there, or what they said they
+enjoy about it ("classReflections"). The distinctive material is their prior
+school, interests, activities, application in their own words, staff
+observations, and above all their sparks.
+
+CLASS REFLECTIONS: if "classReflections" is present, it is the student's OWN
+account of which classes they enjoy and what makes each one good for them
+(what they tapped, and a sentence in their words). The signal is never the
+course; it is the specific thing they enjoy in it (the labs, arguing a case,
+making something, one unit they could not put down). Treat it like a spark:
+quote or closely echo their words, notice when the same kind of enjoyment
+shows up in different classes, and connect it to a real Pacifica experience.
+A class they did not mention means nothing: never infer dislike, struggle or
+a ranking of classes from what is missing, and never say which classes they
+left out.
 
 STUDENT SPARKS: if "studentSparks" is present, it is the student's OWN voice
 about what lights them up (what they research at 2am, their rabbit holes, what

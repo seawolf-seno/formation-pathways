@@ -131,6 +131,59 @@ The browser calls two invoker functions that wrap SECURITY DEFINER functions
 in the private schema (migration `20261004150000_spark_family_links.sql`;
 19 RLS cases, including calls made as `anon`).
 
+### Study Hub: their classes and free study resources
+
+**Open the Study Hub with [name]** (person page, "Where they are now") opens
+`/pathway/[personId]/study` on the adult's own signed-in device: the
+student's classes for the latest school year, straight from the schedule
+already imported (Blackbaud class history plus Canvas), each with the shared
+study library's free links for that subject (past exams, practice, open
+textbooks, reference) and what the student said they enjoy about it. It is
+the first step of folding Study Hub, a student's separate `study-commons`
+app, into Formation Pathways (Fizzy card #32).
+
+- **The library** is `fixtures/study-library.json`, which faculty can edit:
+  subjects, the title phrases that put a class in a subject (first match
+  wins, so the specific subject goes first), and links. It started from
+  Study Commons' curated links. Links only: nothing is mirrored, and each
+  publisher's terms apply. Only `https://` links are shown
+  (`lib/sor/study-library.ts`).
+- **No guessing.** A class whose title matches no subject shows "Nothing
+  shared for this class yet"; course-specific links (an AP archive, a unit's
+  chapter) show only for that course.
+- **Read-only.** The page writes nothing, shows nothing about how a student
+  is doing in a class, and opening it is logged (`open_study_hub`). No
+  migration is needed. There is still no student login: a student using this
+  alone, uploading resources, or answering questions each needs a decision
+  first (see CLAUDE.md).
+
+### Class reflections: which classes they enjoy
+
+Nearly every student takes the same classes, so a schedule says little about
+one of them. What a student enjoys in a class is theirs alone. On their page,
+**Start class reflections** opens `/pathway/[personId]/classes` on the adult's
+own signed-in device (first step of folding Study Hub in, Fizzy card #32):
+
+- **Their classes**, from the latest school year of Blackbaud class history
+  plus any Canvas course not already listed. Tap once for a class they like,
+  twice for one they love.
+- **What makes it good**, for each class they chose: taps from
+  `prompts/class-reflection-likes.txt` (faculty can edit it) and one sentence,
+  spoken or typed, about what they'd keep doing even if it wasn't assigned.
+
+Enjoyment only. A class the student doesn't tap is not recorded, and there is
+no rating, number or "didn't like it" anywhere. Saving uses the same rules as
+Spark: the **`student_voice`** consent (database trigger), written as the
+signed-in adult (`class_reflections`, migration
+`20261014000000_class_reflections.sql`), readable by admin, admissions and
+teachers. Only the student's own classes are kept, titled from their schedule
+rather than from the browser. Until the migration is applied the feature is
+hidden (no section on the person page, no prompt on the Study Hub) and
+nothing else changes. The next draft gets them as `classReflections`
+through the same name-removal step as everything else, and the prompt treats
+them like sparks: the signal is what they enjoy in a class, never the course
+itself, and a class they left out means nothing.
+
 **AI for real students is a separate switch.** `ANTHROPIC_API_KEY` alone runs
 AI for the fictional demo and the six sample students only. A real student's
 details reach Claude only when the family consented (`ai_drafting`) **and**
