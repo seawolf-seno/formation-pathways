@@ -38,6 +38,13 @@ Rules:
   believes..." attached to a real name.
 - Each pathway also needs a "hook" and, where a world signal genuinely
   fits, "whyNow" and "whyNowRef" (see the section below).
+- "startingPoint" is optional and will usually be absent here: all you have
+  is a few short answers, so you rarely know where an applicant stands on
+  anything. Include it only where they plainly state something they have
+  already done — if they write "I've rebuilt two bikes", the field reads
+  "you have rebuilt two bikes start to finish" — as a stage and never a rank
+  (see "WHERE THEY ALREADY STAND" below). Never infer one from an interest:
+  naming a thing they like is not evidence of having done it.
 - Each pathway must directly quote or closely echo at least one specific
   phrase from the applicant's actual answers — this is the moment they
   realize they were truly read, so do not paraphrase into blandness.
@@ -68,6 +75,7 @@ in exactly this shape:
       ],
       "glimpse": "string",
       "hook": "string",
+      "startingPoint": "string (optional, usually omitted for an applicant)",
       "whyNow": "string (optional, at most three per draft)",
       "whyNowRef": "W number of the item it restates (required with whyNow)"
     }

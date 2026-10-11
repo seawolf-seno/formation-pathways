@@ -929,6 +929,17 @@ export async function updateDraftPathwaysAction(input: {
     if (pathways.length < plan.keepMin) {
       throw new Error(`Keep at least ${plan.keepMin} ${plan.keepMin === 1 ? "pathway" : "pathways"}.`);
     }
+    // Said out loud rather than silently deleted: a staff member who typed
+    // "level 3 of 5" here should learn why it can't be saved, not watch their
+    // sentence vanish. No scores on students (product principle #2).
+    const scored = input.pathways.find(
+      (p, i) => String(p.startingPoint ?? "").trim() && !pathways[i]?.startingPoint
+    );
+    if (scored) {
+      throw new Error(
+        `"Where they are now" can't be a score or a level — say what they've already done instead (in "${clip(scored.name, 60)}").`
+      );
+    }
     if (pathways.some((p) => !p.name || !p.firstSemester)) {
       throw new Error("Each pathway needs a name and a first-semester description.");
     }

@@ -133,6 +133,12 @@ export function FamilyPathways({
             A possibility to explore together—with the people and experiences
             that can help bring it to life.
           </p>
+          {pathway.startingPoint && (
+            <p className="family-starting-point">
+              <span>Where you are now</span>
+              {pathway.startingPoint}
+            </p>
+          )}
           <button
             className="family-button"
             onClick={() => dialog.current?.showModal()}

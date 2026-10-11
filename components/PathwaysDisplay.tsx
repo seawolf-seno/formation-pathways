@@ -22,6 +22,14 @@ export function PathwaysDisplay({
               Grows from: “{pathway.hook.replace(/^["“]|["”]$/g, "")}”
             </p>
           )}
+          {pathway.startingPoint && (
+            <p className="mt-3 border-l-2 border-[var(--color-pacific)] pl-3 text-sm leading-relaxed text-[var(--color-ink)]">
+              <span className="block text-[10px] font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">
+                Where you are now
+              </span>
+              {pathway.startingPoint}
+            </p>
+          )}
           <p className="mt-3 text-sm leading-relaxed text-[var(--color-ink)]">
             {pathway.firstSemester}
           </p>

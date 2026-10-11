@@ -210,6 +210,12 @@ export function InquiryDraftReview({
                   <span className="font-display text-base text-[var(--color-navy-ink)]">{p.name}</span>
                 </span>
                 {p.hook && <span className="mt-1 block text-xs text-[var(--color-ink-muted)]">Grows from “{p.hook.replace(/^["“]|["”]$/g, "")}”</span>}
+                {p.startingPoint && (
+                  <span className="mt-2 block border-l-2 border-[var(--color-pacific)] pl-2 text-xs">
+                    <span className="block uppercase tracking-widest text-[10px] text-[var(--color-ink-muted)]">Where they are now</span>
+                    {p.startingPoint}
+                  </span>
+                )}
                 <span className="mt-2 block">{p.firstSemester}</span>
                 {p.glimpse && <span className="mt-2 block font-display italic">{p.glimpse}</span>}
                 {p.whyNow && <span className="mt-2 block text-xs text-[var(--color-ink-muted)]">Why now: {p.whyNow}</span>}

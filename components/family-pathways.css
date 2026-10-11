@@ -260,6 +260,21 @@
   color: var(--muted);
   max-width: 320px;
 }
+/* Where the student already stands, set before the road ahead. Reads as
+   something already true of them, not as a rung on a ladder. */
+.family-detail-intro > p.family-starting-point {
+  border-left: 2px solid var(--gold);
+  padding-left: 16px;
+  color: var(--ink);
+}
+.family-starting-point > span {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
 .family-button {
   display: inline-flex;
   justify-content: center;
