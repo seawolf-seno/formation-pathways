@@ -29,6 +29,11 @@ export default async function SorLayout({ children }: { children: React.ReactNod
                 Pilot
               </Link>
             )}
+            {(staff.role === "admin" || staff.role === "teacher") && (
+              <Link href="/pilot/resources" className="font-medium text-[var(--color-pacific)] hover:text-white">
+                Resources
+              </Link>
+            )}
             <form action={signOutAction}>
               <button className="text-xs text-[var(--color-pacific)] hover:text-white" title={staff.email}>
                 Sign out

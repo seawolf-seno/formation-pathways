@@ -151,11 +151,36 @@ app, into Formation Pathways (Fizzy card #32).
 - **No guessing.** A class whose title matches no subject shows "Nothing
   shared for this class yet"; course-specific links (an AP archive, a unit's
   chapter) show only for that course.
-- **Read-only.** The page writes nothing, shows nothing about how a student
-  is doing in a class, and opening it is logged (`open_study_hub`). No
-  migration is needed. There is still no student login: a student using this
-  alone, uploading resources, or answering questions each needs a decision
-  first (see CLAUDE.md).
+- **Nothing about performance.** The page shows nothing about how a student
+  is doing in a class, and opening it is logged (`open_study_hub`). The
+  library itself needs no migration. There is still no student login: a
+  student using this alone, uploading files, or answering questions each
+  needs a decision first (see CLAUDE.md).
+
+### Links students add: suggested, then approved by a teacher
+
+On the Study Hub, **Add something that helped you** under a class lets the
+student suggest a link for it: the address, what it is, what kind of thing
+(video, practice, reading, reference, past exam) and, if they like, why it
+helped. Second step of folding Study Hub in (Fizzy #32).
+
+- **Links only.** No file is uploaded or stored, and nothing is mirrored.
+  Only `https://` links with no sign-in details are accepted (checked in the
+  app and again by the database).
+- **A teacher or admin decides.** A suggestion is saved unreviewed. It shows
+  on other students' Study Hubs, for a class with the same title, only after
+  it is approved at `/pilot/resources` ("Resources" in the top bar for
+  teachers and admins). The database records who decided, from the
+  signed-in account. A review can tidy the title, kind or note, but not the
+  link, the class or the student; a decision can be reversed.
+- **No names to other students.** Approved links say "Found by Pacifica
+  students" and "A student said: …". Staff see who suggested each one. A
+  student sees their own waiting ones, and never a declined label.
+- **Same rules as the rest of student voice.** `class_resources` (migration
+  `20261015000000_class_resources.sql`) needs the `student_voice` consent,
+  is written as the signed-in adult, and is removed if the student is
+  withdrawn. Until the migration is applied the button and the review list
+  are hidden and the Study Hub is unchanged.
 
 ### Class reflections: which classes they enjoy
 

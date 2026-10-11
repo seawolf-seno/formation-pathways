@@ -4,13 +4,14 @@
 // nothing here is about any student. Pure: reading the file's shape and
 // matching a class title to its subject. No I/O.
 
-export const RESOURCE_KINDS = ["Past exam", "Practice", "Open reading", "Reference"] as const;
+export const RESOURCE_KINDS = ["Past exam", "Practice", "Video", "Open reading", "Reference"] as const;
 export type ResourceKind = (typeof RESOURCE_KINDS)[number];
 
 /** How each kind is headed on the page. */
 export const KIND_HEADINGS: Record<ResourceKind, string> = {
   "Past exam": "Past exams",
   Practice: "Practice",
+  Video: "Videos",
   "Open reading": "Free textbooks and readings",
   Reference: "Reference",
 };
@@ -44,9 +45,10 @@ export interface StudyLibrary {
 const text = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 const phrases = (v: unknown) => (Array.isArray(v) ? v.map((p) => text(p, 80).toLowerCase()).filter(Boolean) : []);
 
-/** Only ordinary https links: the file is hand-edited, and a link in it is
- *  rendered as something a student taps. */
-function httpsUrl(v: unknown): string | null {
+/** Only ordinary https links, with no sign-in details in them: a link here is
+ *  rendered as something a student taps, whether it came from the hand-edited
+ *  library file or from a student's suggestion. */
+export function httpsUrl(v: unknown): string | null {
   try {
     const url = new URL(text(v, 500));
     return url.protocol === "https:" && !url.username && !url.password ? url.toString() : null;

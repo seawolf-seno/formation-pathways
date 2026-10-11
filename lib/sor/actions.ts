@@ -24,6 +24,7 @@ import { blackbaudConnection, FLOW_COOKIE, TOKEN_COOKIE } from "./blackbaud-auth
 import { cookies } from "next/headers";
 import { validateStudentSparks } from "./sparks";
 import { classesForReflection, tableNotThereYet, validateClassReflections } from "./class-reflections";
+import { validateResourceSuggestion } from "./class-resources";
 import {
   INQUIRY_STATUSES,
   displayName,
@@ -1109,6 +1110,66 @@ export async function saveClassReflectionsAction(input: { personId: string; refl
       notes: classes.filter((c) => c.note).length,
     });
     revalidatePath(`/pilot/people/${input.personId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+const RESOURCES_NOT_YET = "Adding resources isn't switched on yet. Nothing on this screen is lost; try again in a few minutes.";
+
+/** Save a study link a student suggests for one of their own classes, as the
+ *  adult who's signed in. It starts unreviewed: nobody else sees it until a
+ *  teacher or admin approves it. The database refuses it without
+ *  student_voice consent. */
+export async function suggestClassResourceAction(input: { personId: string; suggestion: unknown }): Promise<Result> {
+  try {
+    const staff = await requireStaff();
+    const profile = await getPersonProfile(input.personId);
+    if (!profile) return { ok: false, error: "Student not found." };
+    const checked = validateResourceSuggestion(input.suggestion, classesForReflection(profile.courses, profile.classHistory));
+    if (!checked.ok) return { ok: false, error: checked.error };
+    const { classTitle, title, url, kind, note } = checked.suggestion;
+    const supabase = await getSorClient();
+    const { error } = await supabase
+      .from("class_resources")
+      .insert({ person_id: input.personId, class_title: classTitle, title, url, kind, note, created_by: staff.user_id });
+    if (error) {
+      if (tableNotThereYet(error)) return { ok: false, error: RESOURCES_NOT_YET };
+      return {
+        ok: false,
+        error: /student_voice/.test(error.message)
+          ? "There's no student-voice consent on file for this student, so what they suggest can't be saved."
+          : error.message,
+      };
+    }
+    await logAccess(staff, "suggest_class_resource", input.personId, { kind, host: new URL(url).hostname });
+    revalidatePath(`/pathway/${input.personId}/study`);
+    revalidatePath("/pilot/resources");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** A teacher or admin approves or declines a suggested link. The database
+ *  records who decided (the signed-in reviewer, never a value sent here) and
+ *  refuses any change to the link, the class or the student. */
+export async function reviewClassResourceAction(id: string, decision: "approved" | "declined"): Promise<Result> {
+  try {
+    const staff = await requireRole("admin", "teacher");
+    if (decision !== "approved" && decision !== "declined") return { ok: false, error: "Choose approve or decline." };
+    const supabase = await getSorClient();
+    const { data, error } = await supabase
+      .from("class_resources")
+      .update({ status: decision })
+      .eq("id", id)
+      .select("person_id");
+    if (error) return tableNotThereYet(error) ? { ok: false, error: RESOURCES_NOT_YET } : fail(error);
+    if (!data?.length) return { ok: false, error: "That suggestion isn't there any more." };
+    await logAccess(staff, "review_class_resource", data[0].person_id, { resourceId: id, decision });
+    revalidatePath("/pilot/resources");
+    revalidatePath(`/pathway/${data[0].person_id}/study`);
     return { ok: true };
   } catch (e) {
     return fail(e);

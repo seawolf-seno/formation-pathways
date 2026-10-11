@@ -2,7 +2,8 @@ import fs from "fs";
 import path from "path";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPersonProfile, logAccess, requireStaff } from "@/lib/sor/queries";
+import { getClassResources, getPersonProfile, logAccess, requireStaff } from "@/lib/sor/queries";
+import { suggestionsByClass } from "@/lib/sor/class-resources";
 import { classesForReflection, latestReflections } from "@/lib/sor/class-reflections";
 import { parseStudyLibrary, resourcesForClass } from "@/lib/sor/study-library";
 import { StudyHub } from "@/components/sor/StudyHub";
@@ -18,8 +19,9 @@ export const metadata = {
  * (Blackbaud class history and Canvas), each with the shared study library's
  * free resources for that subject and what the student said they enjoy about
  * it. Opened on a staff member's signed-in device and explored together:
- * there is no student login yet. Reads only; nothing here is written, and
- * nothing about how the student is doing in a class is shown. The library is
+ * there is no student login yet. A student can also suggest a link that
+ * helped them (shown to others only once a teacher approves it). Nothing
+ * about how the student is doing in a class is shown. The library is
  * fixtures/study-library.json, which faculty can edit.
  */
 export default async function StudyHubPage({ params }: { params: Promise<{ personId: string }> }) {
@@ -46,13 +48,22 @@ export default async function StudyHubPage({ params }: { params: Promise<{ perso
 
   const library = parseStudyLibrary(JSON.parse(fs.readFileSync(path.join(process.cwd(), "fixtures", "study-library.json"), "utf-8")));
   const enjoyed = new Map(latestReflections(profile.classReflections).map((c) => [c.key, c]));
+  const suggested = await getClassResources(classes);
+  const byClass = suggestionsByClass(suggested.rows, personId, classes);
+  const voiceConsent = person.is_sample || consents.some((c) => c.scope === "student_voice" && !c.revoked_at);
   return (
     <StudyHub
       personId={personId}
       firstName={firstName}
       isSample={person.is_sample}
-      classes={classes.map((c) => ({ ...c, shared: resourcesForClass(c.title, library), reflection: enjoyed.get(c.key) }))}
-      canReflect={profile.classReflectionsReady && (person.is_sample || consents.some((c) => c.scope === "student_voice" && !c.revoked_at))}
+      classes={classes.map((c) => ({
+        ...c,
+        shared: resourcesForClass(c.title, library),
+        reflection: enjoyed.get(c.key),
+        suggestions: byClass.get(c.key) ?? { approved: [], waiting: [] },
+      }))}
+      canReflect={profile.classReflectionsReady && voiceConsent}
+      canSuggest={suggested.ready && voiceConsent}
     />
   );
 }
