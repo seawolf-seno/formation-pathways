@@ -148,12 +148,31 @@
 .spark-sub code { color: var(--star); }
 .spark-error { color: #f3b39b; font-size: 14px; margin-top: 10px; }
 
+/* Who reads this. Quieter than the invitation above it and still readable:
+   a student who has to squint at the audience will assume the worst. */
+.spark-who {
+  border-left: 2px solid #8fb3d955;
+  padding-left: 14px;
+  margin: 0 0 18px;
+  color: #f7f9fb8f;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .spark-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-top: 14px;
+  flex-wrap: wrap;
+}
+/* Back and Skip travel together on the left, so adding Back does not push
+   Skip into the middle of the row. */
+.spark-row-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
 }
 .spark-go,

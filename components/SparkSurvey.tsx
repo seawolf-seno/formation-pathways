@@ -109,6 +109,12 @@ export function SparkSurvey({
             Tap at least {MIN_INTERESTS} — and then keep going if more than {MIN_INTERESTS} are
             true. Being into a lot of things is a real answer here, not a failure to pick.
           </p>
+          {/* Who reads it, before they answer. An applicant hedges hardest,
+              because they are guessing at what the school wants to hear. */}
+          <p className="mt-3 border-l-2 border-[var(--color-pacific)] pl-3 text-xs leading-relaxed text-[var(--color-ink-muted)]">
+            The admissions team reads this. Nothing here is graded or scored, there are no wrong
+            answers, and you can go back and change anything before you send it.
+          </p>
           <div className="mt-5 flex flex-wrap gap-2">
             {interests.map((opt) => {
               const active = picked.includes(opt.label);
