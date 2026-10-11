@@ -1,1 +1,6 @@
+# seno reviews everything. These are listed on their own so it's clear they
+# also need seno to act, not just approve: migrations seno applies
+# (staging, then production), and the CI and repo rules.
 * @seawolf-seno
+/supabase/ @seawolf-seno
+/.github/ @seawolf-seno

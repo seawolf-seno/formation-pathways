@@ -34,8 +34,15 @@ owner is auto-requested on every PR.
 A few things to know:
 
 - **Direct pushes to `main` are blocked.** Everything goes through a PR.
-- **CI runs automatically** (`npm run lint` and `npm run build`) and has to
-  pass before your PR can be merged, on top of a manual review.
+- **CI runs automatically** (lint, the database guardrail tests, the unit
+  tests and a production build) and has to pass before your PR can be
+  merged, on top of seno's review. Your branch must be up to date with
+  `main`: use **Update branch** on the PR, or rebase.
+- **Pushing after an approval dismisses it**, so seno re-reviews what
+  actually merges.
+- **Ignore the red Vercel check for now** ("Deployment was blocked"). The
+  Vercel project is moving to a school team; until then it only builds
+  seno's own commits. The **build** check is the one that counts.
 - **PRs are squash-merged.** Don't worry about keeping a tidy commit history
   on your branch — it'll collapse into one clean commit on `main`.
 - **Pick up an issue labeled `good first issue`** if you're not sure what to
@@ -68,4 +75,28 @@ Keep PRs small and scoped to one feature or fix. If you're about to touch
 on, ask first (open an issue or comment on the existing one) so two people
 don't build the same thing at once.
 
-<!-- dry-run: verifying the CI + branch protection + CODEOWNERS loop end-to-end -->
+## Database changes (Supabase migrations)
+
+seno manages the database. You write the migration; seno applies it.
+
+1. Add **one** file to `supabase/migrations/`, named
+   `YYYYMMDDHHMMSS_what_it_does.sql`, with a timestamp **later than the
+   newest file on `main`**. CI fails a reused or older timestamp. If `main`
+   gets a newer migration before yours merges, rebase and rename yours.
+2. Every new table needs RLS policies, explicit `grant` statements (Supabase
+   stops auto-granting new tables on 2026-10-30), a consent trigger if it
+   holds per-student data, and cases in `supabase/tests/rls.test.mjs`.
+3. Make the app work **before** the migration exists: the deploy and the
+   migration land a few minutes apart, so return empty results or hide the
+   feature, never a 500.
+4. **Never apply a migration yourself**, and never connect to the live
+   database. Local work uses the sample data and, once it exists, the
+   staging project's public key.
+
+The PR gets a **needs migration** label automatically. seno applies it to
+staging, checks the preview, applies it to production, then merges.
+
+## Fizzy
+
+Work is tracked on Fizzy cards. Put the card number in your PR ("Fizzy #34")
+and post a short note on the card when you open the PR and when it merges.

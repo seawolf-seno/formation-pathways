@@ -32,7 +32,9 @@ Note how long each part takes. The questions are at the end.
 
 **What you should see right away:** a welcome page built from what you wrote. It has your words
 back, programs that match what you ticked, "A first week", and "What happens next". No AI is
-involved; it appears instantly.
+involved; it appears instantly. It ends with **Where to go from here**: the pathway on its way,
+**Send them the link** to invite another family, and **Start the application**. Links tagged
+"Placeholder link" aren't final yet.
 
 5. Tap **Open it in the inbox** (in the gold note).
 
@@ -82,15 +84,17 @@ Send your answers to seno, along with the times you noted for each part.
 
 1. **Parent:** Was the form quick on a phone? Was any question confusing or too personal?
 2. **Welcome page:** Did it feel like it heard you? Is anything there we can't actually deliver?
-3. **"A first week":** These lines are placeholders. Please rewrite them in your own words with
+3. **Next steps:** Is there always something to do next? What should **Start the application** and
+   **Ask for a pathway** link to? Send seno the real links.
+4. **"A first week":** These lines are placeholders. Please rewrite them in your own words with
    real first-week moments, three or four lines, one sentence each.
-4. **Pathway:** Did it sound like the child you described, or like any child? Would you sign it?
-5. **Sending:** Was "Email it to …" easy? Would you rather the app send the email itself?
-6. **Sharing:** Would a parent post this card? Is the guardian checkbox clear? Is the thank-you
+5. **Pathway:** Did it sound like the child you described, or like any child? Would you sign it?
+6. **Sending:** Was "Email it to …" easy? Would you rather the app send the email itself?
+7. **Sharing:** Would a parent post this card? Is the guardian checkbox clear? Is the thank-you
    line honest without being awkward?
-7. **Referrals:** Were confirm → approve → sent clear? What should the thank-you actually be?
+8. **Referrals:** Were confirm → approve → sent clear? What should the thank-you actually be?
    (Leadership decides; your suggestion helps.)
-8. Anything that felt slow, broken, or not like Pacifica.
+9. Anything that felt slow, broken, or not like Pacifica.
 
 ## If something goes wrong
 

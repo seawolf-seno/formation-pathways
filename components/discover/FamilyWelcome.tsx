@@ -6,6 +6,7 @@ import { PathwayJourney } from "@/components/PathwayJourney";
 import type { GeneratedPathway } from "@/lib/types";
 import "@/components/family-pathways.css";
 import { ShareStudio, type ShareAction } from "./ShareStudio";
+import { NextSteps } from "./NextSteps";
 import "./family-welcome.css";
 
 const WORDS = ["", "One", "Two", "Three", "Four", "Five", "Six"];
@@ -29,7 +30,7 @@ export interface WelcomeStory {
 export function FamilyWelcome({
   familyName, parentFirstName, childFirstName, currentSchool, oneThing, matches,
   stories, sameSchool, pathways, cardBase, share, stopSharing, moreWithApplication = false,
-  firstWeek = [], thanks = false, pathwayRequested = true, next, embed = false,
+  firstWeek = [], thanks = false, pathwayRequested = true, next, embed = false, referralCode = null, showPlaceholders = false,
 }: {
   familyName: string;
   parentFirstName: string;
@@ -57,6 +58,10 @@ export function FamilyWelcome({
   next?: ReactNode;
   /** Inside the school website's frame: no header of our own. */
   embed?: boolean;
+  /** The family's own code, for inviting another family. */
+  referralCode?: string | null;
+  /** Staff and sample families see which next-step links are placeholders. */
+  showPlaceholders?: boolean;
 }) {
   const [selected, setSelected] = useState(0);
   const pathway = pathways?.[selected];
@@ -222,6 +227,15 @@ export function FamilyWelcome({
           thanks={thanks}
         />
       )}
+
+      <NextSteps
+        childFirstName={childFirstName}
+        pathway={pathways ? "ready" : pathwayRequested ? "preparing" : "not-requested"}
+        referralCode={referralCode}
+        shareAnchor={!!pathways}
+        thanks={thanks}
+        showPlaceholders={showPlaceholders}
+      />
 
       <footer className="family-footer">
         <span>Pacifica Christian · Formation Pathways</span>

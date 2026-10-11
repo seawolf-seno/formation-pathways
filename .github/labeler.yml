@@ -1,0 +1,4 @@
+# actions/labeler: labels a PR by the files it changes (.github/workflows/label.yml).
+"needs migration":
+  - changed-files:
+      - any-glob-to-any-file: supabase/migrations/**

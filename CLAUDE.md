@@ -62,12 +62,14 @@ adults behind the scenes; students stay present, in person, with people.
   Cloud/OAuth 2.0 developer console needed to generate a Drive token, waiting on Pacifica
   IT. Don't push on this until he says it's unblocked. Everything else (mock Canvas/Drive,
   the whole app) works with zero live credentials in the meantime.
-- **Live deployment (2026-09-28)**: https://formation-pathways.vercel.app, Vercel project
-  `formation-pathways` on seno's personal **Hobby** team (`seno-2280s-projects`; move to a
-  school Pro/Education team before real use). The GitHub repo is connected: merges to `main`
-  auto-deploy to production, PRs get previews behind Vercel login. Env is
-  `NEXT_PUBLIC_SUPABASE_URL` + the publishable key only (Production + Preview): no Anthropic key
-  (every AI step runs its offline fallback), no service role, no Finalsite or Canvas credentials.
+- **Live deployment (2026-09-28; team moved 2026-10-11)**: https://formation-pathways.vercel.app,
+  Vercel project `formation-pathways`, now in the school's **Pacifica Christian High School**
+  team (moved from seno's personal Hobby team 2026-10-11). Preview deployments use the
+  staging Supabase project (see "Agent database access"); Production keeps the live one. The GitHub repo is connected: merges to `main`
+  auto-deploy to production, PRs get previews behind Vercel login. Preview has only the two
+  public Supabase settings (staging), so AI and integrations run their offline fallbacks there;
+  Production has the live keys and integration secrets (names in `docs/hosting-move.md`). No
+  service-role key anywhere.
   Supabase Auth Site URL and `/auth/callback` redirect are set to the production URL; code and
   link sign-in both verified in the auth logs. On Vercel the fictional demo's SQLite lives in
   per-instance `/tmp`. `lib/demo-persist.ts` (2026-10-01) snapshots it to Supabase
@@ -76,12 +78,21 @@ adults behind the scenes; students stay present, in person, with people.
   migration `20261001180000_demo_snapshots.sql` applied by seno**; until then it silently stays
   per-instance (details in `docs/oct-5-demo.md`). Server-built links use
   `requestOrigin()` (`lib/origin.ts`); never hard-code a host.
-- **Agent database access (2026-09-28)**: the account-level claude.ai Supabase connector (owner
-  access, bypasses RLS and consent triggers) was disabled. The repo's `.mcp.json` Supabase
-  server is `read_only=true` (PR #11), authenticated 2026-09-28 and verified
-  (`transaction_read_only = on`). Agents: never write to the
-  live database, never query per-student tables once real students exist, and apply new
-  migrations only via the SQL editor or `supabase db push` run by seno.
+- **Agent database access (updated 2026-10-11)**: two databases, two rules.
+  - **Production** (`cvppxixatcreyptpkymh`, real pilot students): the repo's `.mcp.json`
+    Supabase server is `read_only=true` (PR #11, verified `transaction_read_only = on`).
+    Agents never write to it, never query per-student tables, and never apply migrations
+    there; seno applies them (SQL editor or `supabase db push`). The account-level claude.ai
+    Supabase connector (owner access, bypasses RLS) stays disabled.
+  - **Staging** (`tavgqwdqlwpmcejzefso`, fictional data only): what Vercel **Preview**
+    deployments use. seno's agent has a writable `supabase-staging` MCP server (local
+    scope, not in `.mcp.json`) and may apply migrations and load sample data there. Never
+    put a real student or family in staging, and never open its real-data gate. Built
+    2026-10-11: all 14 migrations through `20261013000000` applied under their file
+    timestamps, schema fingerprint-verified identical to a PGlite run of the same files,
+    security advisors clean.
+  - Order for any new migration: staging first (check the PR preview), then production,
+    then merge.
 - **Decided, not built**: Anthropic auth on Vercel should be Workload Identity Federation
   (Vercel OIDC token → federation rule; SDK 0.125 has `oidcFederationProvider` +
   `TokenCache`), set up in the school's Anthropic org, not seno's personal one. Until then,
@@ -245,6 +256,12 @@ adults behind the scenes; students stay present, in person, with people.
   Study Commons: fictional grades, grade-based practice, Canvas submission, discussions.
   Next for #32, each needing a decision first: student sign-in (none exists), student uploads
   with teacher approval, and open questions that build a no-numbers "where you are" narrative.
+- **Always a next step (2026-10-09, branch `seno/always-next-step`, card #29)**: every family
+  page ends with `components/discover/NextSteps.tsx`: the pathway (on its way / share it / ask for
+  one), invite a family with their referral code, start the application. `NEXT_STEP_LINKS` in
+  `lib/discover.ts` are **placeholders** until admissions gives the real application link;
+  staff and samples see a "Placeholder link" tag. **Needs seno to apply
+  `20261013000000_referral_thanks_public.sql`** (until then invites always carry the disclosure).
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)
@@ -327,6 +344,12 @@ Test for every screen: "would a parent trust this with their child's story?"
 - Existing pages/nav live under `app/(staff)/` with their own layout; `/apply`
   and `/applicant/[slugToken]` stay outside that group so public-facing pages
   never inherit the internal staff header/nav.
+- **Migrations: seno applies every one** (SQL editor or `supabase db push`). Contributors and
+  their agents write the migration file in their PR but never apply it, and never touch the
+  live database. Name it `YYYYMMDDHHMMSS_what_it_does.sql` with a timestamp later than the
+  newest on `main`; rebase before review. CI (`tests/migrations.test.mjs`) fails a reused
+  timestamp. Code that needs a new table must degrade gracefully until it exists (return
+  empty, hide the feature), because the deploy and the migration never land at the same moment.
 - From 2026-10-30 Supabase no longer auto-grants Data API access to new `public`
   tables (existing tables are unaffected). Every migration that creates a table must
   include its own `grant` statements in the same file, or the table is unreachable
