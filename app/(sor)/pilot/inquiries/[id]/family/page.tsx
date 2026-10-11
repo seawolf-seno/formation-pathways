@@ -50,6 +50,7 @@ export default async function FamilyPreviewPage({ params }: { params: Promise<{ 
         moreWithApplication
         firstWeek={FIRST_WEEK}
         pathwayRequested={i.consent_pathway}
+        showPlaceholders
       />
     </>
   );

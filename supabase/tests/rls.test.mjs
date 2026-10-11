@@ -327,6 +327,8 @@ await expect("nobody deletes a thank-you record", "admin", `delete from referral
 await expect("a teacher can't read referrals", "teach", `select * from referral_thanks`, true, r => r.rows.length === 0);
 await expectAnon("anon can't read referrals", `select * from referral_thanks`, false, r => r.rows.length === 0);
 
+await expectAnon("the public can ask whether thank-yous are on (and only that)", `select referral_thanks_open() as on`, true, r => r.rows[0].on === true);
+await expectAnon("but still can't read the decision", `select referral_thanks_what from pilot_settings`, false, r => r.rows.length === 0);
 // The public form's backstop throttle.
 await expect("inquiries open again", "admin", `update pilot_settings set inquiries_open = true, inquiries_approved_by = 'Head of School', inquiries_approval_reference = 'mtg', inquiries_approved_at = now() returning *`, true, r => r.rows.length === 1);
 await expectAnon("a second child from the same family", submit({ child_first_name: "Sib" }), true);

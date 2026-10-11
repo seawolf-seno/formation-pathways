@@ -90,6 +90,9 @@ export function DiscoverFlow({
       firstWeek={FIRST_WEEK}
       pathwayRequested={done.consentPathway}
       next={next}
+      referralCode={done.shareCode}
+      thanks={done.thanks}
+      showPlaceholders={!!done.testInquiryId}
       // /discover has its own bar (or none, inside the website's frame).
       embed
     />

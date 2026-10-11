@@ -193,6 +193,21 @@ export const FIRST_WEEK: { moment: string; line: string }[] = [
   { moment: "A real question", line: "Open, honest conversation about faith is welcome here, whatever a student's background." },
 ];
 
+/** Where a family's next steps lead (components/discover/NextSteps.tsx).
+ *  PLACEHOLDERS until admissions gives the real links (the Finalsite
+ *  application, a way to ask for a pathway later): `placeholder` ones show a
+ *  "Placeholder link" tag to staff and sample families only. */
+export const NEXT_STEP_LINKS = {
+  apply: { href: "https://www.pacificachristian.org/admissions", placeholder: true },
+  requestPathway: { href: "https://www.pacificachristian.org/admissions", placeholder: true },
+  visit: { href: "https://www.pacificachristian.org/admissions/visit-pacifica", placeholder: false },
+} as const;
+
+/** The words a family sends when they invite another family to inquire. */
+export function inviteText(childFirstName: string, url: string): string {
+  return `We just told Pacifica Christian about ${childFirstName}, and they're preparing a few ways ${childFirstName} could grow there. If you're looking at high schools too, it takes a few minutes: ${url}`;
+}
+
 /** The programs to show for what a family picked; a sport counts as Athletics. */
 export function welcomeMatches(interests: string[]): { program: string; line: string }[] {
   const areas = new Set(interests.filter((i) => i in PROGRAM_MATCHES));
