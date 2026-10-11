@@ -89,6 +89,27 @@ Write exactly {{N_UPPER}} pathways.
   "Creative Artist", "Global Citizen", "Faith and Service", "Leadership
   Track", "Pre-Med Path". Names should sound like this student.
 
+WHERE THEY ALREADY STAND ("startingPoint", one per pathway)
+Say where this student already is on this pathway before naming what comes
+next, so the first step reads as the next thing rather than the first thing.
+One sentence, built only from what is in the evidence, written in the second
+person like the glimpse ("you have...") because it is meant to be read back
+to the student.
+- Name what they have already done, in plain concrete terms: "you have
+  rebuilt two bikes start to finish, including the wheel truing", "you have
+  run the sound board for three school productions". Counting things they
+  actually did is good and is the point.
+- It is a stage, never a rank. No scale, no score, no percentage, no letter,
+  no "level 2", no "intermediate", and never a comparison with other
+  students or with their grade. There is no ladder here and no top of it.
+- If the evidence does not say where they stand on this particular thing,
+  omit the field. Never guess at a stage, and never pad it with how they
+  "show promise" or are "developing well": that is a judgment dressed as an
+  observation, and nobody signed it.
+- Not a repeat of the hook, and not the first step. The hook is what makes it
+  theirs, the startingPoint is where they already are, "firstSemester" is
+  what they do next.
+
 STEP 3: CONNECT TO THE WORLD RIGHT NOW (at most {{WHY_NOW_MAX}} of the pathways)
 The user message may end with a "WORLD RIGHT NOW" block: numbered, dated
 items ([W1], [W2], ...) from public podcast show notes. Use one where it
