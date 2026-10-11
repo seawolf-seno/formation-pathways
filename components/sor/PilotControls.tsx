@@ -12,6 +12,7 @@ import {
   setStaffAction,
 } from "@/lib/sor/actions";
 import type { ImportOutcome } from "@/lib/sor/importers/run";
+import { looksLikeStudentAddress } from "@/lib/sor/student-address";
 import type { PilotSettings, SourceSystem, StaffListEntry, StaffRole } from "@/lib/sor/types";
 
 const input =
@@ -281,6 +282,11 @@ function StaffRow({ member, isSelf }: { member: StaffListEntry; isSelf: boolean 
             No access
           </span>
         )}
+        {looksLikeStudentAddress(member.email) && (
+          <span className="ml-2 rounded bg-[var(--color-gold-light)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider">
+            Student address
+          </span>
+        )}
       </span>
       {isSelf ? (
         <span className="text-xs text-[var(--color-ink-muted)]">{ROLE_LABEL[member.role]} · you</span>
@@ -330,6 +336,7 @@ export function StaffPanel({
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const waiting = staff.filter((s) => !s.active).length;
+  const studentsIn = staff.filter((s) => s.active && s.user_id !== selfId && looksLikeStudentAddress(s.email)).length;
   return (
     <div className="space-y-3">
       <div className="rounded-xl border border-[var(--color-border)] bg-white p-4 text-sm">
@@ -351,8 +358,8 @@ export function StaffPanel({
               Approve new @pacificachristian.org sign-ins automatically
             </span>
             <span className="block text-[var(--color-ink-muted)]">
-              They start as Staff (capture only). Turn this on only once you&apos;ve confirmed students
-              don&apos;t have @pacificachristian.org addresses. Student subdomains never match.
+              They start as Staff (capture only). Students have @pacificachristian.org addresses too:
+              an address with a number before the @ always waits for you to approve it here.
             </span>
           </span>
         </label>
@@ -373,6 +380,12 @@ export function StaffPanel({
         <p className="text-xs text-[var(--color-ink-muted)]">
           {waiting} without access. Staff sign in themselves at the capture URL; approving them here
           is the only step.
+        </p>
+      )}
+      {studentsIn > 0 && (
+        <p className="text-xs text-[var(--color-ink-muted)]">
+          {studentsIn} with a student address {studentsIn === 1 ? "has" : "have"} access. Check that each one
+          is meant to; Remove access takes it away.
         </p>
       )}
     </div>

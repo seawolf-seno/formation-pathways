@@ -176,6 +176,20 @@ await db.exec(`insert into auth.users (id, email, email_confirmed_at) values ('$
 const auto = await db.query(`select active from staff where user_id = '${u.p2}'`);
 const autoOk = auto.rows.length === 1 && auto.rows[0].active === true; if (autoOk) pass++; else fail++;
 console.log(`${autoOk ? "PASS" : "FAIL"}  with auto-approve on, a new school sign-in is active staff`);
+// Student addresses (a number before the @) always wait, even with auto-approve on.
+Object.assign(u, { stu: "00000000-0000-0000-0000-0000000000e6", stu2: "00000000-0000-0000-0000-0000000000e7" });
+Object.assign(ids, { student: u.stu });
+await db.exec(`insert into auth.users (id, email, email_confirmed_at) values ('${u.stu}','kid28@pacificachristian.org', now()), ('${u.stu2}','Sam.Ple2028@pacificachristian.org', now())`);
+const stu = await db.query(`select active from staff where user_id in ('${u.stu}','${u.stu2}')`);
+const stuOk = stu.rows.length === 2 && stu.rows.every(r => r.active === false); if (stuOk) pass++; else fail++;
+console.log(`${stuOk ? "PASS" : "FAIL"}  with auto-approve on, a student address still waits for approval`, stu.rows);
+await expect("a waiting student address sees no people", "student", `select * from people`, true, r => r.rows.length === 0);
+await expect("a waiting student address cannot approve itself", "student", `update staff set active = true where user_id = '${u.stu}' returning *`, true, r => r.rows.length === 0);
+await expect("a signed-in account cannot call the address check itself", "student", `select private.is_student_address('kid28@pacificachristian.org')`, false);
+await expect("an admin can still approve a student contributor by hand", "admin", `update staff set active = true where user_id = '${u.stu}' returning *`, true, r => r.rows.length === 1);
+const rule = await db.query(`select array_agg(private.is_student_address(e) order by o) as got from unnest(array['kid28@pacificachristian.org','ssample30@pacificachristian.org','Sam.Ple2028@pacificachristian.org','28sample@pacificachristian.org','ssample@pacificachristian.org','teacher@pacificachristian.org','you+wren@pacificachristian.org','teacher@school2.example','',null]) with ordinality as t(e, o)`);
+const ruleOk = rule.rows[0].got.join() === "true,true,true,true,false,false,false,false,false,false"; if (ruleOk) pass++; else fail++;
+console.log(`${ruleOk ? "PASS" : "FAIL"}  the address rule matches lib/sor/student-address.ts`, rule.rows[0].got);
 await db.exec(`update auth.users set email_confirmed_at = now() where id = '${ids.admin}'`);
 const kept = await db.query(`select role from staff where user_id = '${ids.admin}'`);
 const keptOk = kept.rows[0]?.role === "admin"; if (keptOk) pass++; else fail++;

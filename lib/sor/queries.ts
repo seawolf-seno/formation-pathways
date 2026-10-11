@@ -19,9 +19,11 @@ import type {
 import type { FunnelCount } from "./funnel";
 import { validateStudentSparks } from "./sparks";
 import { tableNotThereYet, validateClassReflections } from "./class-reflections";
+import { looksLikeStudentAddress } from "./student-address";
 
 /** The signed-in, active staff member, or a redirect to /login. Signed in
- *  and waiting for an admin → /login?error=pending; not on the staff table at
+ *  and waiting for an admin → /login?error=pending, or ?error=student for a
+ *  student address (never approved automatically); not on the staff table at
  *  all (e.g. a non-school address) → /login?error=not-staff. */
 export async function requireStaff(): Promise<StaffMember> {
   await connection(); // per-request, never prerendered, even if env is missing at build time
@@ -38,7 +40,7 @@ export async function requireStaff(): Promise<StaffMember> {
     .eq("user_id", user.id)
     .maybeSingle();
   if (!data) redirect("/login?error=not-staff");
-  if (!data.active) redirect("/login?error=pending");
+  if (!data.active) redirect(`/login?error=${looksLikeStudentAddress(data.email) ? "student" : "pending"}`);
   const { user_id, email, display_name, role } = data as StaffMember;
   return { user_id, email, display_name, role };
 }

@@ -264,10 +264,21 @@ roster on stage. Then, by seno (real student details, so not an agent):
    `@pacificachristian.org` address creates a **pending** Staff account (a
    database trigger; subdomains like `@students.…` never match). Pending
    accounts see nothing. Admins approve them, set roles, or remove access in
-   the Staff section of `/pilot`. Once you've confirmed students don't hold
-   `@pacificachristian.org` addresses, tick *Approve new sign-ins
-   automatically* there and new staff start as Staff (capture only) straight
-   away. Nobody can change their own access.
+   the Staff section of `/pilot`. Tick *Approve new sign-ins automatically*
+   there and new staff start as Staff (capture only) straight away. Nobody can
+   change their own access.
+
+   **Students have `@pacificachristian.org` addresses too.** Theirs carry a
+   number before the @, so an address with a number is never approved
+   automatically (`private.is_student_address`, migration
+   `20261016000000_student_addresses_wait.sql`; the same rule in
+   `lib/sor/student-address.ts`). It waits, the person sees "not open to
+   student accounts yet", and `/pilot` tags it *Student address*. An admin can
+   still approve one by hand (a student contributor, or a staff address that
+   happens to carry a number). The rule is a guess from the address: it only
+   ever holds an account back for a person to decide. Accounts approved before
+   the migration are not changed; `/pilot` counts the student addresses that
+   have access so an admin can check each one.
 6. **Try it on fiction.** Go to `/pilot`, click *Load fictional sample pilot*,
    then run all three imports (sample mode), open a student, click *Draft*,
    and capture on `/capture`.
@@ -340,7 +351,8 @@ The button is built and hidden until `GOOGLE_SIGNIN=on`.
 2. Vercel env (Production): `GOOGLE_SIGNIN=on`, then redeploy.
 3. Sign in once with Google. The staff trigger already handles Google sign-ins:
    they arrive confirmed, with the person's full name, and start as *pending*
-   until approved on `/pilot`, unless auto-approve is on.
+   until approved on `/pilot`, unless auto-approve is on (a student address
+   always waits).
 
 ## Going live per source
 

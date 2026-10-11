@@ -262,6 +262,16 @@ adults behind the scenes; students stay present, in person, with people.
   `lib/discover.ts` are **placeholders** until admissions gives the real application link;
   staff and samples see a "Placeholder link" tag. **Needs seno to apply
   `20261013000000_referral_thanks_public.sql`** (until then invites always carry the disclosure).
+- **Student addresses wait (2026-10-10, branch `samuel/student-signin`, card #35)**: students
+  hold `@pacificachristian.org` addresses too (a number before the @), so with auto-approve on
+  a student's first sign-in became an active Staff account. Now the provisioning trigger never
+  auto-approves an address with a number (`private.is_student_address`; same rule in
+  `lib/sor/student-address.ts`); it waits, sees `/login?error=student`, and `/pilot` tags it
+  *Student address* and counts the ones that already have access. An admin can still approve one
+  by hand (student contributors). **Needs seno to apply `20261016000000_student_addresses_wait.sql`**,
+  then review the tagged accounts on `/pilot`: the migration changes no existing row. Not done:
+  a student sign-in with its own pages (#32), and narrowing what plain Staff can read
+  (`docs/security-review.md`, decision 1).
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)

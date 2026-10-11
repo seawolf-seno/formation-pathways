@@ -7,6 +7,8 @@ const ERRORS: Record<string, string> = {
   link: "That sign-in link expired or was already used. Request a new code below.",
   pending:
     "You're signed in. The pilot admin needs to approve your account before you can capture. You don't need to do anything else.",
+  student:
+    "You're signed in, but this looks like a student address, and Formation Pathways isn't open to student accounts yet. If you're staff, or helping build it, the pilot admin can approve your account.",
   "not-staff":
     "That account isn't on the Formation Pathways staff list. Sign in with your @pacificachristian.org address.",
 };
