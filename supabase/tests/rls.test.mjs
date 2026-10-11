@@ -405,6 +405,85 @@ await expectAnon("a second child from the same family", submit({ child_first_nam
 await expectAnon("a third", submit({ child_first_name: "Sib2" }), true);
 await expectAnon("but not a fourth in a day", submit({ child_first_name: "Sib3" }), false);
 
+// View-only accounts (role `viewer`): fictional samples only, and no writes.
+const v = { viewer: "00000000-0000-0000-0000-00000000a11e", real: "99999999-9999-9999-9999-999999999999" };
+Object.assign(ids, { viewer: v.viewer });
+const vSample = (await db.query("select id from people where is_sample limit 1")).rows[0].id;
+await db.exec(`insert into auth.users (id, email, email_confirmed_at) values ('${v.viewer}','helper30@pacificachristian.org', now())`);
+// The account starts as a teacher and makes rows of its own, so the checks
+// below also cover "you may change what you made yourself" rules.
+await as("admin", `update staff set role = 'teacher', active = true where user_id = '${v.viewer}'`);
+await as("viewer", `insert into observations (person_id, author_id, author_name, raw_text, body) values ('${vSample}', '${v.viewer}', 'V', 'mine', 'mine')`);
+await as("viewer", `insert into student_sparks (person_id, sparks, created_by) values ('${vSample}', '{"answers":[]}', '${v.viewer}')`);
+await as("viewer", `insert into class_reflections (person_id, reflections, created_by) values ('${vSample}', '{"classes":[]}', '${v.viewer}')`);
+await as("viewer", `insert into class_resources (person_id, class_title, title, url, kind, created_by) values ('${vSample}', 'Chemistry', 'Mine', 'https://example.org/mine', 'Practice', '${v.viewer}')`);
+await as("viewer", `insert into spark_links (person_id, token_hash, first_name, created_by) values ('${vSample}', ${hash("tok-viewer-own")}, 'Sam', '${v.viewer}')`);
+await expect("an admin gives a student contributor the view-only role", "admin", `update staff set role = 'viewer', active = true where user_id = '${v.viewer}' returning role`, true, r => r.rows[0]?.role === "viewer");
+// One real student and one sample, each with a row in every table a viewer may read.
+await as("admin", `insert into people (id, first_name, last_name, stage) values ('${v.real}','Real','Two','enrolled')`);
+await as("admin", `insert into consents (person_id, scope, granted_by, granted_on, evidence, recorded_by) select '${v.real}', s, 'Parent Two', '2026-09-30', 'Signed form', '${ids.admin}' from unnest(enum_range(null::consent_scope)) s`);
+await as("admin", `insert into consents (person_id, scope, granted_by, granted_on, evidence, recorded_by) values ('${vSample}', 'student_voice', 'Sample Parent', '2026-09-30', 'Fictional', '${ids.admin}')`);
+for (const p of [v.real, vSample]) {
+  await as("admin", `insert into enrollments (person_id, grade) values ('${p}', 10) on conflict (person_id) do nothing`);
+  await as("admin", `insert into course_history (person_id, section_id, school_year, course_title) values ('${p}', 'v1', '2026-2027', 'Chemistry')`);
+  await as("teach", `insert into observations (person_id, author_id, author_name, raw_text, body) values ('${p}', '${ids.teach}', 'T', 'x', 'x')`);
+  await as("teach", `insert into student_sparks (person_id, sparks, created_by) values ('${p}', '{"answers":[]}', '${ids.teach}')`);
+  await as("teach", `insert into class_reflections (person_id, reflections, created_by) values ('${p}', '{"classes":[]}', '${ids.teach}')`);
+  await as("teach", `insert into class_resources (person_id, class_title, title, url, kind, created_by) values ('${p}', 'Chemistry', 'Moles', 'https://example.org/moles', 'Practice', '${ids.teach}')`);
+}
+await expect("a viewer sees fictional sample people only", "viewer", `select is_sample from people`, true, r => r.rows.length >= 1 && r.rows.every(x => x.is_sample));
+await expect("...while a teacher still sees everyone", "teach", `select count(*) filter (where not is_sample)::int as n from people`, true, r => r.rows[0].n >= 1);
+for (const t of ["consents", "enrollments", "course_history", "observations", "student_sparks", "class_reflections", "class_resources"]) {
+  const there = (await db.query(`select count(*)::int as n from ${t} where person_id = '${v.real}'`)).rows[0].n;
+  await expect(`a viewer reads ${t} for samples, never a real student's (${there} there)`, "viewer", `select count(*)::int as n, count(*) filter (where person_id = '${v.real}')::int as real_n from ${t}`, true, r => there >= 1 && r.rows[0].n >= 1 && r.rows[0].real_n === 0);
+}
+for (const t of ["pathway_drafts", "admissions_records", "external_ids", "spark_links", "pilot_settings", "demo_snapshots", "access_log", "inquiries", "import_runs", "admissions_funnel_counts", "referral_thanks"])
+  await expect(`a viewer reads nothing from ${t}`, "viewer", `select * from ${t}`, true, r => r.rows.length === 0);
+await expect("a viewer sees only their own staff row", "viewer", `select user_id from staff`, true, r => r.rows.length === 1 && r.rows[0].user_id === v.viewer);
+await expect("a viewer cannot write an observation, even about a sample", "viewer", `insert into observations (person_id, author_id, author_name, raw_text, body) values ('${vSample}', '${v.viewer}', 'V', 'x', 'x')`, false);
+await expect("a viewer cannot save sparks", "viewer", `insert into student_sparks (person_id, sparks, created_by) values ('${vSample}', '{"answers":[]}', '${v.viewer}')`, false);
+await expect("a viewer cannot save class reflections", "viewer", `insert into class_reflections (person_id, reflections, created_by) values ('${vSample}', '{"classes":[]}', '${v.viewer}')`, false);
+await expect("a viewer cannot suggest a resource", "viewer", `insert into class_resources (person_id, class_title, title, url, kind, created_by) values ('${vSample}', 'Chemistry', 'x', 'https://example.org/', 'Practice', '${v.viewer}')`, false);
+await expect("a viewer cannot make an at-home link", "viewer", `insert into spark_links (person_id, token_hash, first_name, created_by) values ('${vSample}', ${hash("tok-viewer-new")}, 'Sam', '${v.viewer}')`, false);
+await expect("a viewer cannot add a person", "viewer", `insert into people (first_name, last_name, stage, is_sample) values ('New', 'Sample', 'applicant', true)`, false);
+for (const t of ["people", "observations", "class_resources", "consents", "student_sparks"]) {
+  await expect(`a viewer cannot change ${t}`, "viewer", `update ${t} set created_at = now() returning *`, true, r => r.rows.length === 0);
+  await expect(`a viewer cannot delete from ${t}`, "viewer", `delete from ${t} returning *`, true, r => r.rows.length === 0);
+}
+await expect("a viewer cannot change their own role", "viewer", `update staff set role = 'admin' where user_id = '${v.viewer}' returning *`, true, r => r.rows.length === 0);
+await expect("a viewer's views are logged as themselves", "viewer", `insert into access_log (staff_id, action, person_id) values ('${v.viewer}', 'view_person', '${vSample}')`, true);
+await expect("a viewer cannot log as someone else", "viewer", `insert into access_log (staff_id, action) values ('${ids.admin}', 'view_person')`, false);
+await expect("an admin sees the viewer's log entry", "admin", `select * from access_log where staff_id = '${v.viewer}'`, true, r => r.rows.length === 1);
+// Try to change and delete everything, in every table, with no WHERE (so a
+// read rule can't hide a loose write rule). Nothing may change.
+const vTables = (await db.query(`select c.relname as t, (select a.attname from pg_attribute a where a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped order by a.attnum limit 1) as col from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and c.relkind = 'r' order by 1`)).rows;
+const vCount = async () => Object.fromEntries(await Promise.all(vTables.map(async ({ t }) => [t, (await db.query(`select count(*)::int as n, coalesce(md5(string_agg(x::text, '|' order by x::text)), '') as h from ${t} x`)).rows[0]])));
+const vBefore = await vCount();
+for (const { t, col } of vTables) {
+  for (const sql of [`update ${t} set ${col} = ${col}`, `delete from ${t}`]) { try { await as("viewer", sql); } catch { /* refused outright is fine */ } }
+}
+const vAfter = await vCount();
+const vChanged = vTables.map(({ t }) => t).filter((t) => vBefore[t].n !== vAfter[t].n || vBefore[t].h !== vAfter[t].h);
+const vNothing = vChanged.length === 0 && vTables.length >= 20; if (vNothing) pass++; else fail++;
+console.log(`${vNothing ? "PASS" : "FAIL"}  a viewer changing and deleting everything in all ${vTables.length} tables changes nothing, even rows they made as a teacher`, vChanged);
+const vMine = (await db.query(`select (select count(*) from observations where author_id = '${v.viewer}')::int as obs, (select count(*) from spark_links where created_by = '${v.viewer}')::int as links`)).rows[0];
+const vKept = vMine.obs === 1 && vMine.links === 1; if (vKept) pass++; else fail++;
+console.log(`${vKept ? "PASS" : "FAIL"}  ...including their own earlier note and at-home link`, vMine);
+await db.exec(`update staff set active = false where user_id = '${ids.leaver}'`);
+await as("teach", `insert into observations (person_id, author_id, author_name, raw_text, body) values ('${vSample}', '${ids.teach}', 'T', 'kept', 'kept')`);
+await db.exec(`update observations set author_id = '${ids.leaver}' where raw_text = 'kept'`);
+try { await as("leaver", `delete from observations`); } catch { /* refused outright is fine */ }
+const vLeaver = (await db.query(`select count(*)::int as n from observations where raw_text = 'kept'`)).rows[0].n === 1; if (vLeaver) pass++; else fail++;
+console.log(`${vLeaver ? "PASS" : "FAIL"}  an account with access removed can't delete the notes it wrote`);
+// Default deny holds only while every policy names a role check: is_staff()
+// and has_role() leave viewers out, so a policy without one would let them in.
+const open = await db.query(`select tablename || '.' || policyname as p from pg_policies where schemaname = 'public' and policyname <> 'staff_read' and coalesce(qual, '') || ' ' || coalesce(with_check, '') !~ (case when policyname like '%_viewer_%' then '(is_viewer|viewer_sees)\\(' else '(is_staff|has_role)\\(' end)`);
+const noneOpen = open.rows.length === 0; if (noneOpen) pass++; else fail++;
+console.log(`${noneOpen ? "PASS" : "FAIL"}  every policy names a role check, so a view-only account gets nothing by accident`, open.rows.map(r => r.p));
+const viewerWrites = await db.query(`select tablename || '.' || policyname as p from pg_policies where schemaname = 'public' and policyname like '%_viewer_%' and cmd <> 'SELECT' and policyname <> 'access_log_viewer_insert'`);
+const noViewerWrites = viewerWrites.rows.length === 0; if (noViewerWrites) pass++; else fail++;
+console.log(`${noViewerWrites ? "PASS" : "FAIL"}  the only thing a viewer can write is their own access-log entry`, viewerWrites.rows.map(r => r.p));
+
 const exposed = await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef");
 const noneExposed = exposed.rows.length === 0; if (noneExposed) pass++; else fail++;
 console.log(`${noneExposed ? "PASS" : "FAIL"}  no SECURITY DEFINER function in the API-exposed public schema`, exposed.rows.map(r => r.proname));

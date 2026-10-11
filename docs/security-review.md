@@ -85,6 +85,7 @@ Apply it in the Supabase SQL editor (or `supabase db push`). Then open `/pilot` 
   - single use, with a row lock;
   - expiry and consent are checked when a link is made and when it's used;
   - a visitor learns only a first name.
+- A view-only account (`viewer`, `20261018000000_view_only_accounts.sql`) reads fictional sample students only and writes nothing but its own access-log entries. The same migration stops an account from deleting observations and at-home links it made once its access is removed or made view-only.
 - Staff self-provisioning creates pending `staff` accounts only. Nobody can activate or promote themselves, and the email domain is enforced on every staff row.
 - Every system-of-record action checks the signed-in staff member and role before touching data, with row-level security behind it.
 - Blackbaud sign-in uses PKCE plus a checked `state`. The token lives only in an httpOnly cookie, readable only by admin actions.

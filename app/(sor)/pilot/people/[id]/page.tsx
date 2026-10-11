@@ -62,8 +62,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   const name = displayName(person);
   const isAdmin = staff.role === "admin";
   const canDraft = staff.role === "admin" || staff.role === "admissions";
-  // RLS: student_sparks and class_reflections are readable by admin, admissions and teacher only.
-  const canReadSparks = canDraft || staff.role === "teacher";
+  // RLS: student_sparks and class_reflections are readable by admin, admissions and teacher only,
+  // and by a view-only account for fictional sample students.
+  const canReadSparks = canDraft || staff.role === "teacher" || staff.role === "viewer";
   const aiConsent = person.is_sample || consents.some((c) => c.scope === "ai_drafting" && !c.revoked_at);
   const latest = drafts[0];
   const plan = PATHWAY_PLAN[audienceForStage(person.stage)];

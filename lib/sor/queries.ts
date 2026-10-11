@@ -16,6 +16,7 @@ import type {
   InquiryShare,
   ReferralThanks,
 } from "./types";
+import { VIEW_ONLY_MESSAGE } from "./types";
 import type { FunnelCount } from "./funnel";
 import { validateStudentSparks } from "./sparks";
 import { tableNotThereYet, validateClassReflections, type ReflectionClass } from "./class-reflections";
@@ -44,6 +45,16 @@ export async function requireStaff(): Promise<StaffMember> {
   if (!data.active) redirect(`/login?error=${looksLikeStudentAddress(data.email) ? "student" : "pending"}`);
   const { user_id, email, display_name, role } = data as StaffMember;
   return { user_id, email, display_name, role };
+}
+
+/** For anything that saves, sends, creates or calls the AI: the signed-in
+ *  staff member, unless the account is view only. Every Server Action in
+ *  lib/sor/actions.ts goes through this (tests/view-only.test.mjs), so a
+ *  viewer is stopped before any work starts, not only by the database. */
+export async function requireActingStaff(): Promise<StaffMember> {
+  const staff = await requireStaff();
+  if (staff.role === "viewer") throw new Error(VIEW_ONLY_MESSAGE);
+  return staff;
 }
 
 export async function logAccess(

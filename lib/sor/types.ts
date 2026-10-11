@@ -2,7 +2,13 @@ import type { FormationTag, GeneratedPathway } from "@/lib/types";
 
 export type LifecycleStage = "applicant" | "admitted" | "enrolled" | "alumni" | "withdrawn";
 export type SourceSystem = "finalsite" | "blackbaud" | "canvas";
-export type StaffRole = "admin" | "admissions" | "teacher" | "staff";
+// "viewer" is view only: it opens the pages a teacher can, for fictional
+// sample students only, and can't save, send or create anything. The database
+// enforces both (20261018000000_view_only_accounts.sql).
+export type StaffRole = "admin" | "admissions" | "teacher" | "staff" | "viewer";
+
+/** What a view-only account is told when it tries to save or send something. */
+export const VIEW_ONLY_MESSAGE = "This account is view only. Nothing was saved or sent.";
 export type ConsentScope = "import_records" | "ai_drafting" | "staff_observations" | "student_voice";
 
 export const CONSENT_SCOPES: { scope: ConsentScope; label: string; detail: string }[] = [

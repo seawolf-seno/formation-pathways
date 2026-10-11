@@ -37,6 +37,7 @@ const BLACKBAUD_NOTICE: Record<string, string> = {
 export default async function PilotPage({ searchParams }: { searchParams: Promise<{ blackbaud?: string }> }) {
   const { blackbaud: bbNotice } = await searchParams;
   const staff = await requireStaff();
+  if (staff.role === "viewer") redirect("/pilot/samples");
   if (staff.role !== "admin" && staff.role !== "admissions") redirect("/capture");
   const isAdmin = staff.role === "admin";
   const [settings, roster, runs, staffList, drift] = await Promise.all([

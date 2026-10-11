@@ -260,6 +260,7 @@ const ROLE_LABEL: Record<StaffRole, string> = {
   teacher: "Teacher",
   admissions: "Admissions",
   admin: "Admin",
+  viewer: "View only (sample students)",
 };
 
 function StaffRow({ member, isSelf }: { member: StaffListEntry; isSelf: boolean }) {

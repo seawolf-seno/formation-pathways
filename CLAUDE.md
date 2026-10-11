@@ -281,6 +281,18 @@ adults behind the scenes; students stay present, in person, with people.
   then review the tagged accounts on `/pilot`: the migration changes no existing row. Not done:
   a student sign-in with its own pages (#32), and narrowing what plain Staff can read
   (`docs/security-review.md`, decision 1).
+- **View-only accounts (2026-10-11, branch `samuel/view-only-account`, stacked on #62, card #36)**: a
+  fifth staff role, `viewer` ("View only (sample students)" on `/pilot`), for a student
+  contributor to check that pages still work. It reads fictional sample students only
+  (`private.viewer_sees`) and can't save, send or create anything: `private.is_staff()` is now
+  false for a viewer, so existing and future policies leave it out by default, and every Server
+  Action goes through `requireActingStaff()` (`lib/sor/queries.ts`; guarded by
+  `tests/view-only.test.mjs`). It starts at `/pilot/samples` and is turned away from the
+  fictional demo in production. The migration also requires staff access to delete your own
+  observation or at-home link (before, any signed-in account could delete what it had made).
+  **Needs seno to apply `20261018000000_view_only_accounts.sql`**, then pick the role for the
+  account on `/pilot`; choosing it before the migration shows an error and changes nothing.
+  Whether a viewer should ever see real students is leadership's call; today it cannot.
 - **Next concrete actions**:
   1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
      open a real student on screen). The deck (overview → live demo → what we build next → ask)

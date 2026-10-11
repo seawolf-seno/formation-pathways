@@ -13,7 +13,7 @@ import { DEMO_FAMILIES } from "@/lib/discover-demo";
 import { audienceForStage, FORMATION_TAGS, PATHWAY_PLAN, type FormationTag, type GeneratedPathway } from "@/lib/types";
 import { sanitizeGlimpse, sanitizeMilestones, sanitizeUniqueness } from "@/lib/pathway-journey";
 import { getSorClient } from "./supabase-server";
-import { getCaptureRoster, getInquiry, getPersonProfile, getRoster, logAccess, requireStaff } from "./queries";
+import { getCaptureRoster, getInquiry, getPersonProfile, getRoster, logAccess, requireActingStaff } from "./queries";
 import { matchPeople } from "./match";
 import { runImport, type ImportOutcome } from "./importers/run";
 import { runFunnelImport, type FunnelImportOutcome } from "./importers/run-funnel";
@@ -51,7 +51,7 @@ const fail = (e: unknown): { ok: false; error: string } => {
 };
 
 async function requireRole(...roles: StaffMember["role"][]): Promise<StaffMember> {
-  const staff = await requireStaff();
+  const staff = await requireActingStaff();
   if (!roles.includes(staff.role)) throw new Error(`This needs the ${roles.join(" or ")} role.`);
   return staff;
 }
@@ -161,7 +161,7 @@ export async function setGateAction(formData: FormData): Promise<Result> {
   }
 }
 
-const STAFF_ROLES: StaffMember["role"][] = ["admin", "admissions", "teacher", "staff"];
+const STAFF_ROLES: StaffMember["role"][] = ["admin", "admissions", "teacher", "staff", "viewer"];
 
 /** Approve, change the role of, or deactivate a staff member. Never your own
  *  row, so an admin can't lock themselves (and everyone else) out. */
@@ -855,7 +855,7 @@ export async function matchCaptureAction(
   transcript: string
 ): Promise<Result<{ candidates: { id: string; name: string; stage: string }[]; confident: boolean }>> {
   try {
-    await requireStaff();
+    await requireActingStaff();
     const roster = await getCaptureRoster();
     const matches = matchPeople(transcript, roster);
     const candidates = matches.map((m) => ({
@@ -879,7 +879,7 @@ export async function draftCaptureAction(
   Result<{ cleanText: string; tags: FormationTag[]; disciplineFlag: string | null; aiUsed: boolean; aiNote: string | null }>
 > {
   try {
-    const staff = await requireStaff();
+    const staff = await requireActingStaff();
     const profile = await getPersonProfile(personId);
     if (!profile) return { ok: false, error: "Student not found." };
     if (!hasConsent(profile, "ai_drafting")) {
@@ -928,7 +928,7 @@ export async function saveCaptureAction(input: {
   disciplineFlag: string | null;
 }): Promise<Result> {
   try {
-    const staff = await requireStaff();
+    const staff = await requireActingStaff();
     const tags = input.tags.filter((t): t is FormationTag => (FORMATION_TAGS as readonly string[]).includes(t));
     const supabase = await getSorClient();
     const { error } = await supabase.from("observations").insert({
@@ -1050,7 +1050,7 @@ export async function updateDraftPathwaysAction(input: {
  *  signed in. The database refuses it without student_voice consent. */
 export async function saveStudentSparksAction(input: { personId: string; sparks: unknown }): Promise<Result> {
   try {
-    const staff = await requireStaff();
+    const staff = await requireActingStaff();
     const checked = validateStudentSparks(input.sparks);
     if (!checked.ok) return { ok: false, error: checked.error };
     const supabase = await getSorClient();
@@ -1083,7 +1083,7 @@ export async function saveStudentSparksAction(input: { personId: string; sparks:
  *  consent. */
 export async function saveClassReflectionsAction(input: { personId: string; reflections: unknown }): Promise<Result> {
   try {
-    const staff = await requireStaff();
+    const staff = await requireActingStaff();
     const profile = await getPersonProfile(input.personId);
     if (!profile) return { ok: false, error: "Student not found." };
     const checked = validateClassReflections(input.reflections, classesForReflection(profile.courses, profile.classHistory));
@@ -1124,7 +1124,7 @@ const RESOURCES_NOT_YET = "Adding resources isn't switched on yet. Nothing on th
  *  student_voice consent. */
 export async function suggestClassResourceAction(input: { personId: string; suggestion: unknown }): Promise<Result> {
   try {
-    const staff = await requireStaff();
+    const staff = await requireActingStaff();
     const profile = await getPersonProfile(input.personId);
     if (!profile) return { ok: false, error: "Student not found." };
     const checked = validateResourceSuggestion(input.suggestion, classesForReflection(profile.courses, profile.classHistory));
@@ -1183,7 +1183,7 @@ const SPARK_LINK_DAYS = 7;
  *  and can't be shown again. Needs student_voice consent (DB trigger). */
 export async function createSparkLinkAction(personId: string): Promise<Result<{ url: string; expiresAt: string }>> {
   try {
-    const staff = await requireStaff();
+    const staff = await requireActingStaff();
     const supabase = await getSorClient();
     const { data: person } = await supabase
       .from("people")
