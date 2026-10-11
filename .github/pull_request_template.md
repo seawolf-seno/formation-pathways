@@ -1,6 +1,6 @@
 ## What changed and why
 
-<!-- One or two sentences. What problem does this solve, or what feature does this add? -->
+<!-- One or two sentences. Link the Fizzy card: "Fizzy #34". -->
 
 ## How you tested it
 
@@ -8,11 +8,18 @@
 
 ## Screenshot (for any UI change)
 
-<!-- Drag an image in here, or delete this section if there's no UI change. -->
+<!-- Drag an image in here, or delete this section if there's no UI change. Phone width if families or staff will use it on a phone. -->
+
+## Database (delete if no migration)
+
+- [ ] One new file in `supabase/migrations/`, named `YYYYMMDDHHMMSS_what_it_does.sql`, with a timestamp later than the newest on `main` (rebased on `main` just before asking for review)
+- [ ] Every new table has RLS policies, explicit `grant` statements, and a consent trigger if it holds per-student data
+- [ ] New guardrails have cases in `supabase/tests/rls.test.mjs`
+- [ ] The app still works before the migration is applied (empty results or a hidden feature, never a 500)
+- [ ] I did **not** apply it to any Supabase project. seno applies migrations.
 
 ## Checklist
 
-- [ ] I only used fictional/demo data — no real student names or information anywhere
-- [ ] This PR is scoped to one feature or fix (not a grab-bag of unrelated changes)
-- [ ] I didn't change `lib/db.ts`'s schema, or another student's in-progress files, without checking first
-- [ ] `npm run lint` passes locally
+- [ ] Fictional/sample data only: no real student or family names or information anywhere, including screenshots
+- [ ] Scoped to one feature or fix
+- [ ] `npm run lint`, `npm run test:db` and `npm run test:share` pass locally

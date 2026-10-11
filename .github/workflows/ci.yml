@@ -17,6 +17,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # seno applies migrations in timestamp order, so a PR's new migration
+      # must sort after every migration already on main (CONTRIBUTING.md,
+      # "Database changes"). Reused timestamps fail tests/migrations.test.mjs.
+      - name: New migrations come after main's
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch --no-tags --depth=1 origin "$BASE"
+          latest=$(git ls-tree --name-only "origin/$BASE" supabase/migrations/ | grep '\.sql$' | sort | tail -1 | xargs -r basename)
+          status=0
+          for f in $(git diff --name-only --diff-filter=A "origin/$BASE" HEAD -- supabase/migrations/); do
+            name=$(basename "$f")
+            if [[ "$name" < "$latest" || "$name" == "$latest" ]]; then
+              echo "::error file=$f::$name must sort after $latest, the newest migration on $BASE. Rename it with a later timestamp."
+              status=1
+            fi
+          done
+          exit $status
+        env:
+          BASE: ${{ github.base_ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
