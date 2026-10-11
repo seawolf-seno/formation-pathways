@@ -177,7 +177,7 @@ helped. Second step of folding Study Hub in (Fizzy #32).
   students" and "A student said: …". Staff see who suggested each one. A
   student sees their own waiting ones, and never a declined label.
 - **Same rules as the rest of student voice.** `class_resources` (migration
-  `20261015000000_class_resources.sql`) needs the `student_voice` consent,
+  `20261017000000_class_resources.sql`) needs the `student_voice` consent,
   is written as the signed-in adult, and is removed if the student is
   withdrawn. Until the migration is applied the button and the review list
   are hidden and the Study Hub is unchanged.

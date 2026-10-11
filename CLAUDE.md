@@ -261,7 +261,7 @@ adults behind the scenes; students stay present, in person, with people.
   `class_resources` table: `student_voice` consent trigger, https-only check, a guard that
   fixes the link, class and student and stamps the reviewer from the signed-in account
   (`lib/sor/class-resources.ts`). Links only, no file uploads. Hidden until the migration is
-  applied. **Needs seno to apply `20261015000000_class_resources.sql`.**
+  applied. **Needs seno to apply `20261017000000_class_resources.sql`.**
   Still open for #32, each needing a decision first: student sign-in (none exists), file
   uploads (storage, scanning, copyright), and open questions that build a no-numbers "where
   you are" narrative.
