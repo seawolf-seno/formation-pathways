@@ -96,6 +96,45 @@ await expect("a saved reflection can't be rewritten", "admin", `update class_ref
 await expect("admissions reads class reflections", "adm", `select * from class_reflections`, true, r => r.rows.length === 1);
 await expect("non-staff cannot read class reflections", "stranger", `select * from class_reflections`, true, r => r.rows.length === 0);
 await expect("teacher cannot delete class reflections", "teach", `delete from class_reflections returning id`, true, r => r.rows.length === 0);
+// Class resources (links students suggest for their classes): saved unreviewed, approved by a teacher or admin.
+const plainStaff = "00000000-0000-0000-0000-0000000000f1";
+await db.exec(`insert into auth.users values ('${plainStaff}','f@pacificachristian.org'); insert into staff values ('${plainStaff}','f@pacificachristian.org','Plain','staff');`);
+ids.plain = plainStaff;
+const KID = "11111111-1111-1111-1111-111111111111";
+const res = (who, extra = {}) => {
+  const row = { person_id: KID, class_title: "Spanish III", title: "Verb drills", url: "https://example.org/verbs", kind: "Practice", created_by: ids[who], ...extra };
+  return `insert into class_resources (${Object.keys(row).join(", ")}) values (${Object.values(row).map((v) => `'${v}'`).join(", ")}) returning id, status, class_key`;
+};
+await expect("admin revokes student_voice once more", "admin", `update consents set revoked_at = now() where scope = 'student_voice' and revoked_at is null returning *`, true, r => r.rows.length === 1);
+await expect("a suggested resource is refused without student_voice consent", "plain", res("plain"), false);
+await expect("admin records student_voice consent once more", "admin", `insert into consents (person_id, scope, granted_by, granted_on, evidence, recorded_by) values ('${KID}','student_voice','Parent Kid','2026-10-10','Signed form','${ids.admin}')`, true);
+await expect("any staff member saves a student's suggestion, unreviewed", "plain", res("plain"), true, r => r.rows[0].status === "pending" && r.rows[0].class_key === "spanish iii");
+await expect("nobody saves a suggestion as someone else", "plain", res("teach"), false);
+await expect("a suggestion can't arrive already approved", "teach", res("teach", { status: "approved" }), false);
+await expect("...or with a reviewer filled in", "teach", res("teach", { reviewed_by_name: "Head of School" }), false);
+await expect("a link that isn't https is refused", "teach", res("teach", { url: "http://example.org/verbs" }), false);
+await expect("a script link is refused", "teach", res("teach", { url: "javascript:alert(1)" }), false);
+await expect("a link with sign-in details in it is refused", "teach", res("teach", { url: "https://user:pw@example.org/" }), false);
+await expect("a link with @ in its path is fine", "teach", res("teach", { url: "https://www.youtube.com/@channel", title: "A channel" }), true);
+await expect("a kind the app doesn't have is refused", "teach", res("teach", { kind: "Grades" }), false);
+await expect("non-staff cannot suggest", "stranger", res("stranger"), false);
+await expect("plain staff see the unreviewed one they saved, not anyone else's", "plain", `select title from class_resources`, true, r => r.rows.length === 1 && r.rows[0].title === "Verb drills");
+await expect("a teacher sees them", "teach", `select * from class_resources`, true, r => r.rows.length === 2);
+await expect("plain staff can't approve", "plain", `update class_resources set status = 'approved' returning id`, true, r => r.rows.length === 0);
+await expect("admissions can read but not approve", "adm", `update class_resources set status = 'approved' returning id`, true, r => r.rows.length === 0);
+await expect("a teacher approves one, and is recorded as the reviewer", "teach", `update class_resources set status = 'approved', reviewed_by_name = 'Head of School' where title = 'Verb drills' returning reviewed_by, reviewed_by_name, reviewed_at`, true, r => r.rows.length === 1 && r.rows[0].reviewed_by === ids.teach && r.rows[0].reviewed_by_name === "Teach" && r.rows[0].reviewed_at !== null);
+await expect("the link can't be changed in a review", "teach", `update class_resources set url = 'https://example.org/elsewhere' where title = 'Verb drills'`, false);
+await expect("...nor the class", "teach", `update class_resources set class_title = 'Physics' where title = 'Verb drills'`, false);
+await expect("...nor the student", "admin", `update class_resources set person_id = (select id from people where is_sample limit 1) where title = 'Verb drills'`, false);
+await expect("a reviewed suggestion can't go back to unreviewed", "teach", `update class_resources set status = 'pending' where title = 'Verb drills'`, false);
+await expect("tidying the title keeps the original reviewer", "admin", `update class_resources set title = 'Verb drills (preterite)' where title = 'Verb drills' returning reviewed_by_name`, true, r => r.rows[0]?.reviewed_by_name === "Teach");
+await expect("plain staff still don't see the other unreviewed one", "plain", `select status from class_resources`, true, r => r.rows.length === 1 && r.rows[0].status === "approved");
+await expect("a teacher approves the other; every staff member sees approved ones", "leaver", `update class_resources set status = 'approved' where title = 'A channel' returning id`, true, r => r.rows.length === 1);
+await expect("...including plain staff", "plain", `select status from class_resources`, true, r => r.rows.length === 2 && r.rows.every((x) => x.status === "approved"));
+await expect("an admin takes one down, and that is recorded too", "admin", `update class_resources set status = 'declined' where title = 'A channel' returning reviewed_by_name`, true, r => r.rows[0]?.reviewed_by_name === "Admin");
+await expect("a declined one is hidden from plain staff who didn't save it", "plain", `select title from class_resources`, true, r => r.rows.length === 1 && r.rows[0].title.startsWith("Verb drills"));
+await expect("non-staff cannot read suggestions", "stranger", `select * from class_resources`, true, r => r.rows.length === 0);
+await expect("a teacher cannot delete a suggestion", "teach", `delete from class_resources returning id`, true, r => r.rows.length === 0);
 // At-home Spark links: the one anonymous write path. Write-only, once, expiring.
 async function asAnon(sql) {
   await db.exec(`reset role; select set_config('request.jwt.claim.sub', '', false); set role anon;`);
@@ -126,6 +165,8 @@ await expectAnon("...and can't submit", `select spark_link_submit('tok-leaver', 
 await expectAnon("anon cannot read the links table", `select * from spark_links`, false, r => r.rows.length === 0);
 await expectAnon("anon cannot read sparks", `select * from student_sparks`, false, r => r.rows.length === 0);
 await expectAnon("anon cannot read class reflections", `select * from class_reflections`, false, r => r.rows.length === 0);
+await expectAnon("anon cannot read suggested resources", `select * from class_resources`, false, r => r.rows.length === 0);
+await expectAnon("anon cannot suggest a resource", `insert into class_resources (person_id, class_title, title, url, kind, created_by) values ('11111111-1111-1111-1111-111111111111', 'Spanish III', 'x', 'https://example.org/', 'Practice', '${ids.teach}')`, false);
 await expectAnon("anon cannot write class reflections", `insert into class_reflections (person_id, reflections, created_by) values ('11111111-1111-1111-1111-111111111111', '{"classes":[]}', '${ids.teach}')`, false);
 await expectAnon("anon cannot write sparks directly", `insert into student_sparks (person_id, sparks, created_by) values ('11111111-1111-1111-1111-111111111111', '{}', '${ids.teach}')`, false);
 await expectAnon("anon cannot call other private helpers", `select private.has_role('admin')`, false);

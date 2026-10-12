@@ -254,8 +254,17 @@ adults behind the scenes; students stay present, in person, with people.
   (github.com/TheEnigmaticPhilosopher/study-commons): **confirm the author's permission and
   the name to credit** (the page says "a Pacifica student's project"). Not carried over from
   Study Commons: fictional grades, grade-based practice, Canvas submission, discussions.
-  Next for #32, each needing a decision first: student sign-in (none exists), student uploads
-  with teacher approval, and open questions that build a no-numbers "where you are" narrative.
+- **Links students add (2026-10-10, branch `samuel/class-resources`, stacked on #56, card
+  #32)**: on the Study Hub a student suggests a link for one of their classes
+  (`components/sor/SuggestResource.tsx`); it is saved unreviewed and reaches other students
+  (same class title, no names) only after a teacher or admin approves it at `/pilot/resources`.
+  `class_resources` table: `student_voice` consent trigger, https-only check, a guard that
+  fixes the link, class and student and stamps the reviewer from the signed-in account
+  (`lib/sor/class-resources.ts`). Links only, no file uploads. Hidden until the migration is
+  applied. **Needs seno to apply `20261017000000_class_resources.sql`.**
+  Still open for #32, each needing a decision first: student sign-in (none exists), file
+  uploads (storage, scanning, copyright), and open questions that build a no-numbers "where
+  you are" narrative.
 - **Always a next step (2026-10-09, branch `seno/always-next-step`, card #29)**: every family
   page ends with `components/discover/NextSteps.tsx`: the pathway (on its way / share it / ask for
   one), invite a family with their referral code, start the application. `NEXT_STEP_LINKS` in

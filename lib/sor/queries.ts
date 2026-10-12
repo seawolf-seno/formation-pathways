@@ -18,7 +18,8 @@ import type {
 } from "./types";
 import type { FunnelCount } from "./funnel";
 import { validateStudentSparks } from "./sparks";
-import { tableNotThereYet, validateClassReflections } from "./class-reflections";
+import { tableNotThereYet, validateClassReflections, type ReflectionClass } from "./class-reflections";
+import { classKey, type ClassResource } from "./class-resources";
 import { looksLikeStudentAddress } from "./student-address";
 
 /** The signed-in, active staff member, or a redirect to /login. Signed in
@@ -221,6 +222,40 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
       return checked.ok ? [{ reflections: checked.reflections, created_at: row.created_at }] : [];
     }),
   } as PersonProfile;
+}
+
+/** Suggested study links for a student's classes, as far as the signed-in
+ *  staff member may see them: approved ones for everyone, unreviewed and
+ *  declined ones for the roles that review. `ready` is false until the
+ *  class_resources migration is applied, and the feature hides itself. */
+export async function getClassResources(classes: ReflectionClass[]): Promise<{ ready: boolean; rows: ClassResource[] }> {
+  const keys = [...new Set(classes.map((c) => classKey(c.title)))];
+  const supabase = await getSorClient();
+  const { data, error } = await supabase
+    .from("class_resources")
+    .select("*")
+    .in("class_key", keys.length ? keys : [""])
+    .order("created_at", { ascending: true })
+    .limit(300);
+  if (error && !tableNotThereYet(error)) console.error("class_resources read failed:", error.message);
+  return { ready: !tableNotThereYet(error), rows: (data ?? []) as ClassResource[] };
+}
+
+/** Every suggestion waiting for a teacher, oldest first, and the most recent
+ *  decisions. Admin and teacher (RLS shows other roles less). */
+export async function getResourcesForReview(): Promise<{ ready: boolean; pending: ClassResource[]; decided: ClassResource[] }> {
+  const supabase = await getSorClient();
+  const [pending, decided] = await Promise.all([
+    supabase.from("class_resources").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
+    supabase.from("class_resources").select("*").neq("status", "pending").order("reviewed_at", { ascending: false }).limit(50),
+  ]);
+  const error = pending.error ?? decided.error;
+  if (error && !tableNotThereYet(error)) console.error("class_resources read failed:", error.message);
+  return {
+    ready: !tableNotThereYet(error),
+    pending: (pending.data ?? []) as ClassResource[],
+    decided: (decided.data ?? []) as ClassResource[],
+  };
 }
 
 export async function getImportRuns(): Promise<ImportRun[]> {
