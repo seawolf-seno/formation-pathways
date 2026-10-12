@@ -293,17 +293,50 @@ adults behind the scenes; students stay present, in person, with people.
   **Needs seno to apply `20261018000000_view_only_accounts.sql`**, then pick the role for the
   account on `/pilot`; choosing it before the migration shows an error and changes nothing.
   Whether a viewer should ever see real students is leadership's call; today it cannot.
+- **Always a next step + contributor workflow (2026-10-09/11, PRs #59, #60, #61)**: every
+  family page ends with `components/discover/NextSteps.tsx` (pathway / invite with referral
+  code / start the application); `NEXT_STEP_LINKS` in `lib/discover.ts` are **placeholders**
+  until admissions sends the real application link. `public.referral_thanks_open()` lets the
+  welcome page add the reward disclosure only when thank-yous are on. CI fails a reused or
+  out-of-order migration timestamp (`tests/migrations.test.mjs`, a step in `ci.yml`); PRs adding
+  a migration get the **needs migration** label; `main` requires CI + seno's code-owner review,
+  approvals dismiss on new pushes. #61 (srsuchard): addresses with a digit before the @
+  (students) always start pending, even with auto-approve on.
+- **Hosting + staging (2026-10-11, card #26)**: Vercel project moved to the school team
+  **Pacifica Christian High School** (`team_UE009PyrifdWiQ5eErR7Fyrf`); production still
+  https://formation-pathways.vercel.app. Preview env points at **staging Supabase**
+  (`tavgqwdqlwpmcejzefso`): all 16 migrations through `20261016000000`, fingerprint-verified
+  identical to a PGlite run of the repo's files, advisors clean, seno is admin, sample data
+  loaded (6 sample students + Finalsite/Blackbaud/class history/Canvas, 700 `/season` figures,
+  5 demo families). Staging sign-in is Supabase's built-in email (links only, Supabase org
+  members only); seno chose not to set up SMTP/templates for staging. A preview on current
+  code: https://formation-pathways-1aveofcp4-pacifica-christian-high-school.vercel.app (Vercel
+  login). Agent tools: the Vercel **plugin** connector sees the school team (the claude.ai Vercel
+  connector only sees seno's old personal team); `supabase-staging` MCP (local scope) is
+  writable; `.mcp.json` `supabase` is production, read-only.
+- **Open PRs as of 2026-10-11**:
+  - #58 STEM Scholars (TheEnigmaticPhilosopher): migration still named `20261012000000_…`
+    (collides; asked to rename to `20261015000000_…` and rebase). Not on staging.
+  - #62 class resources (srsuchard): migration `20261017000000_class_resources.sql`.
+  - #63 view-only accounts (srsuchard): includes #62's migration plus
+    `20261018000000_view_only_accounts.sql`. Merge #62 first.
+  - #57 Spark wide evidence (CtelehowskiPCHS): no migration; Vercel check red.
+  For each migration PR: agent applies it to **staging** (record the file's own version in
+  `supabase_migrations.schema_migrations`), seno checks the preview, seno applies to
+  production, then merges.
 - **Next concrete actions**:
-  1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
-     open a real student on screen). The deck (overview → live demo → what we build next → ask)
-     is a claude.ai artifact, documented in `docs/board-deck.md`.
-  2. Admissions director's self-test (`docs/admissions-tester-guide.md`); her answers on the
-     fall-2027 counts and whether `financial_aid_waitlisting` counts as admitted.
-  3. After leadership confirms Anthropic terms: `AI_REAL_STUDENTS=on`, then Spark → Draft →
-     Edit → Sign → Open it with each pilot student; tune prompts from what they say.
-  4. Canvas for the pilot (`CANVAS_*` env + Canvas user ids); ask Finalsite to narrow the API
-     credential; move hosting to a school-owned Vercel team with a security review.
-  5. Later: alumni consent-reset design (sketched on the Systems Map).
+  1. Migration PRs above, in order: #62 → #63 → #58 (after rename), via staging first.
+  2. Admissions phone test: shared doc https://claude.ai/code/artifact/e736d884-aa9c-4fef-9467-280ac6982a34
+     (seno shares it); repo copy `docs/admissions-phone-test.md`. Collect answers, the real
+     application link (`NEXT_STEP_LINKS`) and rewritten "A first week" lines (`FIRST_WEEK`).
+  3. Leadership packet `docs/inquiry-launch.md`: consent wording, thank-you decision (record on
+     `/pilot/inquiries/referrals`), FTC disclosure wording, social media policy, 5-family pilot.
+  4. New Vercel team hardening: spend limit, required 2FA, log retention, Firewall rate limits
+     on `POST /discover` and `/login`; decide Developer seats for colleagues (Viewers' PRs
+     get no previews).
+  5. After leadership confirms Anthropic terms for students: Spark → Draft → Sign with pilot
+     students. Canvas for the pilot; ask Finalsite to narrow the API credential.
+  6. Later: alumni consent-reset design (sketched on the Systems Map).
 - Tracked live at https://claude.ai/artifact/3L9fUkHmf4q6d378289uP6 (Formation Pathways
   section) and narrated architecturally at
   https://claude.ai/artifact/GWGzrdfMSr8vfWsRycGM1T — keep both current alongside this file
