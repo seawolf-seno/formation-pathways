@@ -324,3 +324,40 @@ test("mastery for a Pathway draft: words only, solid first, growing named gently
   assert.ok(!/\d/.test(text.replace("AP Physics 1", "")), "no numbers");
   assert.equal(masteryForPrompt([masterySummary(config, "AP Physics 1", [])]), null);
 });
+
+test("tagged resources join their standard or unit, videos as videos", async () => {
+  const { withCourseResources, kindForUrl } = await import("../lib/mastery/course-resources.ts");
+  const merged = withCourseResources(config, [
+    { id: "a", standard_code: "2.7", group_code: null, kind: "other", title: "Friction demo", url: "https://example.org/f", video_id: null, channel: null, note: null },
+    { id: "b", standard_code: null, group_code: "U3", kind: "video", title: "Energy song", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", video_id: "dQw4w9WgXcQ", channel: "Someone", note: "fun" },
+    { id: "c", standard_code: "9.9", group_code: null, kind: "other", title: "Gone", url: "https://example.org/g", video_id: null, channel: null, note: null },
+  ]);
+  const f = merged.groups.flatMap((g) => g.standards).find((s) => s.code === "2.7");
+  assert.equal(f.resources[0].url, "https://example.org/f");
+  assert.equal(merged.groups.find((g) => g.code === "U3").videos[0].id, "dQw4w9WgXcQ");
+  assert.equal(config.groups.find((g) => g.code === "U3").videos[0].id === "dQw4w9WgXcQ", false, "the shared set isn't changed");
+  assert.equal(kindForUrl("https://youtu.be/dQw4w9WgXcQ"), "video");
+  assert.equal(kindForUrl("https://www.khanacademy.org/science/ap-physics-1"), "khan");
+  assert.equal(kindForUrl("https://phet.colorado.edu/en/simulations/collision-lab"), "phet");
+  assert.equal(kindForUrl("https://apclassroom.collegeboard.org/"), "ap_classroom");
+  assert.equal(kindForUrl("https://example.org/"), "other");
+});
+
+test("the extension matches Khan students exactly and keeps only proficient / mastered", async () => {
+  const { matchRoster, countedLevel } = await import("../extensions/mastery-hub/match.js");
+  const roster = [
+    { id: "p1", first: "Wren", last: "Okafor", preferred: null },
+    { id: "p2", first: "Theodore", last: "Lane", preferred: "Teddy" },
+    { id: "p3", first: "Sam", last: "Ruiz", preferred: null },
+    { id: "p4", first: "Sam", last: "Ruiz", preferred: null },
+  ];
+  assert.equal(matchRoster("Wren Okafor", roster)?.id, "p1");
+  assert.equal(matchRoster("Okafor, Wren", roster)?.id, "p1");
+  assert.equal(matchRoster("Teddy Lane", roster)?.id, "p2");
+  assert.equal(matchRoster("Wren", roster), null, "first name alone isn't enough");
+  assert.equal(matchRoster("Sam Ruiz", roster), null, "two students share the name");
+  assert.equal(matchRoster("", roster), null);
+  assert.equal(countedLevel("MASTERED"), "mastered");
+  assert.equal(countedLevel("proficient"), "proficient");
+  for (const w of ["familiar", "attempted", "unstarted", "", null]) assert.equal(countedLevel(w), null, String(w));
+});

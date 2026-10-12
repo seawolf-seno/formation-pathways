@@ -336,6 +336,15 @@ adults behind the scenes; students stay present, in person, with people.
   families who consented under the old "never by AI" text. Migration `20261021000000` on staging.
   Khan Academy: seno ruled out Clever; next is a Chrome extension using the teacher's own Khan
   session (needs Claude in Chrome access to inspect Khan's teacher pages, structure only).
+- **Mastery Hub browser extension (2026-10-12, branch `seno/mastery-extension`, card #37)**: #67 merged and
+  `20261021` applied to production (verified). Chrome extension `extensions/mastery-hub` (load unpacked;
+  `docs/mastery-extension.md`): reads the teacher's own Khan **Reports → Skills** page (no Khan password, no
+  third party; seno accepted Khan's no-scraping risk) every 3h in a background tab; only **key skills**
+  (≤3 per Khan unit, mapped to a standard on the course page) at **proficient → Proficient / mastered →
+  Extending** become evidence; Khan students matched to the roster in the browser, unmatched never sent.
+  Also **tags any page** as a course resource (`mastery_course_resources`, merged into the course's standards).
+  Auth: a revocable `fpx_` token from `/mastery` (hash only, 180 days) → `app/api/mastery/extension/*` →
+  token-checked SECURITY DEFINER functions. Migration `20261022000000` on staging (verified).
 - **Open PRs as of 2026-10-12**: #62 and #63 merged (their migrations are on staging; production
   is seno's). Still open:
   - #58 STEM Scholars (TheEnigmaticPhilosopher): migration still named `20261012000000_…`

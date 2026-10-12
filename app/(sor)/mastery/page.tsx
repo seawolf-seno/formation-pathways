@@ -1,5 +1,8 @@
 import Link from "next/link";
 import { getMyCourses, masteryConfigs, requireMasteryTeacher } from "@/lib/mastery/queries";
+import { getSorClient } from "@/lib/sor/supabase-server";
+import { requestOrigin } from "@/lib/origin";
+import { ExtensionConnections } from "@/components/mastery/ExtensionTools";
 import { NewCourseForm, SampleCourseButton } from "@/components/mastery/TeacherTools";
 
 export const metadata = { title: "Mastery Hub · Formation Pathways", robots: { index: false, follow: false } };
@@ -23,6 +26,13 @@ export default async function MasteryHome() {
     );
   }
   const configs = await masteryConfigs();
+  const supabase = await getSorClient();
+  const { data: tokenRows } = await supabase
+    .from("mastery_extension_tokens")
+    .select("token_hash, label, created_at, expires_at, last_used_at, revoked_at")
+    .order("created_at", { ascending: false })
+    .limit(20);
+  const hubUrl = await requestOrigin();
   const hasSample = courses.some((c) => c.is_sample);
 
   return (
@@ -60,6 +70,26 @@ export default async function MasteryHome() {
           </Link>
         ))}
         {!courses.length && <p className="text-sm text-[var(--color-ink-muted)]">No courses yet.</p>}
+      </section>
+
+      <section className="space-y-3">
+        <h2 className="font-display text-xl text-[var(--color-navy-ink)]">Browser extension</h2>
+        <p className="max-w-2xl text-sm text-[var(--color-ink-muted)]">
+          The Mastery Hub extension for Chrome reads your Khan Academy skills report while you&apos;re signed in to Khan, and
+          sends your key skills here every few hours. It also lets you tag any page as a resource for one of your classes.
+          Install it once (docs/mastery-extension.md), then connect it here.
+        </p>
+        <ExtensionConnections
+          hubUrl={hubUrl}
+          tokens={(tokenRows ?? []).map((t) => ({
+            hash: t.token_hash,
+            label: t.label,
+            created: t.created_at,
+            expires: t.expires_at,
+            lastUsed: t.last_used_at,
+            revoked: Boolean(t.revoked_at) || new Date(t.expires_at) < new Date(),
+          }))}
+        />
       </section>
 
       <section className="space-y-3">

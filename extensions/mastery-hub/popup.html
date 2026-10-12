@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Mastery Hub</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <header><span class="mark">FP</span> Mastery Hub</header>
+
+  <section id="connect" hidden>
+    <p>Connect this browser to your hub. On the hub's <b>/mastery</b> page, press <b>Connect the extension</b> and paste the code here.</p>
+    <label>Hub address <input id="hub" value="https://formation-pathways.vercel.app" /></label>
+    <label>Connection code <input id="token" placeholder="fpx_…" autocomplete="off" /></label>
+    <button id="doConnect">Connect</button>
+    <p class="msg" id="connectMsg"></p>
+  </section>
+
+  <section id="main" hidden>
+    <p class="who" id="who"></p>
+
+    <h2>Tag this page</h2>
+    <p class="page" id="pageTitle"></p>
+    <label>Class <select id="course"></select></label>
+    <label>For <select id="where"></select></label>
+    <label>Why it helps (optional, students see it) <input id="note" maxlength="300" /></label>
+    <button id="doTag">Save to this class</button>
+    <p class="msg" id="tagMsg"></p>
+
+    <h2>Khan Academy</h2>
+    <div id="khan"></div>
+    <button id="doSync" class="quiet">Sync Khan now</button>
+    <p class="msg" id="syncMsg"></p>
+
+    <footer><button id="disconnect" class="link">Disconnect this browser</button></footer>
+  </section>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 "use server";
 
+import { createHash, randomBytes } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSorClient } from "@/lib/sor/supabase-server";
@@ -10,6 +11,7 @@ import { sampleEvidence } from "./sample";
 import { getMasteryConfig } from "./standard-sets";
 import { fallbackDraftSteps, parseDraftSteps, readSavedSteps, type DraftStep } from "./next-steps";
 import { nextStepsPayload } from "./next-steps-server";
+import { describeLink } from "./links";
 import { draftMasteryNextSteps } from "@/lib/claude";
 import { tidyPhrasing } from "@/lib/draft-style";
 import { insertEvidence, recordRun, runCanvasSync } from "./sync";
@@ -91,13 +93,15 @@ export async function updateCourseSettingsAction(courseId: string, formData: For
     const slug = str(formData.get("slug"), 40);
     const canvas = str(formData.get("canvas_course_id"), 20);
     const finished = str(formData.get("finished_through"), 3);
+    const khan = str(formData.get("khan_class_code"), 12).toUpperCase();
+    if (khan && !/^[A-Z0-9]{6,12}$/.test(khan)) return { ok: false, error: "The Khan class code is the 8 letters and numbers after /teacher/class/ in your Khan class's address." };
     if (!COURSE_SLUG.test(slug)) return { ok: false, error: "The address is letters, numbers and dashes, starting with a letter." };
     if (canvas && !/^\d{1,20}$/.test(canvas)) return { ok: false, error: "The Canvas course id is the number in the course's Canvas address." };
     if (finished && !/^\d{1,2}$/.test(finished)) return { ok: false, error: "Pick a unit." };
     const supabase = await getSorClient();
     const { error } = await supabase
       .from("mastery_courses")
-      .update({ slug, canvas_course_id: canvas || null, finished_through: finished === "" ? null : Number(finished) })
+      .update({ slug, canvas_course_id: canvas || null, finished_through: finished === "" ? null : Number(finished), ...(formData.has("khan_class_code") ? { khan_class_code: khan || null } : {}) })
       .eq("id", courseId);
     if (error) throw new Error(slugTaken(error.message) ? `/mastery/${slug} is already taken.` : error.message);
     refresh();
@@ -551,6 +555,106 @@ export async function discardNextStepsAction(id: string): Promise<Result> {
     await requireMasteryTeacher();
     const supabase = await getSorClient();
     const { error } = await supabase.from("mastery_next_steps").delete().eq("id", id).eq("status", "draft");
+    if (error) throw new Error(error.message);
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ---------------------------------------------------------------- Khan key skills, tagged resources
+
+/** Make a Khan skill one of the unit's (at most three) key skills, mapped to
+ *  a standard, or stop counting it. */
+export async function setKhanSkillAction(courseId: string, skillId: string, chosen: boolean, standardCode: string): Promise<Result> {
+  try {
+    await requireMasteryTeacher();
+    const bundle = await bundleOrThrow(courseId);
+    const standard = standardCode ? findStandard(bundle.config, standardCode) : null;
+    if (chosen && !standard) return { ok: false, error: "Pick the standard this skill shows." };
+    const supabase = await getSorClient();
+    const { data, error } = await supabase
+      .from("mastery_khan_skills")
+      .update({ chosen, standard_code: standard?.code ?? null })
+      .eq("course_id", courseId)
+      .eq("skill_id", skillId)
+      .select("skill_id");
+    if (error) throw new Error(error.message);
+    if (!data?.length) return { ok: false, error: "That skill isn't in this course's Khan list (sync once first)." };
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Tag a link for a standard or unit from the course page (the extension
+ *  does the same from any page). */
+export async function tagResourceAction(courseId: string, formData: FormData): Promise<Result> {
+  try {
+    await requireMasteryTeacher();
+    const bundle = await bundleOrThrow(courseId);
+    const where = str(formData.get("where"), 30);
+    const [type, code] = where.split(":");
+    const standard = type === "s" ? findStandard(bundle.config, code) : null;
+    const group = type === "g" ? bundle.config.groups.find((g) => g.code === code) ?? null : null;
+    if (!standard && !group) return { ok: false, error: "Pick the standard or unit it's for." };
+    const tag = await describeLink(str(formData.get("url"), 500), str(formData.get("title"), 200));
+    const supabase = await getSorClient();
+    const { error } = await supabase.from("mastery_course_resources").insert({
+      course_id: courseId,
+      standard_code: standard?.code ?? null,
+      group_code: group?.code ?? null,
+      note: str(formData.get("note"), 300) || null,
+      ...tag,
+    });
+    if (error) throw new Error(error.message);
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function deleteCourseResourceAction(courseId: string, id: string): Promise<Result> {
+  try {
+    await requireMasteryTeacher();
+    const supabase = await getSorClient();
+    const { error } = await supabase.from("mastery_course_resources").delete().eq("id", id).eq("course_id", courseId);
+    if (error) throw new Error(error.message);
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ---------------------------------------------------------------- browser extension connection
+
+/** A new connection for the browser extension. The token is shown once and
+ *  only its hash is kept; it expires in 180 days. */
+export async function createExtensionTokenAction(label: string): Promise<Result<{ token: string }>> {
+  try {
+    await requireMasteryTeacher();
+    const token = `fpx_${randomBytes(32).toString("base64url")}`;
+    const supabase = await getSorClient();
+    const { error } = await supabase
+      .from("mastery_extension_tokens")
+      .insert({ token_hash: createHash("sha256").update(token, "utf8").digest("hex"), label: label.trim().slice(0, 60) || "Chrome" });
+    if (error) throw new Error(error.message);
+    refresh();
+    return { ok: true, token };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function revokeExtensionTokenAction(tokenHash: string): Promise<Result> {
+  try {
+    await requireMasteryTeacher();
+    const supabase = await getSorClient();
+    const { error } = await supabase.from("mastery_extension_tokens").update({ revoked_at: new Date().toISOString() }).eq("token_hash", tokenHash);
     if (error) throw new Error(error.message);
     refresh();
     return { ok: true };

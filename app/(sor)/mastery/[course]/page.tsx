@@ -9,11 +9,14 @@ import { ClassMap, SOURCE_FILTERS, type SourceFilter } from "@/components/master
 import { ExportDrop } from "@/components/mastery/ExportDrop";
 import { CanvasControls, CourseSettings, DeleteSampleCourse, RequestInbox, RosterPanel, SourceSwitch, type SourceRow } from "@/components/mastery/TeacherTools";
 import { VideoShelf } from "@/components/mastery/VideoShelf";
+import { KhanSkillsPanel, TaggedResources } from "@/components/mastery/ExtensionTools";
+import { allStandards } from "@/lib/mastery/config";
+import { standardsByName } from "@/lib/mastery/exports";
 import { shortDate } from "@/components/mastery/levels";
 
 export const metadata = { title: "Mastery Hub · Formation Pathways", robots: { index: false, follow: false } };
 
-const SOURCE_LABEL = { canvas: "Canvas", ap_classroom: "AP Classroom reports", khan: "Khan Academy (through Canvas)" } as const;
+const SOURCE_LABEL = { canvas: "Canvas", ap_classroom: "AP Classroom reports", khan: "Khan Academy key skills (browser extension)" } as const;
 
 /**
  * One course for its teacher: requests waiting, the class map, where the
@@ -113,6 +116,7 @@ export default async function CoursePage({ params, searchParams }: { params: Pro
           finishedThrough={course.finished_through}
           units={config.groups.filter((g) => g.unitNumber !== null).map((g) => ({ number: g.unitNumber!, title: g.title }))}
           isSample={course.is_sample}
+          khanClassCode={course.khan_class_code}
         />
         <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
           Students sign in and find this course at /me/{course.slug}. Finished units lead their next steps and the videos.
@@ -166,16 +170,40 @@ export default async function CoursePage({ params, searchParams }: { params: Pro
                     </p>
                   </>
                 ) : (
-                  <p className="text-xs text-[var(--color-ink-muted)]">
-                    No uploads: Khan Academy work counts when it reaches Canvas (Khan&apos;s grade sync for Canvas, via Clever LMS
-                    Connect), and Khan skill names map to standards on their own. Until that sync is on, the drop-in above takes a
-                    Khan CSV as a fallback.
-                  </p>
+<KhanSkillsPanel
+                    courseId={course.id}
+                    linked={bundle.khanLinked}
+                    standards={allStandards(config).map((x) => ({ code: x.code, title: x.title }))}
+                    skills={bundle.khanSkills.map((k) => {
+                      const hits = standardsByName(k.title, config);
+                      return { id: k.skill_id, title: k.title, unit: k.unit_title, chosen: k.chosen, standard: k.standard_code, suggestion: hits.length === 1 ? hits[0] : null };
+                    })}
+                  />
                 )}
               </div>
             </div>
           ))}
         </div>
+      </section>
+
+      <section>
+        <h2 className="mb-1 font-display text-xl text-[var(--color-navy-ink)]">Tagged resources</h2>
+        <p className="mb-3 text-sm text-[var(--color-ink-muted)]">
+          Links you tagged for this course (from the browser extension on any page, or here). Students see them with their
+          standard&apos;s next steps; YouTube videos join the video shelf.
+        </p>
+        <TaggedResources
+          courseId={course.id}
+          tagged={bundle.courseResources.map((t) => {
+            const std = t.standard_code ? allStandards(config).find((x) => x.code === t.standard_code) : null;
+            const grp = t.group_code ? config.groups.find((g) => g.code === t.group_code) : null;
+            return { id: t.id, title: t.title, url: t.url, kind: t.kind, note: t.note, where: std ? `${std.code} ${std.title}` : grp?.title ?? "a standard no longer in the course" };
+          })}
+          where={config.groups.flatMap((g) => [
+            { value: `g:${g.code}`, label: `${g.title} (whole unit)` },
+            ...g.standards.map((x) => ({ value: `s:${x.code}`, label: `  ${x.code} ${x.title}` })),
+          ])}
+        />
       </section>
 
       <section>

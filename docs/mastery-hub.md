@@ -318,17 +318,15 @@ Pathway or by AI". It now says that, with AI drafting consent too, strengths in 
 scores) can inform a Pathway draft and the teacher's next steps. Anyone who consented under the
 old wording should re-confirm before their mastery reaches a draft.
 
-## Khan Academy (next)
+## Khan Academy (browser extension)
 
-Khan Academy's grade sync into Canvas needs Clever, which seno ruled out. Instead, a small Chrome
-extension (planned) runs in the teacher's own browser while they're signed in to Khan. Every few
-hours, and on "Send now", it reads their classes' assignment scores and skill mastery with their
-own session and sends them to the course. There's no stored password, no server bot and no third
-party. Khan's help center asks people not to use "scraping tools, bots, or other tech to copy or
-extract data". seno has accepted that risk to his Khan account.
+Khan Academy work comes in through the Mastery Hub Chrome extension, which reads the teacher's
+own Khan skills report in their signed-in browser. Only the teacher's **key skills** count (up to
+three per Khan unit, each mapped to a standard), and only at **proficient** (→ Proficient) or
+**mastered** (→ Extending). The same extension tags any web page as a resource for a class.
+Setup and details: `docs/mastery-extension.md`.
 
 ## Not built yet
 
-- The Khan Academy extension (needs a look at Khan's teacher pages first).
 - Students sending in a file (links only today), and a browser bookmarklet for PhET.
 - Science-practice tagging inside Canvas items (only codes and names in titles count).

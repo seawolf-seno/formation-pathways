@@ -7,6 +7,7 @@ import { tableNotThereYet } from "@/lib/sor/class-reflections";
 import type { Person, StaffMember } from "@/lib/sor/types";
 import { COURSE_SLUG, type EvidenceSource, type Level, type MasteryConfig } from "./config";
 import { getMasteryConfig, listStandardSets } from "./standard-sets";
+import { withCourseResources, type CourseResourceRow } from "./course-resources";
 
 // Mastery Hub reads (Fizzy #37). All through the signed-in user's session:
 // RLS gives a teacher only their own courses and a student only their own
@@ -18,6 +19,8 @@ export interface MasteryCourse {
   /** Its address: /mastery/<slug>, /me/<slug>. */
   slug: string;
   finished_through: number | null;
+  /** The Khan Academy class this course reads key skills from (extension). */
+  khan_class_code: string | null;
   config_key: string;
   teacher_id: string;
   canvas_course_id: string | null;
@@ -117,9 +120,24 @@ export async function getMyCourses(): Promise<(MasteryCourse & { students: numbe
   });
 }
 
+export interface KhanSkillRow {
+  skill_id: string;
+  title: string;
+  unit_title: string;
+  standard_code: string | null;
+  chosen: boolean;
+  seen_at: string;
+}
+
 export interface CourseBundle {
   course: MasteryCourse;
+  /** The course's standards, with its tagged resources merged in. */
   config: MasteryConfig;
+  /** What the teacher tagged for this course ([] before the migration). */
+  courseResources: CourseResourceRow[];
+  /** Khan Academy skills seen by the extension, and which are key ([] for students). */
+  khanSkills: KhanSkillRow[];
+  khanLinked: number;
   roster: RosterStudent[];
   evidence: Evidence[];
   requests: MasteryRequest[];
@@ -142,7 +160,7 @@ export async function getCourseBundle(slugOrCourse: string | MasteryCourse): Pro
   const course = typeof slugOrCourse === "string" ? await findCourse(slugOrCourse) : slugOrCourse;
   if (!course) return null;
   const courseId = course.id;
-  const [roster, evidence, requests, sources] = await Promise.all([
+  const [roster, evidence, requests, sources, tagged, khanSkills, khanLinks] = await Promise.all([
     supabase
       .from("mastery_roster")
       .select("person_id, people(id, first_name, last_name, preferred_name, is_sample, student_accounts(email, active))")
@@ -150,6 +168,9 @@ export async function getCourseBundle(slugOrCourse: string | MasteryCourse): Pro
     supabase.from("mastery_evidence").select("*").eq("course_id", courseId).order("occurred_at", { ascending: false }).limit(10000),
     supabase.from("mastery_requests").select("*").eq("course_id", courseId).order("created_at", { ascending: false }).limit(500),
     supabase.from("mastery_sources").select("source, paused, last_run_at, last_summary").eq("course_id", courseId),
+    supabase.from("mastery_course_resources").select("*").eq("course_id", courseId).order("created_at", { ascending: false }),
+    supabase.from("mastery_khan_skills").select("skill_id, title, unit_title, standard_code, chosen, seen_at").eq("course_id", courseId).order("unit_title").order("title"),
+    supabase.from("mastery_khan_links").select("kaid", { count: "exact", head: true }).eq("course_id", courseId),
   ]);
   type Row = { people: Pick<Person, "id" | "first_name" | "last_name" | "preferred_name" | "is_sample"> & { student_accounts: { email: string; active: boolean } | { email: string; active: boolean }[] | null } };
   const students = ((roster.data ?? []) as unknown as Row[])
@@ -169,7 +190,10 @@ export async function getCourseBundle(slugOrCourse: string | MasteryCourse): Pro
     .sort((a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name));
   return {
     course: course as MasteryCourse,
-    config: await getMasteryConfig((course as MasteryCourse).config_key),
+    config: withCourseResources(await getMasteryConfig((course as MasteryCourse).config_key), (tagged.data ?? []) as CourseResourceRow[]),
+    courseResources: (tagged.data ?? []) as CourseResourceRow[],
+    khanSkills: (khanSkills.data ?? []) as KhanSkillRow[],
+    khanLinked: khanLinks.count ?? 0,
     roster: students,
     evidence: (evidence.data ?? []).map(toEvidence),
     requests: (requests.data ?? []) as MasteryRequest[],
@@ -259,13 +283,14 @@ export async function getStudentCourse(slug: string, personId: string) {
   const course = await findCourse(slug);
   if (!course) return null;
   const courseId = course.id;
-  const [evidence, requests] = await Promise.all([
+  const [evidence, requests, tagged] = await Promise.all([
     supabase.from("mastery_evidence").select("*").eq("course_id", courseId).eq("person_id", personId).order("occurred_at", { ascending: false }),
     supabase.from("mastery_requests").select("*").eq("course_id", courseId).eq("person_id", personId).order("created_at", { ascending: false }).limit(50),
+    supabase.from("mastery_course_resources").select("*").eq("course_id", courseId),
   ]);
   return {
     course: course as MasteryCourse,
-    config: await getMasteryConfig((course as MasteryCourse).config_key),
+    config: withCourseResources(await getMasteryConfig((course as MasteryCourse).config_key), (tagged.data ?? []) as CourseResourceRow[]),
     evidence: (evidence.data ?? []).map(toEvidence),
     requests: (requests.data ?? []) as MasteryRequest[],
   };
