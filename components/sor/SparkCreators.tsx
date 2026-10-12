@@ -4,10 +4,10 @@ import { useState } from "react";
 
 /**
  * "Name three creators you actually watch or listen to": YouTube, TikTok,
- * podcasts, Spotify, anyone. Typed, so only what they choose is shared;
- * replaces the Takeout upload in the Spark Lab formats.
+ * podcasts, Spotify, anyone. Typed, so only what they choose is shared — this
+ * is the last step of every Spark format, in place of any history import.
  */
-export function CreatorsStep({ onDone }: { onDone: (channels: string[]) => void }) {
+export function CreatorsStep({ onDone, done = "Done ✦" }: { onDone: (channels: string[]) => void; done?: string }) {
   const [names, setNames] = useState(["", "", ""]);
   const filled = [...new Set(names.map((n) => n.trim()).filter(Boolean))];
   return (
@@ -30,7 +30,7 @@ export function CreatorsStep({ onDone }: { onDone: (channels: string[]) => void 
       </div>
       <div className="spark-row">
         <button className="spark-quiet" onClick={() => onDone([])}>Skip</button>
-        <button className="spark-go" onClick={() => onDone(filled)} disabled={!filled.length}>Done ✦</button>
+        <button className="spark-go" onClick={() => onDone(filled)} disabled={!filled.length}>{done}</button>
       </div>
     </div>
   );

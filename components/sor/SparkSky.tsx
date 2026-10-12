@@ -6,7 +6,7 @@ import { useDictation } from "@/components/useDictation";
 import { saveStudentSparksAction, submitFamilySparksAction } from "@/lib/sor/actions";
 import type { StudentSparks } from "@/lib/sor/sparks";
 import type { SparkChoicePair, SparkOption } from "@/lib/spark";
-import { topChannels, type ChannelCount } from "@/lib/youtube-takeout";
+import { CreatorsStep } from "./SparkCreators";
 import "./spark-sky.css";
 
 type Step = "intro" | "ask" | "pull" | "lean" | "channels" | "reveal";
@@ -123,9 +123,7 @@ export function SparkSky({
   const [pi, setPi] = useState(0);
   const [leanings, setLeanings] = useState<StudentSparks["leanings"]>([]);
   const [chosen, setChosen] = useState<string | null>(null);
-  const [channelOptions, setChannelOptions] = useState<ChannelCount[] | null>(null);
   const [channels, setChannels] = useState<Set<string>>(new Set());
-  const [fileError, setFileError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -218,16 +216,6 @@ export function SparkSky({
     setPi(pi - 1);
   }
 
-  async function readTakeout(file: File) {
-    setFileError(null);
-    try {
-      // Read here, in this browser. The file is never uploaded anywhere.
-      setChannelOptions(topChannels(JSON.parse(await file.text())));
-    } catch (e) {
-      setFileError(e instanceof Error ? e.message : "Couldn't read that file.");
-    }
-  }
-
   // Leaving with unsaved sparks loses them, so say so before the tab closes.
   const unsaved = !saved && (answers.length > 0 || picks.size > 0);
   useEffect(() => {
@@ -239,29 +227,34 @@ export function SparkSky({
 
   /** The sky is the end of the conversation, so it saves on arrival: closing
    *  the tab after seeing it must not lose everything. The button below stays
-   *  only as a retry if saving failed. */
-  function reveal() {
+   *  only as a retry if saving failed.
+   *
+   *  Takes the creator names rather than reading `channels`, because the step
+   *  before this one sets them and finishes in the same handler — state read
+   *  here would still be the previous render's, and the last thing the student
+   *  typed would be dropped. */
+  function reveal(named: string[]) {
     if (onFinish) {
-      onFinish(collected());
+      onFinish(collected(named));
       return;
     }
     setStep("reveal");
-    if (!saved && !pending && stars.length > 0) save();
+    if (!saved && !pending && (answers.length > 0 || picks.size > 0)) save(named);
   }
 
-  function collected(): StudentSparks {
+  function collected(named: string[]): StudentSparks {
     return {
       answers,
       picks: [...picks.entries()].map(([label, obsessed]) => ({ label, obsessed })),
       leanings,
-      channels: [...channels],
+      channels: named,
     };
   }
 
-  function save() {
+  function save(named: string[]) {
     setError(null);
     start(async () => {
-      const sparks = collected();
+      const sparks = collected(named);
       const res =
         target.kind === "staff"
           ? await saveStudentSparksAction({ personId: target.personId, sparks })
@@ -445,48 +438,20 @@ export function SparkSky({
           </div>
         )}
 
+        {/* The student names who they watch instead of handing over a history
+            file. Watch history is a picture of the recommender — what autoplayed
+            at midnight, what a friend sent — not of them, so it answered a
+            question nobody asked. The three they choose to name are the better
+            signal anyway, and choosing is the whole point: nothing about them
+            gets collected that they didn't decide to say. */}
         {step === "channels" && (
-          <div className="spark-card">
-            <p className="spark-eyebrow">Optional</p>
-            <h2>Got your YouTube history?</h2>
-            <p className="spark-sub">
-              Drop in <code>watch-history.json</code> from Google Takeout. It&apos;s read right here on this device and never
-              uploaded. You pick which channels (if any) to add as stars.
-            </p>
-            {!channelOptions ? (
-              <label className="spark-drop">
-                <input type="file" accept=".json,application/json" onChange={(e) => e.target.files?.[0] && readTakeout(e.target.files[0])} />
-                Choose the file
-              </label>
-            ) : (
-              <div className="spark-bubbles is-static">
-                {channelOptions.map((c) => (
-                  <button
-                    key={c.name}
-                    className={`spark-bubble ${channels.has(c.name) ? "is-lit" : ""}`}
-                    onClick={() =>
-                      setChannels((s) => {
-                        const next = new Set(s);
-                        if (next.has(c.name)) next.delete(c.name);
-                        else next.add(c.name);
-                        return next;
-                      })
-                    }
-                    aria-pressed={channels.has(c.name)}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-            )}
-            {fileError && <p className="spark-error">{fileError}</p>}
-            <div className="spark-row">
-              <span />
-              <button className="spark-go" onClick={reveal}>
-                {onFinish ? (channelOptions ? "Done with this one ✦" : "Skip, done with this one ✦") : channelOptions ? "Show me my sky ✦" : "Skip, show me my sky ✦"}
-              </button>
-            </div>
-          </div>
+          <CreatorsStep
+            onDone={(named) => {
+              setChannels(new Set(named));
+              reveal(named);
+            }}
+            done={onFinish ? "Done with this one ✦" : "Show me my sky ✦"}
+          />
         )}
 
         {step === "reveal" && (
@@ -516,7 +481,7 @@ export function SparkSky({
             ) : (
               <div className="spark-row">
                 <button className="spark-quiet" onClick={() => setStep("pull")}>Add more</button>
-                <button className="spark-go" onClick={save} disabled={stars.length === 0}>
+                <button className="spark-go" onClick={() => save([...channels])} disabled={stars.length === 0}>
                   {error ? "Try saving again ✦" : "Save my sparks ✦"}
                 </button>
               </div>

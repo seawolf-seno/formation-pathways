@@ -316,20 +316,6 @@
 .spark-both.is-chosen { border-style: solid; border-color: var(--gold); color: var(--gold); transform: scale(1.04); }
 .spark-both.is-faded { opacity: 0.25; transform: scale(0.96); }
 
-.spark-drop {
-  position: relative;
-  display: block;
-  border: 1.5px dashed #8fb3d977;
-  border-radius: 18px;
-  padding: 22px;
-  text-align: center;
-  cursor: pointer;
-  color: var(--pacific);
-}
-.spark-drop:focus-within { outline: 2px solid var(--pacific); outline-offset: 3px; }
-/* The native file control is hidden visually; the whole drop zone is its label. */
-.spark-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
-
 /* Phones: keep the sky readable; labels show in full at the reveal. */
 @media (max-width: 640px) {
   .spark-label { display: none; }
