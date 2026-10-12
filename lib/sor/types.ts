@@ -9,7 +9,7 @@ export type StaffRole = "admin" | "admissions" | "teacher" | "staff" | "viewer";
 
 /** What a view-only account is told when it tries to save or send something. */
 export const VIEW_ONLY_MESSAGE = "This account is view only. Nothing was saved or sent.";
-export type ConsentScope = "import_records" | "ai_drafting" | "staff_observations" | "student_voice";
+export type ConsentScope = "import_records" | "ai_drafting" | "staff_observations" | "student_voice" | "mastery_records";
 
 export const CONSENT_SCOPES: { scope: ConsentScope; label: string; detail: string }[] = [
   {
@@ -26,6 +26,11 @@ export const CONSENT_SCOPES: { scope: ConsentScope; label: string; detail: strin
     scope: "student_voice",
     label: "Student voice",
     detail: "Let the student share what lights them up (their own words and picks) in a Spark conversation with staff.",
+  },
+  {
+    scope: "mastery_records",
+    label: "Mastery Hub",
+    detail: "Keep this student's mastery levels, scores and evidence for courses run in the Mastery Hub, and let them sign in to see their own. Never used in a Pathway or by AI.",
   },
   {
     scope: "ai_drafting",

@@ -366,6 +366,8 @@ export async function recordConsentAction(formData: FormData): Promise<Result> {
         recorded_by: staff.user_id,
       }))
     );
+    if (error && /mastery_records/.test(error.message))
+      return { ok: false, error: "The Mastery Hub consent needs its database migration first (20261019000000_mastery_hub.sql). Record the others without it." };
     if (error) return fail(error);
     await logAccess(staff, "record_consent", personId, { scopes });
     revalidatePath("/pilot");
