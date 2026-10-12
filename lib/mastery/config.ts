@@ -104,8 +104,9 @@ export interface MasteryConfig {
 }
 
 const CODE = /^[A-Za-z0-9.-]{1,20}$/;
-/** A course address: same rule as mastery_courses.slug in the database. */
-export const COURSE_SLUG = /^[A-Za-z][A-Za-z0-9-]{1,39}$/;
+/** A course address: same rule as mastery_courses.slug in the database.
+ *  "standards" is taken by /mastery/standards. */
+export const COURSE_SLUG = /^(?!standards$)[A-Za-z][A-Za-z0-9-]{1,39}$/i;
 const isObj = (v: unknown): v is Record<string, unknown> => Boolean(v) && typeof v === "object" && !Array.isArray(v);
 const text = (v: unknown, where: string, max = 200): string => {
   if (typeof v !== "string" || !v.trim() || v.length > max) throw new Error(`${where}: expected text`);

@@ -3,7 +3,8 @@ import { timingSafeEqual } from "crypto";
 import { Client } from "pg";
 import { canvasEvidence } from "./canvas-map";
 import { fetchCanvasMastery, isLiveCanvasConfigured } from "./canvas";
-import { loadMasteryConfig } from "./queries";
+import { parseMasteryConfig } from "./config";
+import { fileStandardSet } from "./standard-sets";
 
 /**
  * The scheduled Canvas import (Vercel Cron → /api/cron/mastery): every real
@@ -65,7 +66,12 @@ export async function runScheduledImport(now = new Date()): Promise<ScheduledRun
       let note: string;
       let added = 0;
       try {
-        const config = loadMasteryConfig(course.config_key);
+        // The hub's saved standards if any, else the built-in file.
+        const { rows: saved } = await db.query<{ config: Record<string, unknown> }>(
+          "select config from public.mastery_standard_sets where key = $1",
+          [course.config_key],
+        );
+        const config = parseMasteryConfig(saved[0]?.config ?? fileStandardSet(course.config_key));
         const { rows: ids } = await db.query<{ person_id: string; external_id: string }>(
           `select r.person_id, e.external_id from public.mastery_roster r
            join public.external_ids e on e.person_id = r.person_id and e.system = 'canvas'

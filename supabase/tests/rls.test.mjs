@@ -598,6 +598,33 @@ await expectImporter("...and as nobody else", `insert into mastery_log (course_i
 await expect("the teacher sees the automatic grade, with no person recorded", "teach", `select recorded_by from mastery_evidence where external_key = 'canvas:assignment:1:9'`, true, r => r.rows.length === 1 && r.rows[0].recorded_by === null);
 await expect("a teacher can't add evidence without being recorded", "teach", `insert into mastery_evidence (course_id, person_id, standard_code, source, title, level) values ((select id from mastery_courses where slug = 'APPhysics1'), ${kidReal}, '2.5', 'oral', 'Oral', 'proficient') returning recorded_by`, true, r => r.rows[0]?.recorded_by === ids.teach);
 
+// Mastery Hub: standard sets edited in the hub, and next steps shared by the teacher.
+const set = (key) => `insert into mastery_standard_sets (key, config) values ('${key}', '{"key":"${key}"}') returning created_by`;
+await expect("a teacher saves a standard set, as its owner", "teach", set("chem-honors"), true, r => r.rows[0]?.created_by === ids.teach);
+await expect("another teacher can't change it", "teach2", `update mastery_standard_sets set config = '{}' where key = 'chem-honors' returning key`, true, r => r.rows.length === 0);
+await expect("admissions can't create one", "adm", set("x-adm"), false);
+await expect("its owner edits it, and the key stays", "teach", `update mastery_standard_sets set config = '{"key":"chem-honors","v":2}' where key = 'chem-honors' returning updated_by`, true, r => r.rows[0]?.updated_by === ids.teach);
+await expect("the key can't change", "teach", `update mastery_standard_sets set key = 'chem' where key = 'chem-honors'`, false);
+await expect("every save is kept", "teach", `select count(*)::int as n from mastery_standard_set_versions where key = 'chem-honors'`, true, r => r.rows[0].n === 2);
+await expect("nobody edits the history", "admin", `update mastery_standard_set_versions set config = '{}' returning id`, true, r => r.rows.length === 0);
+await expect("a stranger can't read standard sets", "stranger", `select * from mastery_standard_sets`, true, r => r.rows.length === 0);
+await expect("the importer reads standard sets", "admin", `select 1`, true);
+await expectImporter("...as the importer", `select key from mastery_standard_sets`, true, r => r.rows.length >= 1);
+const ns = (aiUsed) => `insert into mastery_next_steps (course_id, person_id, steps, used_ai, status) values ((select id from mastery_courses where slug = 'APPhysics1'), ${kidReal}, '[{"standard":"2.5","text":"Try the PhET lab"}]', ${aiUsed}, 'shared') returning status, drafted_by`;
+await expect("the teacher saves rule-based next steps, always as a draft", "teach", ns(false), true, r => r.rows[0]?.status === "draft" && r.rows[0]?.drafted_by === ids.teach);
+await db.exec(`update consents set revoked_at = now() where person_id = ${kidReal} and scope = 'ai_drafting' and revoked_at is null`);
+await expect("an AI draft needs ai_drafting consent", "teach", ns(true), false);
+await db.exec(`insert into consents (person_id, scope, granted_by, granted_on, evidence) values (${kidReal}, 'ai_drafting', 'Parent Kid', '2026-10-12', 'Signed form')`);
+await expect("...and with it, works", "teach", ns(true), true);
+await db.exec(`update student_accounts set active = true where person_id = ${kidReal}`);
+await expect("the student sees no draft", "kid", `select * from mastery_next_steps`, true, r => r.rows.length === 0);
+await expect("another teacher can't share it", "teach2", `update mastery_next_steps set status = 'shared' returning id`, true, r => r.rows.length === 0);
+await expect("the teacher shares one, signed with their own name", "teach", `update mastery_next_steps set status = 'shared', shared_by_name = 'Head of School' where id = (select id from mastery_next_steps where used_ai limit 1) returning shared_by_name`, true, r => r.rows[0]?.shared_by_name === "Teach");
+await expect("now the student sees it", "kid", `select steps from mastery_next_steps`, true, r => r.rows.length === 1);
+await expect("shared next steps are read-only", "teach", `update mastery_next_steps set steps = '[]' where status = 'shared'`, false);
+await expect("a shared one can't be deleted", "teach", `delete from mastery_next_steps where status = 'shared' returning id`, true, r => r.rows.length === 0);
+await expect("a draft can be", "teach", `delete from mastery_next_steps where status = 'draft' returning id`, true, r => r.rows.length === 1);
+
 const exposed = await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef");
 const noneExposed = exposed.rows.length === 0; if (noneExposed) pass++; else fail++;
 console.log(`${noneExposed ? "PASS" : "FAIL"}  no SECURITY DEFINER function in the API-exposed public schema`, exposed.rows.map(r => r.proname));

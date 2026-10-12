@@ -267,3 +267,60 @@ test("Khan Academy work that arrives through Canvas counts as Khan", async () =>
     [], new Map([["1", "p1"]]), config, "2026-10-12T00:00:00Z");
   assert.deepEqual(evidence.map((e) => [e.standard_code, e.source]), [["2.5", "khan"]]);
 });
+
+test("next steps for AI: candidates from the rules, numbered links, no scores", async () => {
+  const { nextStepsInput, parseDraftSteps, fallbackDraftSteps, readSavedSteps } = await import("../lib/mastery/next-steps.ts");
+  const evidence = [
+    { ...ev("2.5", "canvas", "2026-10-01", { score: 4, max_score: 10 }), title: "Unit 2 quiz [2.5]" },
+    { ...ev("2.2", "canvas", "2026-10-03", { score: 9, max_score: 10 }), title: "FBD check [2.2]" },
+    { ...ev("1.1", "canvas", "2026-09-01", { score: 9, max_score: 10 }), title: "Vectors quiz [1.1]" },
+  ];
+  const statuses = studentStatuses(config, evidence);
+  const { input, links } = nextStepsInput(config, "AP Physics 1", statuses, evidence, 2);
+  const text = JSON.stringify(input);
+  assert.ok(!/"score"|"max_score"|\b4\/10\b|\b9\b\s*\/\s*10/.test(text), "no scores leave");
+  assert.equal(input.finishedThrough, "Unit 2 · Force and translational dynamics");
+  assert.ok(input.candidates.every((c) => c.coveredInClass), "finished units first");
+  assert.ok(input.solid.includes("Scalars and vectors in one dimension"));
+  assert.equal(links.size, input.candidates.reduce((n, c) => n + c.links.length, 0));
+
+  const first = input.candidates[0];
+  const answer = {
+    steps: [
+      { standard: first.code, text: "  Start   with the video. ", links: [first.links[0].ref, "L999"] },
+      { standard: "9.9", text: "Invented standard", links: [] },
+      { standard: first.code, text: "Duplicate", links: [] },
+      { standard: input.candidates[1].code, text: "Second", links: [first.links[0].ref] },
+      { standard: input.candidates[2].code, text: "Third", links: [] },
+      { standard: input.candidates[3]?.code, text: "Fourth is one too many", links: [] },
+    ],
+  };
+  const steps = parseDraftSteps(answer, input, links);
+  assert.equal(steps.length, 3);
+  assert.equal(steps[0].text, "Start with the video.");
+  assert.deepEqual(steps[0].links.map((l) => l.url), [links.get(first.links[0].ref).url], "an invented link is dropped");
+  assert.deepEqual(steps[1].links, [], "another standard's link is dropped");
+  assert.deepEqual(parseDraftSteps("nonsense", input, links), []);
+
+  const fb = fallbackDraftSteps(input, links);
+  assert.ok(fb.length > 0 && fb.every((s) => s.text && !/\d+\s*\/\s*\d+|%/.test(s.text)));
+  assert.deepEqual(readSavedSteps([{ standard: "2.5", text: "x", links: [{ label: "a", url: "javascript:alert(1)" }, { label: "b", url: "https://phet.colorado.edu/x" }] }, { bad: true }]), [
+    { standard: "2.5", text: "x", links: [{ label: "b", url: "https://phet.colorado.edu/x" }] },
+  ]);
+});
+
+test("mastery for a Pathway draft: words only, solid first, growing named gently", async () => {
+  const { masterySummary, masteryForPrompt } = await import("../lib/mastery/rules.ts");
+  const evidence = [
+    ev("2.5", "oral", "2026-10-05", { level: "extending" }),
+    ev("2.2", "canvas", "2026-10-03", { score: 8, max_score: 10 }),
+    ev("2.7", "canvas", "2026-10-03", { score: 6, max_score: 10 }),
+  ];
+  const m = masterySummary(config, "AP Physics 1", evidence);
+  assert.deepEqual(m.strong, ["Newton's second law", "Forces and free-body diagrams"]);
+  assert.deepEqual(m.growing, ["Kinetic and static friction"]);
+  const text = masteryForPrompt([m]);
+  assert.match(text, /^AP Physics 1: solid on Newton's second law; Forces and free-body diagrams\. Still growing on Kinetic and static friction\.$/);
+  assert.ok(!/\d/.test(text.replace("AP Physics 1", "")), "no numbers");
+  assert.equal(masteryForPrompt([masterySummary(config, "AP Physics 1", [])]), null);
+});

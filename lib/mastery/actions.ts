@@ -7,8 +7,13 @@ import { parseCsv } from "@/lib/sor/importers/csv";
 import { COURSE_SLUG, EVIDENCE_SOURCES, LEVELS, findStandard, type EvidenceSource, type Level } from "./config";
 import { exportEvidence, parseExport, type RosterPerson } from "./exports";
 import { sampleEvidence } from "./sample";
+import { getMasteryConfig } from "./standard-sets";
+import { fallbackDraftSteps, parseDraftSteps, readSavedSteps, type DraftStep } from "./next-steps";
+import { nextStepsPayload } from "./next-steps-server";
+import { draftMasteryNextSteps } from "@/lib/claude";
+import { tidyPhrasing } from "@/lib/draft-style";
 import { insertEvidence, recordRun, runCanvasSync } from "./sync";
-import { getCourseBundle, loadMasteryConfig, requireMasteryTeacher, requireStudent, type CourseBundle, type MasteryCourse } from "./queries";
+import { getCourseBundle, requireMasteryTeacher, requireStudent, type CourseBundle, type MasteryCourse } from "./queries";
 
 // Mastery Hub writes (Fizzy #37). Server Actions only, as the signed-in user;
 // RLS and the triggers in 20261019000000_mastery_hub.sql decide what's
@@ -65,7 +70,7 @@ export async function createCourseAction(formData: FormData): Promise<Result> {
     const key = str(formData.get("config_key"), 60);
     const canvas = str(formData.get("canvas_course_id"), 20);
     if (!title) return { ok: false, error: "Give the course a name." };
-    const config = loadMasteryConfig(key);
+    const config = await getMasteryConfig(key);
     slug = str(formData.get("slug"), 40) || config.slug;
     if (!COURSE_SLUG.test(slug)) return { ok: false, error: "The address is letters, numbers and dashes, starting with a letter (e.g. APPhysics1 or APPhysics1-P3)." };
     if (canvas && !/^\d+$/.test(canvas)) return { ok: false, error: "The Canvas course id is the number in the course's Canvas address." };
@@ -112,7 +117,7 @@ export async function loadSampleCourseAction(): Promise<Result> {
     const supabase = await getSorClient();
     const { data: people } = await supabase.from("people").select("id").eq("is_sample", true).eq("stage", "enrolled").order("last_name");
     if (!people?.length) return { ok: false, error: "There are no fictional sample students yet. Load them on the pilot page first." };
-    const config = loadMasteryConfig("ap-physics-1");
+    const config = await getMasteryConfig("ap-physics-1");
     // Each teacher can have their own sample: APPhysics1-Sample, -Sample2, …
     let id = "";
     for (let n = 1; n <= 20 && !id; n++) {
@@ -450,7 +455,7 @@ export async function studentRequestAction(courseId: string, formData: FormData)
     const supabase = await getSorClient();
     const { data: course } = await supabase.from("mastery_courses").select("config_key").eq("id", courseId).maybeSingle();
     if (!course) return { ok: false, error: "That course isn't one of yours." };
-    const standard = findStandard(loadMasteryConfig(course.config_key), str(formData.get("standard"), 20));
+    const standard = findStandard(await getMasteryConfig(course.config_key), str(formData.get("standard"), 20));
     if (!standard) return { ok: false, error: "Pick which standard it's for." };
     const message = str(formData.get("message"), 1000);
     const link = httpsLink(str(formData.get("link"), 500));
@@ -463,6 +468,89 @@ export async function studentRequestAction(courseId: string, formData: FormData)
       message,
       link,
     });
+    if (error) throw new Error(error.message);
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ---------------------------------------------------------------- next steps
+
+/** Draft next steps for one student: with Claude when allowed (a sample
+ *  student, or AI_REAL_STUDENTS=on with ai_drafting consent), otherwise the
+ *  rule-based steps in plain words. Always saved as a draft the teacher
+ *  edits and shares. */
+export async function draftNextStepsAction(courseId: string, personId: string): Promise<Result<{ usedAi: boolean }>> {
+  try {
+    const staff = await requireMasteryTeacher();
+    const bundle = await bundleOrThrow(courseId);
+    const student = bundle.roster.find((s) => s.id === personId);
+    if (!student) return { ok: false, error: "That student isn't on this course's roster." };
+    const supabase = await getSorClient();
+    const { data: consents } = await supabase.from("consents").select("scope, revoked_at").eq("person_id", personId);
+    const aiAllowed =
+      student.is_sample ||
+      (process.env.AI_REAL_STUDENTS?.trim() === "on" && (consents ?? []).some((c) => c.scope === "ai_drafting" && !c.revoked_at));
+    const { input, links, anon, text } = nextStepsPayload(bundle, personId, staff.display_name);
+    let steps: DraftStep[] = [];
+    let usedAi = false;
+    if (aiAllowed && input.candidates.length) {
+      anon.assertNoNames(text);
+      const { parsed, usedFallback } = await draftMasteryNextSteps(JSON.stringify(input));
+      if (!usedFallback) {
+        steps = parseDraftSteps(parsed, input, links).map((s) => ({ ...s, text: tidyPhrasing(anon.restore(s.text)) }));
+        usedAi = steps.length > 0;
+      }
+    }
+    if (!steps.length) steps = fallbackDraftSteps(input, links);
+    if (!steps.length) return { ok: false, error: "Nothing to suggest yet: there's no evidence in a unit the class has reached." };
+    const { error } = await supabase.from("mastery_next_steps").insert({ course_id: courseId, person_id: personId, steps, used_ai: usedAi });
+    if (error) throw new Error(/ai_drafting/.test(error.message) ? "This student's family hasn't given AI drafting consent." : error.message);
+    refresh();
+    return { ok: true, usedAi };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function saveNextStepsAction(id: string, steps: unknown): Promise<Result> {
+  try {
+    await requireMasteryTeacher();
+    const clean = readSavedSteps(steps).filter((s) => s.text.trim());
+    if (!clean.length) return { ok: false, error: "Keep at least one step, or discard the draft." };
+    const supabase = await getSorClient();
+    const { data, error } = await supabase.from("mastery_next_steps").update({ steps: clean }).eq("id", id).eq("status", "draft").select("id");
+    if (error) throw new Error(error.message);
+    if (!data?.length) return { ok: false, error: "That draft is already shared or gone." };
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Share a draft with the student, signed with the teacher's own name. */
+export async function shareNextStepsAction(id: string): Promise<Result> {
+  try {
+    await requireMasteryTeacher();
+    const supabase = await getSorClient();
+    const { data, error } = await supabase.from("mastery_next_steps").update({ status: "shared" }).eq("id", id).eq("status", "draft").select("id");
+    if (error) throw new Error(error.message);
+    if (!data?.length) return { ok: false, error: "That draft is already shared or gone." };
+    refresh();
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+export async function discardNextStepsAction(id: string): Promise<Result> {
+  try {
+    await requireMasteryTeacher();
+    const supabase = await getSorClient();
+    const { error } = await supabase.from("mastery_next_steps").delete().eq("id", id).eq("status", "draft");
     if (error) throw new Error(error.message);
     refresh();
     return { ok: true };

@@ -1,13 +1,12 @@
 import "server-only";
-import fs from "fs";
-import path from "path";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { getSorClient, isSorConfigured } from "@/lib/sor/supabase-server";
 import { requireStaff } from "@/lib/sor/queries";
 import { tableNotThereYet } from "@/lib/sor/class-reflections";
 import type { Person, StaffMember } from "@/lib/sor/types";
-import { COURSE_SLUG, parseMasteryConfig, type EvidenceSource, type Level, type MasteryConfig } from "./config";
+import { COURSE_SLUG, type EvidenceSource, type Level, type MasteryConfig } from "./config";
+import { getMasteryConfig, listStandardSets } from "./standard-sets";
 
 // Mastery Hub reads (Fizzy #37). All through the signed-in user's session:
 // RLS gives a teacher only their own courses and a student only their own
@@ -84,35 +83,9 @@ const toEvidence = (e: Record<string, unknown>): Evidence => ({
   max_score: e.max_score === null ? null : Number(e.max_score),
 });
 
-const configCache = new Map<string, MasteryConfig>();
-
-/** A course's standards file. Throws a plain message if it's missing or broken. */
-export function loadMasteryConfig(key: string): MasteryConfig {
-  if (!/^[a-z0-9-]{1,60}$/.test(key)) throw new Error("Unknown standards file");
-  const hit = configCache.get(key);
-  if (hit && process.env.NODE_ENV === "production") return hit;
-  const file = path.join(process.cwd(), "fixtures", "mastery", `${key}.json`);
-  if (!fs.existsSync(file)) throw new Error(`No standards file fixtures/mastery/${key}.json`);
-  const config = parseMasteryConfig(JSON.parse(fs.readFileSync(file, "utf-8")));
-  configCache.set(key, config);
-  return config;
-}
-
-/** The standards files a new course can use. */
-export function masteryConfigs(): { key: string; title: string; slug: string }[] {
-  const dir = path.join(process.cwd(), "fixtures", "mastery");
-  if (!fs.existsSync(dir)) return [];
-  return fs
-    .readdirSync(dir)
-    .filter((f) => f.endsWith(".json"))
-    .flatMap((f) => {
-      try {
-        const c = loadMasteryConfig(f.replace(/\.json$/, ""));
-        return [{ key: c.key, title: c.title, slug: c.slug }];
-      } catch {
-        return [];
-      }
-    });
+/** The standard sets a new course can use (built-in files and the hub's own). */
+export async function masteryConfigs(): Promise<{ key: string; title: string; slug: string }[]> {
+  return (await listStandardSets()).filter((s) => !s.problem).map(({ key, title, slug }) => ({ key, title, slug }));
 }
 
 /** Teachers and admins run mastery courses. */
@@ -196,7 +169,7 @@ export async function getCourseBundle(slugOrCourse: string | MasteryCourse): Pro
     .sort((a, b) => a.last_name.localeCompare(b.last_name) || a.first_name.localeCompare(b.first_name));
   return {
     course: course as MasteryCourse,
-    config: loadMasteryConfig((course as MasteryCourse).config_key),
+    config: await getMasteryConfig((course as MasteryCourse).config_key),
     roster: students,
     evidence: (evidence.data ?? []).map(toEvidence),
     requests: (requests.data ?? []) as MasteryRequest[],
@@ -292,7 +265,7 @@ export async function getStudentCourse(slug: string, personId: string) {
   ]);
   return {
     course: course as MasteryCourse,
-    config: loadMasteryConfig((course as MasteryCourse).config_key),
+    config: await getMasteryConfig((course as MasteryCourse).config_key),
     evidence: (evidence.data ?? []).map(toEvidence),
     requests: (requests.data ?? []) as MasteryRequest[],
   };
@@ -304,13 +277,42 @@ export async function masterySummaryFor(personId: string) {
   const { data: rows, error } = await supabase.from("mastery_roster").select("course_id, mastery_courses(*)").eq("person_id", personId);
   if (error || !rows?.length) return [];
   const { data: evidence } = await supabase.from("mastery_evidence").select("*").eq("person_id", personId);
-  return rows.flatMap((r) => {
+  const out: { course: MasteryCourse; config: MasteryConfig; evidence: Evidence[] }[] = [];
+  for (const r of rows) {
     const course = (Array.isArray(r.mastery_courses) ? r.mastery_courses[0] : r.mastery_courses) as MasteryCourse | null;
-    if (!course) return [];
+    if (!course) continue;
     try {
-      return [{ course, config: loadMasteryConfig(course.config_key), evidence: (evidence ?? []).filter((e) => e.course_id === course.id).map(toEvidence) }];
+      out.push({ course, config: await getMasteryConfig(course.config_key), evidence: (evidence ?? []).filter((e) => e.course_id === course.id).map(toEvidence) });
     } catch {
-      return [];
+      // A broken standard set hides that course here; its own page says why.
     }
-  });
+  }
+  return out;
+}
+
+export interface SavedNextSteps {
+  id: string;
+  steps: import("./next-steps").DraftStep[];
+  used_ai: boolean;
+  status: "draft" | "shared";
+  shared_by_name: string | null;
+  shared_at: string | null;
+  created_at: string;
+}
+
+/** The newest next steps for a student in a course: any status for their
+ *  teacher; for the student, RLS returns only shared ones. null before the
+ *  migration or when there are none. */
+export async function latestNextSteps(courseId: string, personId: string, sharedOnly = false): Promise<SavedNextSteps | null> {
+  const supabase = await getSorClient();
+  let q = supabase
+    .from("mastery_next_steps")
+    .select("id, steps, used_ai, status, shared_by_name, shared_at, created_at")
+    .eq("course_id", courseId)
+    .eq("person_id", personId);
+  if (sharedOnly) q = q.eq("status", "shared");
+  const { data, error } = await q.order("created_at", { ascending: false }).limit(1).maybeSingle();
+  if (error || !data) return null;
+  const { readSavedSteps } = await import("./next-steps");
+  return { ...(data as SavedNextSteps), steps: readSavedSteps(data.steps) };
 }

@@ -644,6 +644,8 @@ export interface RuakhInput {
   studentSparks: string | null;
   /** Which classes they enjoy and what makes each one good, in their words, as plain text. */
   classReflections: string | null;
+  /** Mastery Hub courses in words: where they're solid, where still growing. Never scores. */
+  masteryStrengths?: string | null;
 }
 
 export interface RuakhDraft {
@@ -748,5 +750,29 @@ export async function draftRuakhPathways(
     return { portrait: parsed.portrait, pathways, usedFallback: false };
   } catch {
     return fallback;
+  }
+}
+
+/**
+ * Mastery Hub next steps for one student (prompts/mastery-next-steps.txt).
+ * `payload` is the anonymized JSON from lib/mastery/next-steps.ts; the caller
+ * checks the answer against its candidates and links. Never throws: with no
+ * key or on any failure it returns null and the caller drafts without AI.
+ */
+export async function draftMasteryNextSteps(payload: string): Promise<{ parsed: unknown | null; usedFallback: boolean }> {
+  const anthropic = getClient();
+  if (!anthropic) return { parsed: null, usedFallback: true };
+  try {
+    const message = await anthropic.messages.create({
+      model: MODEL,
+      max_tokens: 900,
+      system: [readPrompt("mastery-next-steps.txt"), readPrompt("placeholders.txt")].join("\n\n---\n\n"),
+      messages: [{ role: "user", content: payload }],
+    });
+    const textBlock = message.content.find((b) => b.type === "text");
+    if (!textBlock || textBlock.type !== "text") return { parsed: null, usedFallback: true };
+    return { parsed: extractJson(textBlock.text), usedFallback: false };
+  } catch {
+    return { parsed: null, usedFallback: true };
   }
 }
