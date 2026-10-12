@@ -162,3 +162,38 @@ export function levelCounts(statuses: Iterable<StandardStatus>): Record<Level | 
   for (const s of statuses) counts[s.level ?? "none"]++;
   return counts;
 }
+
+export interface MasterySummary {
+  course: string;
+  /** Standards at Extending, then Proficient (titles, in course order). */
+  strong: string[];
+  /** Standards with evidence still at Developing (titles). */
+  growing: string[];
+}
+
+/** What a course says about a student, in words only: where they're strong
+ *  and where they're still growing. Never a score or a level count. This is
+ *  what reaches a Pathway draft (lib/sor/ai-input.ts). */
+export function masterySummary(config: MasteryConfig, courseTitle: string, evidence: EvidenceLike[]): MasterySummary {
+  const statuses = studentStatuses(config, evidence);
+  const titled = allStandards(config).map((s) => ({ title: s.title, level: statuses.get(s.code)?.level ?? null }));
+  return {
+    course: courseTitle,
+    strong: [...titled.filter((s) => s.level === "extending"), ...titled.filter((s) => s.level === "proficient")].map((s) => s.title).slice(0, 12),
+    growing: titled.filter((s) => s.level === "developing").map((s) => s.title).slice(0, 8),
+  };
+}
+
+/** The summaries as plain text for a prompt, or null when there's nothing. */
+export function masteryForPrompt(summaries: MasterySummary[]): string | null {
+  const lines = summaries
+    .filter((m) => m.strong.length || m.growing.length)
+    .map((m) =>
+      [
+        `${m.course}:`,
+        m.strong.length ? ` solid on ${m.strong.join("; ")}.` : "",
+        m.growing.length ? ` Still growing on ${m.growing.join("; ")}.` : "",
+      ].join(""),
+    );
+  return lines.length ? lines.join("\n") : null;
+}

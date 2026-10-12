@@ -255,11 +255,80 @@ Unit 2. To see the student side, give
 a sample student a sign-in with an address you can receive at, then sign in with that
 address in a private window.
 
-## Not built yet (each needs a decision)
+## Standards edited in the hub
 
-- AI-written next steps. Today they're deterministic links from the standards file.
-  Anything AI would go through `lib/sor/ai-input.ts` and never include scores.
-- Feeding mastery into pathway drafts. The pilot page shows it in words; the drafting
-  input doesn't include it yet.
+`/mastery/standards` lists every subject's standards: the built-in files (`fixtures/mastery/`)
+and any made in the hub. `/mastery/standards/<key>` is the editor. In it you can change:
+- the subject's name and default course address;
+- what each level means, and the scoring rules;
+- units: add, remove, reorder;
+- standards, each with **other names** (Khan skill names, textbook headings);
+- study links per unit;
+- **YouTube videos** per unit or per standard. Paste a link and its title and channel come from
+  YouTube's oEmbed, the same check the built-in list went through.
+
+"Edit as JSON" shows everything else (source weights, level words).
+
+Each save is checked by the same parser as the files, then stored in `mastery_standard_sets` and
+kept in `mastery_standard_set_versions` (**Earlier versions → Put this version back**). The first
+save of a built-in set makes the hub's copy, owned by whoever saved it. After that only that
+teacher or an admin can change it, and everyone else can read it. Every course using a set
+changes when it's saved, including the scheduled Canvas import, which reads the hub's copy too.
+"standards" can't be a course address.
+
+## Next steps from the teacher (AI drafts)
+
+On a student's page (`/mastery/<course>/students/<id>`), **Draft next steps** writes up to three
+steps for that student. The panel is labeled **Draft**, and only the teacher sees it until they
+edit it and press **Share with <name>**. Then the student sees it at the top of their page as
+"From <teacher>", signed from the teacher's own staff record. A shared one is read-only; draft
+again for new ones.
+
+- **With Claude** when allowed: a sample student, or `AI_REAL_STUDENTS=on` plus `ai_drafting`
+  consent (also enforced by the database).
+  - What's sent: the course name, the class's finished unit, a few candidate standards from the
+    rules with their level **in words**, the newest evidence titles and sources (no scores, no
+    teacher notes), and the course's own links, numbered.
+  - Names are replaced (`lib/sor/anonymize.ts`), and nothing is sent if one slips through. The
+    teacher sees the exact payload under "What the AI sees".
+  - The answer is kept only if each step points at a real candidate and its own links.
+    Invented standards and links are dropped (`lib/mastery/next-steps.ts`, tested).
+  - Prompt: `prompts/mastery-next-steps.txt`.
+- **Without AI** (no key, no consent, a failure): the rule-based steps in plain words, for the
+  teacher to edit the same way.
+
+The rule-based next steps on every student page stay as they are.
+
+## Mastery in the Pathway
+
+A student's pilot page shows their mastery courses in words ("Paths toward mastery"). Their
+Pathway draft input (`lib/sor/ai-input.ts` → `masteryStrengths`) now includes the same words:
+which standards they're solid on and which are still growing, per course. It never includes
+scores, levels or counts. It's sent only with `ai_drafting` consent, through the anonymizer like
+everything else, and only for courses the drafting staff member can see (an admin sees all).
+
+`prompts/ruakh-today.txt` treats it as backdrop, like courses:
+- a strength that lines up with a spark is evidence the student can already do what a pathway
+  asks;
+- "still growing" is never named, and a student is never called behind or weak;
+- grades, levels and "mastery" never appear in a pathway.
+
+**Consent wording changed** (2026-10-12). The Mastery Hub consent used to say "never used in a
+Pathway or by AI". It now says that, with AI drafting consent too, strengths in words (never
+scores) can inform a Pathway draft and the teacher's next steps. Anyone who consented under the
+old wording should re-confirm before their mastery reaches a draft.
+
+## Khan Academy (next)
+
+Khan Academy's grade sync into Canvas needs Clever, which seno ruled out. Instead, a small Chrome
+extension (planned) runs in the teacher's own browser while they're signed in to Khan. Every few
+hours, and on "Send now", it reads their classes' assignment scores and skill mastery with their
+own session and sends them to the course. There's no stored password, no server bot and no third
+party. Khan's help center asks people not to use "scraping tools, bots, or other tech to copy or
+extract data". seno has accepted that risk to his Khan account.
+
+## Not built yet
+
+- The Khan Academy extension (needs a look at Khan's teacher pages first).
 - Students sending in a file (links only today), and a browser bookmarklet for PhET.
-- Science-practice tagging inside Canvas items (only codes in titles count).
+- Science-practice tagging inside Canvas items (only codes and names in titles count).

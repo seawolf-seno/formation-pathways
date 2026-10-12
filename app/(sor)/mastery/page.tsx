@@ -22,14 +22,19 @@ export default async function MasteryHome() {
       </div>
     );
   }
-  const configs = masteryConfigs();
+  const configs = await masteryConfigs();
   const hasSample = courses.some((c) => c.is_sample);
 
   return (
     <div className="mx-auto max-w-5xl space-y-10 px-4 py-8 sm:px-6">
       <header>
         <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--color-gold)]">Mastery Hub</p>
-        <h1 className="mt-1 font-display text-3xl text-[var(--color-navy-ink)]">Your courses</h1>
+        <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
+          <h1 className="font-display text-3xl text-[var(--color-navy-ink)]">Your courses</h1>
+          <Link href="/mastery/standards" className="rounded-xl border border-[var(--color-border)] bg-white px-4 py-2 text-sm text-[var(--color-navy-ink)]">
+            Standards, links &amp; videos
+          </Link>
+        </div>
         <p className="mt-2 max-w-2xl text-sm text-[var(--color-ink-muted)]">
           Mastery by standard, from Canvas, AP Classroom and Khan Academy reports, oral exams, and the work students send in.
           Students sign in to see where they are and what to do next. Grades and scores stay here: they never reach a Pathway
@@ -61,7 +66,7 @@ export default async function MasteryHome() {
         <h2 className="font-display text-xl text-[var(--color-navy-ink)]">Start a course</h2>
         <NewCourseForm configs={configs} />
         <p className="text-xs text-[var(--color-ink-muted)]">
-          Standards come from a file in <code>fixtures/mastery/</code>; another subject is one more file (docs/mastery-hub.md).
+          Pick a subject&apos;s standards, or make a new subject under Standards.
           The Canvas course id is the number in the course&apos;s Canvas address, and you can add it later.
         </p>
         {!hasSample && (

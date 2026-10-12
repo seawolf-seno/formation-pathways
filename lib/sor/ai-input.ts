@@ -7,6 +7,7 @@ import { inquiryDraftInput } from "../discover.ts";
 import { Pseudonymizer } from "./anonymize.ts";
 import { latestReflections, reflectionsForPrompt } from "./class-reflections.ts";
 import { mergeSparks, sparksForPrompt } from "./sparks.ts";
+import { masteryForPrompt } from "../mastery/rules.ts";
 import type { Inquiry, Person, PersonProfile } from "./types";
 
 /** The student, everyone else on the roster this staff member can see, and
@@ -68,6 +69,10 @@ function toRuakhInput(profile: PersonProfile): RuakhInput {
     classReflections: profile.classReflections.length
       ? reflectionsForPrompt(latestReflections(profile.classReflections))
       : null,
+    // Mastery Hub courses in words only (solid / still growing), never a
+    // score or a level count. Needs mastery_records consent to exist at all,
+    // and reaches Claude only with ai_drafting, like everything here.
+    masteryStrengths: masteryForPrompt(profile.mastery ?? []),
   };
 }
 

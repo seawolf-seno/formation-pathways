@@ -30,7 +30,7 @@ export const CONSENT_SCOPES: { scope: ConsentScope; label: string; detail: strin
   {
     scope: "mastery_records",
     label: "Mastery Hub",
-    detail: "Keep this student's mastery levels, scores and evidence for courses run in the Mastery Hub, and let them sign in to see their own. Never used in a Pathway or by AI.",
+    detail: "Keep this student's mastery levels, scores and evidence for courses run in the Mastery Hub, and let them sign in to see their own. With AI drafting consent too, their strengths in words (never scores) can inform a Pathway draft and their teacher's next steps.",
   },
   {
     scope: "ai_drafting",
@@ -302,6 +302,9 @@ export interface PersonProfile {
   evidence: AcademicEvidence[];
   observations: SorObservation[];
   drafts: PathwayDraft[];
+  /** Mastery Hub courses in words only (strong / still growing); [] if none,
+   *  or this staff member doesn't teach them. Never scores. */
+  mastery: import("../mastery/rules").MasterySummary[];
 }
 
 export function displayName(p: Pick<Person, "first_name" | "last_name" | "preferred_name">): string {

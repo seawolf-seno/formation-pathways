@@ -40,6 +40,17 @@ A class they did not mention means nothing: never infer dislike, struggle or
 a ranking of classes from what is missing, and never say which classes they
 left out.
 
+MASTERY: if "masteryStrengths" is present, it is what a teacher's
+standards-based grading shows, in words only: standards where the student is
+solid, and some still growing. Like courses, it is backdrop: never build a
+pathway, its name or its hook on a standard alone. Use it two ways. When a
+strength lines up with a spark, an interest or an observation, it is evidence
+the student can already do what the pathway asks, so let the first steps
+start from there instead of from scratch. "Still growing" is growth in
+progress, never a weakness: do not name it in a pathway, never call the
+student behind, struggling or weak, and never rank. Never mention grades,
+scores, levels or "mastery" to the reader.
+
 STUDENT SPARKS: if "studentSparks" is present, it is the student's OWN voice
 about what lights them up (what they research at 2am, their rabbit holes, what
 they practice when it's boring, what they tapped as obsessions, channels they

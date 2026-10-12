@@ -22,6 +22,7 @@ import { validateStudentSparks } from "./sparks";
 import { tableNotThereYet, validateClassReflections, type ReflectionClass } from "./class-reflections";
 import { classKey, type ClassResource } from "./class-resources";
 import { looksLikeStudentAddress } from "./student-address";
+import { masteryForPerson } from "../mastery/profile";
 
 /** The signed-in, active staff member, or a redirect to /login. Signed in
  *  and waiting for an admin → /login?error=pending, or ?error=student for a
@@ -208,6 +209,7 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
   if (reflections.error && !tableNotThereYet(reflections.error)) {
     console.error("class_reflections read failed:", reflections.error.message);
   }
+  const mastery = await masteryForPerson(id);
   return {
     person: person as Person,
     externalIds: externalIds.data ?? [],
@@ -218,6 +220,7 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
     evidence: evidence.data ?? [],
     observations: observations.data ?? [],
     drafts: drafts.data ?? [],
+    mastery,
     classHistory: classHistory.data ?? [],
     // Re-validated on read: a family link can submit straight to the database,
     // so a stored row isn't trusted to have the app's shape.

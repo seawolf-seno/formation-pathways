@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { getStudentCourse, requireStudent } from "@/lib/mastery/queries";
+import { getStudentCourse, latestNextSteps, requireStudent } from "@/lib/mastery/queries";
+import { allStandards } from "@/lib/mastery/config";
+import { SharedSteps } from "@/components/mastery/NextStepsPanel";
 import { standardOptions } from "@/lib/mastery/config";
 import { MasteryView } from "@/components/mastery/MasteryView";
 import { StudentRequests } from "@/components/mastery/StudentRequests";
@@ -19,6 +21,7 @@ export default async function StudentCoursePage({ params }: { params: Promise<{ 
   if (!data) notFound();
   if (data.course.slug !== decodeURIComponent(address)) redirect(`/me/${data.course.slug}`);
   const courseId = data.course.id;
+  const shared = await latestNextSteps(courseId, student.personId, true);
   return (
     <div className="mx-auto max-w-4xl space-y-10 px-4 py-8 sm:px-6">
       <header>
@@ -28,6 +31,9 @@ export default async function StudentCoursePage({ params }: { params: Promise<{ 
         <h1 className="mt-1 font-display text-3xl text-[var(--color-navy-ink)]">{data.course.title}</h1>
         {data.course.is_sample && <p className="mt-1 text-xs uppercase tracking-wider text-[var(--color-gold)]">Fictional sample</p>}
       </header>
+      {shared && shared.steps.length > 0 && (
+        <SharedSteps steps={shared.steps} sharedBy={shared.shared_by_name} titles={Object.fromEntries(allStandards(data.config).map((s) => [s.code, s.title]))} />
+      )}
       <MasteryView config={data.config} evidence={data.evidence} firstName={student.firstName} audience="student" finishedThrough={data.course.finished_through} />
       <VideoShelf config={data.config} finishedThrough={data.course.finished_through} you />
       <section>

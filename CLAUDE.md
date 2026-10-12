@@ -326,6 +326,16 @@ adults behind the scenes; students stay present, in person, with people.
   arrives **through Canvas** (Khan Districts/Clever LMS Connect grade sync, or Khan2Canvas after a privacy
   review), recognized as Khan and mapped by skill name via `aliases`; class-map **source switch**;
   multi-file AP Classroom drop-in. `docs/mastery-hub.md`, `docs/staging.md`.
+- **Mastery Hub, finishing (2026-10-12, branch `seno/mastery-finish`, card #37)**: production has
+  `20261020` (importer role, no login yet). This branch: **standards edited in the hub**
+  (`/mastery/standards`, `mastery_standard_sets` + version history; built-in files are starting
+  points), **AI next steps** drafted per student through the anonymizer (levels in words, no
+  scores, only the course's own links), labeled Draft until the teacher shares them
+  (`mastery_next_steps`), and **mastery feeds Pathway drafts** (`masteryStrengths`, words only,
+  `ai_drafting` consent). The `mastery_records` consent wording changed accordingly: re-confirm
+  families who consented under the old "never by AI" text. Migration `20261021000000` on staging.
+  Khan Academy: seno ruled out Clever; next is a Chrome extension using the teacher's own Khan
+  session (needs Claude in Chrome access to inspect Khan's teacher pages, structure only).
 - **Open PRs as of 2026-10-12**: #62 and #63 merged (their migrations are on staging; production
   is seno's). Still open:
   - #58 STEM Scholars (TheEnigmaticPhilosopher): migration still named `20261012000000_…`
