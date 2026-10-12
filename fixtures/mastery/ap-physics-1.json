@@ -1,0 +1,917 @@
+{
+  "$comment": "Faculty-editable. Standards follow the AP Physics 1 Course and Exam Description (2024 revision): check the codes and titles against your copy. Links are deliberately course- or book-level until a teacher replaces them with exact pages (lib/mastery/config.ts checks every one is https). See docs/mastery-hub.md. Videos: chosen 2026-10-12 from widely used channels (Flipping Physics, CrashCourse, Khan Academy, Professor Dave Explains, The Organic Chemistry Tutor); every id checked against YouTube's oEmbed and titles copied from it. Not ranked by view count. A teacher swaps them freely: a YouTube address or id plus title and channel.",
+  "key": "ap-physics-1",
+  "slug": "APPhysics1",
+  "title": "AP Physics 1",
+  "scale": [
+    {
+      "level": "beginning",
+      "label": "Beginning",
+      "meaning": "Starting out: the ideas are new and still taking shape."
+    },
+    {
+      "level": "developing",
+      "label": "Developing",
+      "meaning": "Getting there: right some of the time, with help."
+    },
+    {
+      "level": "proficient",
+      "label": "Proficient",
+      "meaning": "Has it: solves AP-style problems on this on their own."
+    },
+    {
+      "level": "extending",
+      "label": "Extending",
+      "meaning": "Goes further: explains it, connects it, applies it somewhere new."
+    }
+  ],
+  "rules": {
+    "scoreThresholds": {
+      "extending": 90,
+      "proficient": 75,
+      "developing": 50
+    },
+    "recent": 4,
+    "decay": 0.6,
+    "weights": {
+      "oral": 3,
+      "observation": 2,
+      "ap_classroom": 2,
+      "canvas": 2,
+      "khan": 1,
+      "phet": 1,
+      "openstax": 1,
+      "student": 1,
+      "other": 1
+    },
+    "teacherSources": [
+      "oral",
+      "observation"
+    ],
+    "levelWords": {
+      "attempted": "beginning",
+      "familiar": "developing",
+      "proficient": "proficient",
+      "mastered": "extending",
+      "not started": null
+    }
+  },
+  "groups": [
+    {
+      "code": "U1",
+      "title": "Unit 1 · Kinematics",
+      "unitNumber": 1,
+      "resources": [
+        {
+          "kind": "khan",
+          "label": "Khan Academy: AP Physics 1, unit 1",
+          "url": "https://www.khanacademy.org/science/ap-physics-1"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Vector Addition",
+          "url": "https://phet.colorado.edu/en/simulations/vector-addition"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Projectile Motion",
+          "url": "https://phet.colorado.edu/en/simulations/projectile-motion"
+        },
+        {
+          "kind": "openstax",
+          "label": "OpenStax College Physics for AP Courses 2e: Chapters 2–3 (kinematics)",
+          "url": "https://openstax.org/details/books/college-physics-ap-courses-2e"
+        },
+        {
+          "kind": "ap_classroom",
+          "label": "AP Classroom: Unit 1 topic questions and progress check",
+          "url": "https://apclassroom.collegeboard.org"
+        }
+      ],
+      "standards": [
+        {
+          "code": "1.1",
+          "title": "Scalars and vectors in one dimension",
+          "videos": [
+            {
+              "id": "ZYl9-iz7nR8",
+              "title": "Introduction to Tip-to-Tail Vector Addition, Vectors and Scalars",
+              "channel": "Flipping Physics",
+              "topics": "vectors and scalars"
+            }
+          ]
+        },
+        {
+          "code": "1.2",
+          "title": "Displacement, velocity, and acceleration"
+        },
+        {
+          "code": "1.3",
+          "title": "Representing motion",
+          "videos": [
+            {
+              "id": "fhOqbAF1Uis",
+              "title": "Walking Position, Velocity and Acceleration as a Function of Time Graphs",
+              "channel": "Flipping Physics",
+              "topics": "motion graphs"
+            }
+          ]
+        },
+        {
+          "code": "1.4",
+          "title": "Reference frames and relative motion",
+          "videos": [
+            {
+              "id": "jYMU6bn5GHY",
+              "title": "Introduction to Relative Motion using a Quadcopter Drone (UAV)",
+              "channel": "Flipping Physics",
+              "topics": "relative motion"
+            }
+          ]
+        },
+        {
+          "code": "1.5",
+          "title": "Vectors and motion in two dimensions",
+          "videos": [
+            {
+              "id": "GiiWsXtt5GE",
+              "title": "Introduction to Projectile Motion",
+              "channel": "Flipping Physics",
+              "topics": "projectile motion"
+            },
+            {
+              "id": "8NLzuURxFwY",
+              "title": "Introduction to Projectile Motion - Formulas and Equations",
+              "channel": "The Organic Chemistry Tutor",
+              "topics": "projectile motion problems"
+            }
+          ]
+        }
+      ],
+      "videos": [
+        {
+          "id": "qP-9wwRrJbg",
+          "title": "AP Physics 1 - Unit 1 Review - Kinematics - Exam Prep",
+          "channel": "Flipping Physics",
+          "topics": "full unit review"
+        },
+        {
+          "id": "c-Zpnz0e4go",
+          "title": "Fixing Unit 1 Misconceptions in AP Physics 1",
+          "channel": "Flipping Physics",
+          "topics": "common misconceptions"
+        },
+        {
+          "id": "ZM8ECpBuQYE",
+          "title": "Motion in a Straight Line: Crash Course Physics #1",
+          "channel": "CrashCourse",
+          "topics": "1D motion"
+        },
+        {
+          "id": "w3BhzYI6zXU",
+          "title": "Vectors and 2D Motion: Crash Course Physics #4",
+          "channel": "CrashCourse",
+          "topics": "vectors and 2D motion"
+        }
+      ]
+    },
+    {
+      "code": "U2",
+      "title": "Unit 2 · Force and translational dynamics",
+      "unitNumber": 2,
+      "resources": [
+        {
+          "kind": "khan",
+          "label": "Khan Academy: AP Physics 1, unit 2",
+          "url": "https://www.khanacademy.org/science/ap-physics-1"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Forces and Motion: Basics",
+          "url": "https://phet.colorado.edu/en/simulations/forces-and-motion-basics"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Gravity Force Lab",
+          "url": "https://phet.colorado.edu/en/simulations/gravity-force-lab"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Hooke's Law",
+          "url": "https://phet.colorado.edu/en/simulations/hookes-law"
+        },
+        {
+          "kind": "openstax",
+          "label": "OpenStax College Physics for AP Courses 2e: Chapters 4–6 (dynamics, friction, circular motion)",
+          "url": "https://openstax.org/details/books/college-physics-ap-courses-2e"
+        },
+        {
+          "kind": "ap_classroom",
+          "label": "AP Classroom: Unit 2 topic questions and progress check",
+          "url": "https://apclassroom.collegeboard.org"
+        }
+      ],
+      "standards": [
+        {
+          "code": "2.1",
+          "title": "Systems and center of mass",
+          "videos": [
+            {
+              "id": "O-q-MAYpNLI",
+              "title": "Calculating the Center of Mass of a System of Particles",
+              "channel": "Flipping Physics",
+              "topics": "center of mass"
+            }
+          ]
+        },
+        {
+          "code": "2.2",
+          "title": "Forces and free-body diagrams",
+          "videos": [
+            {
+              "id": "29YPIvj1zjc",
+              "title": "Introduction to Free Body Diagrams",
+              "channel": "Flipping Physics",
+              "topics": "free-body diagrams"
+            },
+            {
+              "id": "pA9Uc_rJNiA",
+              "title": "5 Steps to Help Solve any Free Body Diagram Problem",
+              "channel": "Flipping Physics",
+              "topics": "free-body diagram problems"
+            }
+          ]
+        },
+        {
+          "code": "2.3",
+          "title": "Newton's third law",
+          "videos": [
+            {
+              "id": "bAevUhFUhV4",
+              "title": "Introduction to Newton’s Third Law of Motion",
+              "channel": "Flipping Physics",
+              "topics": "Newton's third law"
+            }
+          ]
+        },
+        {
+          "code": "2.4",
+          "title": "Newton's first law",
+          "videos": [
+            {
+              "id": "7kPRD0ow-hM",
+              "title": "Introduction to Newton’s First Law of Motion",
+              "channel": "Flipping Physics",
+              "topics": "Newton's first law"
+            }
+          ]
+        },
+        {
+          "code": "2.5",
+          "title": "Newton's second law",
+          "videos": [
+            {
+              "id": "j1TUpbGzPBQ",
+              "title": "Introduction to Newton’s Second Law of Motion with Example Problem",
+              "channel": "Flipping Physics",
+              "topics": "Newton's second law"
+            }
+          ]
+        },
+        {
+          "code": "2.6",
+          "title": "Gravitational force",
+          "videos": [
+            {
+              "id": "7gf6YpdvtE0",
+              "title": "Newtonian Gravity: Crash Course Physics #8",
+              "channel": "CrashCourse",
+              "topics": "gravitation"
+            }
+          ]
+        },
+        {
+          "code": "2.7",
+          "title": "Kinetic and static friction",
+          "videos": [
+            {
+              "id": "fo_pmp5rtzo",
+              "title": "Friction: Crash Course Physics #6",
+              "channel": "CrashCourse",
+              "topics": "friction"
+            }
+          ]
+        },
+        {
+          "code": "2.8",
+          "title": "Spring forces",
+          "videos": [
+            {
+              "id": "EbVeoJBjHTw",
+              "title": "Hooke's Law Introduction - Force of a Spring",
+              "channel": "Flipping Physics",
+              "topics": "Hooke's law"
+            }
+          ]
+        },
+        {
+          "code": "2.9",
+          "title": "Circular motion",
+          "videos": [
+            {
+              "id": "bpFK2VCRHUs",
+              "title": "Uniform Circular Motion: Crash Course Physics #7",
+              "channel": "CrashCourse",
+              "topics": "circular motion"
+            }
+          ]
+        }
+      ],
+      "videos": [
+        {
+          "id": "syJ6Bmmquh8",
+          "title": "AP Physics 1 - Unit 2a Review - Newton's Laws and Forces -  Exam Prep",
+          "channel": "Flipping Physics",
+          "topics": "full review: Newton's laws, forces"
+        },
+        {
+          "id": "2p-sSRU6WJI",
+          "title": "AP Physics 1 - Unit 2b Review - Universal Gravitation, Spring Force, and Circular Motion",
+          "channel": "Flipping Physics",
+          "topics": "full review: gravitation, springs, circular motion"
+        },
+        {
+          "id": "kKKM8Y-u7ds",
+          "title": "Newton's Laws: Crash Course Physics #5",
+          "channel": "CrashCourse",
+          "topics": "Newton's three laws"
+        },
+        {
+          "id": "JpFAMNcBrwA",
+          "title": "Fixing Unit 2a Misconceptions in AP Physics 1",
+          "channel": "Flipping Physics",
+          "topics": "common misconceptions (2a)"
+        },
+        {
+          "id": "gs2r6IVL0VU",
+          "title": "Fixing Unit 2b Misconceptions in AP Physics 1",
+          "channel": "Flipping Physics",
+          "topics": "common misconceptions (2b)"
+        }
+      ]
+    },
+    {
+      "code": "U3",
+      "title": "Unit 3 · Work, energy, and power",
+      "unitNumber": 3,
+      "resources": [
+        {
+          "kind": "khan",
+          "label": "Khan Academy: AP Physics 1, unit 3",
+          "url": "https://www.khanacademy.org/science/ap-physics-1"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Energy Skate Park",
+          "url": "https://phet.colorado.edu/en/simulations/energy-skate-park"
+        },
+        {
+          "kind": "openstax",
+          "label": "OpenStax College Physics for AP Courses 2e: Chapter 7 (work and energy)",
+          "url": "https://openstax.org/details/books/college-physics-ap-courses-2e"
+        },
+        {
+          "kind": "ap_classroom",
+          "label": "AP Classroom: Unit 3 topic questions and progress check",
+          "url": "https://apclassroom.collegeboard.org"
+        }
+      ],
+      "standards": [
+        {
+          "code": "3.1",
+          "title": "Translational kinetic energy"
+        },
+        {
+          "code": "3.2",
+          "title": "Work"
+        },
+        {
+          "code": "3.3",
+          "title": "Potential energy"
+        },
+        {
+          "code": "3.4",
+          "title": "Conservation of energy"
+        },
+        {
+          "code": "3.5",
+          "title": "Power"
+        }
+      ],
+      "videos": [
+        {
+          "id": "dyueNvRuxic",
+          "title": "AP Physics 1 - Unit 3 Review - Work, Energy, and Power - Exam Prep",
+          "channel": "Flipping Physics",
+          "topics": "full unit review"
+        },
+        {
+          "id": "w4QFJb9a8vo",
+          "title": "Work, Energy, and Power: Crash Course Physics #9",
+          "channel": "CrashCourse"
+        },
+        {
+          "id": "0Oeywu5IR6s",
+          "title": "Introduction to Work with Examples",
+          "channel": "Flipping Physics",
+          "topics": "work"
+        },
+        {
+          "id": "AnuLW0ZX7-Q",
+          "title": "Introduction to Conservation of Mechanical Energy with Demonstrations",
+          "channel": "Flipping Physics",
+          "topics": "conservation of energy"
+        },
+        {
+          "id": "BtHLmxvP7o0",
+          "title": "Introduction to Power",
+          "channel": "Flipping Physics",
+          "topics": "power"
+        }
+      ]
+    },
+    {
+      "code": "U4",
+      "title": "Unit 4 · Linear momentum",
+      "unitNumber": 4,
+      "resources": [
+        {
+          "kind": "khan",
+          "label": "Khan Academy: AP Physics 1, unit 4",
+          "url": "https://www.khanacademy.org/science/ap-physics-1"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Collision Lab",
+          "url": "https://phet.colorado.edu/en/simulations/collision-lab"
+        },
+        {
+          "kind": "openstax",
+          "label": "OpenStax College Physics for AP Courses 2e: Chapter 8 (momentum)",
+          "url": "https://openstax.org/details/books/college-physics-ap-courses-2e"
+        },
+        {
+          "kind": "ap_classroom",
+          "label": "AP Classroom: Unit 4 topic questions and progress check",
+          "url": "https://apclassroom.collegeboard.org"
+        }
+      ],
+      "standards": [
+        {
+          "code": "4.1",
+          "title": "Linear momentum"
+        },
+        {
+          "code": "4.2",
+          "title": "Change in momentum and impulse"
+        },
+        {
+          "code": "4.3",
+          "title": "Conservation of linear momentum"
+        },
+        {
+          "code": "4.4",
+          "title": "Elastic and inelastic collisions"
+        }
+      ],
+      "videos": [
+        {
+          "id": "ufXw3CgzJCk",
+          "title": "AP Physics 1 - Unit 4 Review - Linear Momentum - Exam Prep",
+          "channel": "Flipping Physics",
+          "topics": "full unit review"
+        },
+        {
+          "id": "Y-QOfc2XqOk",
+          "title": "Collisions: Crash Course Physics #10",
+          "channel": "CrashCourse",
+          "topics": "momentum and collisions"
+        },
+        {
+          "id": "6myC6S2TNHw",
+          "title": "Impulse Introduction or If You Don't Bend Your Knees When Stepping off a Wall",
+          "channel": "Flipping Physics",
+          "topics": "impulse"
+        },
+        {
+          "id": "Kf0bBxmNeec",
+          "title": "Introduction to Conservation of Momentum with Demonstrations",
+          "channel": "Flipping Physics",
+          "topics": "conservation of momentum"
+        },
+        {
+          "id": "8OB8eIPgEkQ",
+          "title": "Elastic and inelastic collisions | Impacts and linear momentum | Physics | Khan Academy",
+          "channel": "Khan Academy Physics",
+          "topics": "elastic vs. inelastic"
+        }
+      ]
+    },
+    {
+      "code": "U5",
+      "title": "Unit 5 · Torque and rotational dynamics",
+      "unitNumber": 5,
+      "resources": [
+        {
+          "kind": "khan",
+          "label": "Khan Academy: AP Physics 1, unit 5",
+          "url": "https://www.khanacademy.org/science/ap-physics-1"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Balancing Act",
+          "url": "https://phet.colorado.edu/en/simulations/balancing-act"
+        },
+        {
+          "kind": "openstax",
+          "label": "OpenStax College Physics for AP Courses 2e: Chapters 9–10 (statics, rotational motion)",
+          "url": "https://openstax.org/details/books/college-physics-ap-courses-2e"
+        },
+        {
+          "kind": "ap_classroom",
+          "label": "AP Classroom: Unit 5 topic questions and progress check",
+          "url": "https://apclassroom.collegeboard.org"
+        }
+      ],
+      "standards": [
+        {
+          "code": "5.1",
+          "title": "Rotational kinematics"
+        },
+        {
+          "code": "5.2",
+          "title": "Connecting linear and rotational motion"
+        },
+        {
+          "code": "5.3",
+          "title": "Torque"
+        },
+        {
+          "code": "5.4",
+          "title": "Rotational inertia"
+        },
+        {
+          "code": "5.5",
+          "title": "Rotational equilibrium"
+        },
+        {
+          "code": "5.6",
+          "title": "Newton's second law in rotational form"
+        }
+      ],
+      "videos": [
+        {
+          "id": "ZdnVrZ0Z3nY",
+          "title": "AP Physics 1 - Unit 5a Review - Rotational Kinematics - Exam Prep",
+          "channel": "Flipping Physics",
+          "topics": "full review: rotational kinematics"
+        },
+        {
+          "id": "uZCqkfmFkCU",
+          "title": "AP Physics 1 - Unit 5b Review - Torque and Rotational Inertia - Exam Prep",
+          "channel": "Flipping Physics",
+          "topics": "full review: torque, rotational inertia"
+        },
+        {
+          "id": "fmXFWi-WfyU",
+          "title": "Rotational Motion: Crash Course Physics #11",
+          "channel": "CrashCourse",
+          "topics": "rotational kinematics"
+        },
+        {
+          "id": "b-HZ1SZPaQw",
+          "title": "Torque: Crash Course Physics #12",
+          "channel": "CrashCourse",
+          "topics": "torque, rotational inertia"
+        },
+        {
+          "id": "zwZ6OLv4ksA",
+          "title": "Rotational Equilibrium Introduction (and Static Equilibrium too!!)",
+          "channel": "Flipping Physics",
+          "topics": "rotational equilibrium"
+        }
+      ]
+    },
+    {
+      "code": "U6",
+      "title": "Unit 6 · Energy and momentum of rotating systems",
+      "unitNumber": 6,
+      "resources": [
+        {
+          "kind": "khan",
+          "label": "Khan Academy: AP Physics 1, unit 6",
+          "url": "https://www.khanacademy.org/science/ap-physics-1"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Gravity and Orbits",
+          "url": "https://phet.colorado.edu/en/simulations/gravity-and-orbits"
+        },
+        {
+          "kind": "openstax",
+          "label": "OpenStax College Physics for AP Courses 2e: Chapter 10 (rotational motion and angular momentum)",
+          "url": "https://openstax.org/details/books/college-physics-ap-courses-2e"
+        },
+        {
+          "kind": "ap_classroom",
+          "label": "AP Classroom: Unit 6 topic questions and progress check",
+          "url": "https://apclassroom.collegeboard.org"
+        }
+      ],
+      "standards": [
+        {
+          "code": "6.1",
+          "title": "Rotational kinetic energy"
+        },
+        {
+          "code": "6.2",
+          "title": "Torque and work"
+        },
+        {
+          "code": "6.3",
+          "title": "Angular momentum and angular impulse"
+        },
+        {
+          "code": "6.4",
+          "title": "Conservation of angular momentum"
+        },
+        {
+          "code": "6.5",
+          "title": "Rolling"
+        },
+        {
+          "code": "6.6",
+          "title": "Motion of orbiting satellites"
+        }
+      ],
+      "videos": [
+        {
+          "id": "ktMu1bXQbks",
+          "title": "AP Physics 1 - Unit 6 Review - Energy and Momentum of Rotating Systems - Exam Prep",
+          "channel": "Flipping Physics",
+          "topics": "full unit review"
+        },
+        {
+          "id": "C2qGOfCOUko",
+          "title": "Moment of Inertia Introduction and Rotational Kinetic Energy Derivation",
+          "channel": "Flipping Physics",
+          "topics": "rotational kinetic energy"
+        },
+        {
+          "id": "oGzQflqf1VA",
+          "title": "Conservation of Angular Momentum Introduction and Demonstrations",
+          "channel": "Flipping Physics",
+          "topics": "angular momentum"
+        },
+        {
+          "id": "r_yqJ2HXoC0",
+          "title": "Rolling Without Slipping Introduction and Demonstrations",
+          "channel": "Flipping Physics",
+          "topics": "rolling"
+        },
+        {
+          "id": "-Q5AAxX5TlI",
+          "title": "Mechanical Energy of a Satellite in Circular Orbit",
+          "channel": "Flipping Physics",
+          "topics": "orbits"
+        }
+      ]
+    },
+    {
+      "code": "U7",
+      "title": "Unit 7 · Oscillations",
+      "unitNumber": 7,
+      "resources": [
+        {
+          "kind": "khan",
+          "label": "Khan Academy: AP Physics 1, unit 7",
+          "url": "https://www.khanacademy.org/science/ap-physics-1"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Masses and Springs",
+          "url": "https://phet.colorado.edu/en/simulations/masses-and-springs"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Pendulum Lab",
+          "url": "https://phet.colorado.edu/en/simulations/pendulum-lab"
+        },
+        {
+          "kind": "openstax",
+          "label": "OpenStax College Physics for AP Courses 2e: Chapter 16 (oscillatory motion)",
+          "url": "https://openstax.org/details/books/college-physics-ap-courses-2e"
+        },
+        {
+          "kind": "ap_classroom",
+          "label": "AP Classroom: Unit 7 topic questions and progress check",
+          "url": "https://apclassroom.collegeboard.org"
+        }
+      ],
+      "standards": [
+        {
+          "code": "7.1",
+          "title": "Defining simple harmonic motion"
+        },
+        {
+          "code": "7.2",
+          "title": "Frequency and period of SHM"
+        },
+        {
+          "code": "7.3",
+          "title": "Representing and analyzing SHM"
+        },
+        {
+          "code": "7.4",
+          "title": "Energy of simple harmonic oscillators"
+        }
+      ],
+      "videos": [
+        {
+          "id": "wgEyKvMN2ME",
+          "title": "AP Physics 1 - Unit 7 Review - Oscillations - Exam Prep",
+          "channel": "Flipping Physics",
+          "topics": "full unit review"
+        },
+        {
+          "id": "jxstE6A_CYQ",
+          "title": "Simple Harmonic Motion: Crash Course Physics #16",
+          "channel": "CrashCourse",
+          "topics": "SHM, springs and pendulums"
+        },
+        {
+          "id": "QVkfRELZpK0",
+          "title": "Simple Harmonic Motion Introduction(SHM) via a Horizontal Mass-Spring System",
+          "channel": "Flipping Physics",
+          "topics": "mass-spring SHM"
+        },
+        {
+          "id": "vQypNfbga5U",
+          "title": "When is a Pendulum in Simple Harmonic Motion?(SHM)",
+          "channel": "Flipping Physics",
+          "topics": "pendulums"
+        },
+        {
+          "id": "HuV8itFrht4",
+          "title": "Simple Harmonic Motion(SHM) - Graphs of Mechanical Energies",
+          "channel": "Flipping Physics",
+          "topics": "energy in SHM"
+        }
+      ]
+    },
+    {
+      "code": "U8",
+      "title": "Unit 8 · Fluids",
+      "unitNumber": 8,
+      "resources": [
+        {
+          "kind": "khan",
+          "label": "Khan Academy: AP Physics 1, unit 8",
+          "url": "https://www.khanacademy.org/science/ap-physics-1"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Under Pressure",
+          "url": "https://phet.colorado.edu/en/simulations/under-pressure"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Density",
+          "url": "https://phet.colorado.edu/en/simulations/density"
+        },
+        {
+          "kind": "phet",
+          "label": "PhET: Buoyancy",
+          "url": "https://phet.colorado.edu/en/simulations/buoyancy"
+        },
+        {
+          "kind": "openstax",
+          "label": "OpenStax College Physics for AP Courses 2e: Chapters 11–12 (fluid statics and dynamics)",
+          "url": "https://openstax.org/details/books/college-physics-ap-courses-2e"
+        },
+        {
+          "kind": "ap_classroom",
+          "label": "AP Classroom: Unit 8 topic questions and progress check",
+          "url": "https://apclassroom.collegeboard.org"
+        }
+      ],
+      "standards": [
+        {
+          "code": "8.1",
+          "title": "Internal structure and density"
+        },
+        {
+          "code": "8.2",
+          "title": "Pressure"
+        },
+        {
+          "code": "8.3",
+          "title": "Fluids and Newton's laws"
+        },
+        {
+          "code": "8.4",
+          "title": "Fluids and conservation laws"
+        }
+      ],
+      "videos": [
+        {
+          "id": "C9JgVBg7L7Q",
+          "title": "AP Physics 1 - Unit 8 Review - Fluids - Exam Prep",
+          "channel": "Flipping Physics",
+          "topics": "full unit review"
+        },
+        {
+          "id": "b5SqYuWT4-4",
+          "title": "Fluids at Rest: Crash Course Physics #14",
+          "channel": "CrashCourse",
+          "topics": "density, pressure, buoyancy"
+        },
+        {
+          "id": "fJefjG3xhW0",
+          "title": "Fluids in Motion: Crash Course Physics #15",
+          "channel": "CrashCourse",
+          "topics": "continuity, Bernoulli"
+        },
+        {
+          "id": "16HDJNoXQII",
+          "title": "Fluids, Buoyancy, and Archimedes' Principle",
+          "channel": "Professor Dave Explains",
+          "topics": "buoyancy"
+        },
+        {
+          "id": "f3ln4aq44u0",
+          "title": "Bernoulli's Principle Derivation",
+          "channel": "Flipping Physics",
+          "topics": "Bernoulli's equation"
+        }
+      ]
+    },
+    {
+      "code": "SP",
+      "title": "Science practices",
+      "resources": [
+        {
+          "kind": "ap_classroom",
+          "label": "AP Classroom: practice questions by science practice",
+          "url": "https://apclassroom.collegeboard.org"
+        }
+      ],
+      "standards": [
+        {
+          "code": "SP1",
+          "title": "Creating representations"
+        },
+        {
+          "code": "SP2",
+          "title": "Mathematical routines"
+        },
+        {
+          "code": "SP3",
+          "title": "Scientific questioning and argumentation"
+        }
+      ],
+      "videos": [
+        {
+          "id": "l3SMlNjFhmg",
+          "title": "AP Physics 1 Exam Cram: Full Curriculum in 30 Minutes",
+          "channel": "Flipping Physics",
+          "topics": "whole-course review"
+        },
+        {
+          "id": "kPjeYfqU7_0",
+          "title": "Step-by-Step Physics Problem Solving",
+          "channel": "Flipping Physics",
+          "topics": "problem-solving steps"
+        },
+        {
+          "id": "hn1LtwnwGX0",
+          "title": "Why \"Show All Your Work\"?",
+          "channel": "Flipping Physics",
+          "topics": "showing your work"
+        },
+        {
+          "id": "9KzmUCRP7Dk",
+          "title": "2019 #1 Free Response Question - AP Physics 1 - Exam Solution",
+          "channel": "Flipping Physics",
+          "topics": "worked FRQ (pre-2025 format)"
+        },
+        {
+          "id": "HROH7htBt4c",
+          "title": "2015 #1 Free Response Question - AP Physics 1 - Exam Solution",
+          "channel": "Flipping Physics",
+          "topics": "worked FRQ (pre-2025 format)"
+        }
+      ]
+    }
+  ]
+}

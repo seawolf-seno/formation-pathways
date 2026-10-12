@@ -314,18 +314,37 @@ adults behind the scenes; students stay present, in person, with people.
   login). Agent tools: the Vercel **plugin** connector sees the school team (the claude.ai Vercel
   connector only sees seno's old personal team); `supabase-staging` MCP (local scope) is
   writable; `.mcp.json` `supabase` is production, read-only.
-- **Open PRs as of 2026-10-11**:
+- **Open PRs as of 2026-10-12**: #62 and #63 merged (their migrations are on staging; production
+  is seno's). Still open:
   - #58 STEM Scholars (TheEnigmaticPhilosopher): migration still named `20261012000000_…`
-    (collides; asked to rename to `20261015000000_…` and rebase). Not on staging.
-  - #62 class resources (srsuchard): migration `20261017000000_class_resources.sql`.
-  - #63 view-only accounts (srsuchard): includes #62's migration plus
-    `20261018000000_view_only_accounts.sql`. Merge #62 first.
+    (collides; asked to rename to a timestamp later than main's newest and rebase). Not on staging.
   - #57 Spark wide evidence (CtelehowskiPCHS): no migration; Vercel check red.
+  - Mastery Hub (seno/mastery-hub, card #37): migration `20261019000000_mastery_hub.sql`, on staging.
   For each migration PR: agent applies it to **staging** (record the file's own version in
   `supabase_migrations.schema_migrations`), seno checks the preview, seno applies to
   production, then merges.
+- **Mastery Hub (2026-10-12, branch `seno/mastery-hub`, card #37)**: standards-based grading
+  for any subject that wants it, AP Physics 1 first (`fixtures/mastery/ap-physics-1.json`; a new
+  subject is one more file, a new class is a new address). Each course has an **address**:
+  `/mastery/APPhysics1` (teacher: requests, class map, course settings incl. **finished through
+  Unit N**, video shelf, sources with pause switches, roster + student sign-ins; plus `/oral`,
+  `/students/[id]`, `/log`) and `/me/APPhysics1` (student). **Students sign in** (same `/login`,
+  school address registered by their teacher in `student_accounts`): levels in words, every
+  piece of evidence **with scores**, next steps (finished units first) with links and videos,
+  a **YouTube video shelf** (59 videos, oEmbed-verified, in the standards file; links out,
+  nothing embedded), oral exam requests and sent-in work. Evidence: Canvas (graded work /
+  Outcomes naming a standard code; checked on opening, at most every 6h), AP Classroom / Khan
+  **CSV export drop-in** (preview first; exact name/email matching; no scraping or stored
+  passwords, seno's choice), oral exams, accepted student work. Levels are deterministic
+  (`lib/mastery/rules.ts`), no AI. New consent scope `mastery_records`; append-only
+  `mastery_log` by triggers. Staging: `20261017`, `20261018` and this `20261019` applied in order
+  2026-10-12, whole schema fingerprint-verified, advisors clean. **Needs seno to apply
+  `20261019000000_mastery_hub.sql` to production** (after #62/#63's). Not built: a nightly
+  import with nobody signed in (needs its own DB role), AI next steps, mastery in pathway drafts,
+  view-only accounts in the hub. `docs/mastery-hub.md`.
 - **Next concrete actions**:
-  1. Migration PRs above, in order: #62 → #63 → #58 (after rename), via staging first.
+  1. Production migrations `20261017`, `20261018` (merged), then `20261019` (Mastery Hub, when
+     merged); #58 after its rename, via staging first.
   2. Admissions phone test: shared doc https://claude.ai/code/artifact/e736d884-aa9c-4fef-9467-280ac6982a34
      (seno shares it); repo copy `docs/admissions-phone-test.md`. Collect answers, the real
      application link (`NEXT_STEP_LINKS`) and rewritten "A first week" lines (`FIRST_WEEK`).
@@ -376,6 +395,9 @@ conflicts with this file, this file wins for what's already built.
 2. Compass, never dossier. No numeric scores on students anywhere. Counts and
    narratives only. No red/failure states on a student profile. The word
    "record" never appears in the UI — say "Pathway."
+   One deliberate exception (seno, 2026-10-12): the Mastery Hub's `mastery_evidence`
+   keeps raw scores for the teacher and that student only. They never appear on a Pathway,
+   a family page, the person page (words and counts only there) or in any AI call.
 3. Grace in the architecture. Prompts must frame struggle as
    growth-in-progress and actively surface pattern-breaking positives.
 4. Warm, not clinical. AI writes about teenagers the way a teacher who loves

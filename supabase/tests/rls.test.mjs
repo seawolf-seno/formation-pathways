@@ -477,12 +477,89 @@ const vLeaver = (await db.query(`select count(*)::int as n from observations whe
 console.log(`${vLeaver ? "PASS" : "FAIL"}  an account with access removed can't delete the notes it wrote`);
 // Default deny holds only while every policy names a role check: is_staff()
 // and has_role() leave viewers out, so a policy without one would let them in.
-const open = await db.query(`select tablename || '.' || policyname as p from pg_policies where schemaname = 'public' and policyname <> 'staff_read' and coalesce(qual, '') || ' ' || coalesce(with_check, '') !~ (case when policyname like '%_viewer_%' then '(is_viewer|viewer_sees)\\(' else '(is_staff|has_role)\\(' end)`);
+// The Mastery Hub's helpers count too: teaches_course() / teaches_person() are
+// built on has_role('admin') and is_staff(), and current_student() matches only
+// a registered student sign-in, which an active staff address can't have
+// (cases under "Mastery Hub" below check a viewer gets nothing).
+const open = await db.query(`select tablename || '.' || policyname as p from pg_policies where schemaname = 'public' and policyname <> 'staff_read' and coalesce(qual, '') || ' ' || coalesce(with_check, '') !~ (case when policyname like '%_viewer_%' then '(is_viewer|viewer_sees)\\(' else '(is_staff|has_role|teaches_course|teaches_person|current_student)\\(' end)`);
 const noneOpen = open.rows.length === 0; if (noneOpen) pass++; else fail++;
 console.log(`${noneOpen ? "PASS" : "FAIL"}  every policy names a role check, so a view-only account gets nothing by accident`, open.rows.map(r => r.p));
 const viewerWrites = await db.query(`select tablename || '.' || policyname as p from pg_policies where schemaname = 'public' and policyname like '%_viewer_%' and cmd <> 'SELECT' and policyname <> 'access_log_viewer_insert'`);
 const noViewerWrites = viewerWrites.rows.length === 0; if (noViewerWrites) pass++; else fail++;
 console.log(`${noViewerWrites ? "PASS" : "FAIL"}  the only thing a viewer can write is their own access-log entry`, viewerWrites.rows.map(r => r.p));
+// Mastery Hub (Fizzy #37): one teacher's course, scores allowed here only,
+// students sign in and see only their own.
+Object.assign(ids, { teach2: "00000000-0000-0000-0000-0000000000f2", kid: "00000000-0000-0000-0000-0000000000f3", kidUnconfirmed: "00000000-0000-0000-0000-0000000000f4" });
+await db.exec(`insert into auth.users (id, email, email_confirmed_at) values ('${ids.teach2}','other.teacher@pacificachristian.org', now());
+update staff set active = true, role = 'teacher' where user_id = '${ids.teach2}';`);
+const real = "'22222222-2222-2222-2222-222222222222'";
+await db.exec(`update pilot_settings set real_data_enabled = true, approved_by = coalesce(approved_by, 'Head of School'), approval_reference = coalesce(approval_reference, 'mtg'), approved_at = coalesce(approved_at, now());
+insert into people (id, first_name, last_name, stage) values (${real}, 'Mastery', 'Kid', 'enrolled');
+insert into consents (person_id, scope, granted_by, granted_on, evidence) values (${real}, 'mastery_records', 'Parent Kid', '2026-10-12', 'Signed form');`);
+const sampleOne = "(select id from people where is_sample limit 1)";
+const course = "(select id from mastery_courses where title = 'AP Physics 1')";
+const sampleCourse = "(select id from mastery_courses where title = 'AP Physics 1 (sample)')";
+const ev = (who, extra = "") => `insert into mastery_evidence (course_id, person_id, standard_code, source, title, score, max_score${extra ? ", level" : ""}) values (${course}, ${real}, '2.5', 'canvas', 'Unit 2 quiz', 8, 10${extra ? `, '${extra}'` : ""}) returning recorded_by`;
+await expect("a teacher creates their own mastery course", "teach", `insert into mastery_courses (title, slug, config_key) values ('AP Physics 1', 'APPhysics1', 'ap-physics-1') returning teacher_id`, true, r => r.rows[0]?.teacher_id === ids.teach);
+await expect("but not one in someone else's name", "teach", `insert into mastery_courses (title, slug, config_key, teacher_id) values ('Theirs', 'Theirs', 'ap-physics-1', '${ids.admin}')`, false);
+await expect("admissions can't create a mastery course", "adm", `insert into mastery_courses (title, slug, config_key) values ('X', 'Xcourse', 'ap-physics-1')`, false);
+await expect("the teacher puts a consented student on the roster", "teach", `insert into mastery_roster (course_id, person_id) values (${course}, ${real}) returning person_id`, true, r => r.rows.length === 1);
+await expect("another teacher can't add to that roster", "teach2", `insert into mastery_roster (course_id, person_id) values (${course}, ${sampleOne})`, false);
+await expect("another teacher can't see the course", "teach2", `select * from mastery_courses`, true, r => r.rows.length === 0);
+await expect("a sample course", "teach", `insert into mastery_courses (title, slug, config_key, is_sample) values ('AP Physics 1 (sample)', 'APPhysics1-Sample', 'ap-physics-1', true) returning id`, true, r => r.rows.length === 1);
+await expect("two courses can't share an address, in any capitalization", "admin", `insert into mastery_courses (title, slug, config_key) values ('Again', 'apphysics1', 'ap-physics-1')`, false);
+await expect("an address is letters, numbers and dashes", "teach", `insert into mastery_courses (title, slug, config_key) values ('Bad', 'AP Physics/1', 'ap-physics-1')`, false);
+await expect("the teacher marks the class finished through Unit 2", "teach", `update mastery_courses set finished_through = 2 where slug = 'APPhysics1' returning finished_through`, true, r => r.rows[0]?.finished_through === 2);
+await expect("a sample course holds no real student", "teach", `insert into mastery_roster (course_id, person_id) values (${sampleCourse}, ${real})`, false);
+await expect("a course can't turn from sample to real", "teach", `update mastery_courses set is_sample = false where title = 'AP Physics 1 (sample)'`, false);
+await expect("no evidence for a student who isn't on the roster", "teach", `insert into mastery_evidence (course_id, person_id, standard_code, source, title, level) values (${course}, ${sampleOne}, '1.1', 'oral', 'Oral exam', 'proficient')`, false);
+await expect("the teacher records a score, as themselves", "teach", ev("teach"), true, r => r.rows[0]?.recorded_by === ids.teach);
+await expect("evidence needs a level or a full score", "teach", `insert into mastery_evidence (course_id, person_id, standard_code, source, title, score) values (${course}, ${real}, '2.5', 'canvas', 'Half', 3)`, false);
+await expect("an unknown level is refused", "teach", `insert into mastery_evidence (course_id, person_id, standard_code, source, title, level) values (${course}, ${real}, '2.5', 'oral', 'Oral', 'A+')`, false);
+await expect("a link must be https", "teach", `insert into mastery_evidence (course_id, person_id, standard_code, source, title, level, link) values (${course}, ${real}, '2.5', 'oral', 'Oral', 'developing', 'javascript:alert(1)')`, false);
+await expect("the same import row twice adds nothing", "teach", `insert into mastery_evidence (course_id, person_id, standard_code, source, title, score, max_score, external_key) values (${course}, ${real}, '2.5', 'canvas', 'Quiz', 1, 2, 'canvas:1'), (${course}, ${real}, '2.5', 'canvas', 'Quiz', 1, 2, 'canvas:1')`, false);
+await expect("evidence is never edited", "teach", `update mastery_evidence set score = 10 returning id`, true, r => r.rows.length === 0);
+await expect("admissions can't read a teacher's grades", "adm", `select * from mastery_evidence`, true, r => r.rows.length === 0);
+await expect("another teacher can't read them", "teach2", `select * from mastery_evidence`, true, r => r.rows.length === 0);
+await expect("an admin can", "admin", `select * from mastery_evidence`, true, r => r.rows.length === 1);
+await expect("a staff address can't be a student sign-in", "teach", `insert into student_accounts (person_id, email) values (${real}, 'c@pacificachristian.org')`, false);
+await expect("a non-school address can't be a student sign-in", "teach", `insert into student_accounts (person_id, email) values (${real}, 'kid@gmail.com')`, false);
+await expect("another teacher can't give this student a sign-in", "teach2", `insert into student_accounts (person_id, email) values (${real}, 'mkid30@pacificachristian.org')`, false);
+await expect("the course's teacher gives the student a sign-in", "teach", `insert into student_accounts (person_id, email) values (${real}, 'mkid30@pacificachristian.org') returning created_by`, true, r => r.rows[0]?.created_by === ids.teach);
+await db.exec(`insert into auth.users (id, email, email_confirmed_at) values ('${ids.kid}','MKid30@pacificachristian.org', now()), ('${ids.kidUnconfirmed}','mkid30@pacificachristian.org', null) on conflict do nothing;`).catch(async () => {
+  await db.exec(`insert into auth.users (id, email, email_confirmed_at) values ('${ids.kid}','MKid30@pacificachristian.org', now())`);
+});
+await expect("a registered student's sign-in makes no staff row", "admin", `select * from staff where lower(email) = 'mkid30@pacificachristian.org'`, true, r => r.rows.length === 0);
+await expect("the student sees their own course", "kid", `select title from mastery_courses`, true, r => r.rows.length === 1 && r.rows[0].title === "AP Physics 1");
+await expect("the student sees their own evidence, scores included", "kid", `select score from mastery_evidence`, true, r => r.rows.length === 1 && Number(r.rows[0].score) === 8);
+await expect("the student sees only their own name in people", "kid", `select id from people`, true, r => r.rows.length === 1);
+await expect("the student sees no observations", "kid", `select * from observations`, true, r => r.rows.length === 0);
+await expect("the student sees no sparks or drafts", "kid", `select (select count(*) from student_sparks) + (select count(*) from pathway_drafts) as n`, true, r => Number(r.rows[0].n) === 0);
+await expect("the student can't read the log", "kid", `select * from mastery_log`, true, r => r.rows.length === 0);
+await expect("the student can't add evidence", "kid", `insert into mastery_evidence (course_id, person_id, standard_code, source, title, level) values (${course}, ${real}, '2.5', 'student', 'Me', 'extending')`, false);
+await expect("the student can't add themselves to a course", "kid", `insert into mastery_roster (course_id, person_id) values (${sampleCourse}, ${real})`, false);
+await expect("the student asks for an oral exam", "kid", `insert into mastery_requests (course_id, person_id, standard_code, kind, message, status) values (${course}, ${real}, '2.5', 'oral_exam', 'Ready for 2.5', 'done') returning status, created_by`, true, r => r.rows[0]?.status === "open" && r.rows[0]?.created_by === ids.kid);
+await expect("the student sends evidence with a link", "kid", `insert into mastery_requests (course_id, person_id, standard_code, kind, message, link) values (${course}, ${real}, '3.4', 'evidence', 'PhET energy lab', 'https://phet.colorado.edu/en/simulations/energy-skate-park') returning id`, true, r => r.rows.length === 1);
+await expect("...but not for another student", "kid", `insert into mastery_requests (course_id, person_id, standard_code, kind) values (${course}, ${sampleOne}, '2.5', 'oral_exam')`, false);
+await expect("the student can't answer their own request", "kid", `update mastery_requests set status = 'accepted' returning id`, true, r => r.rows.length === 0);
+await expect("the teacher schedules it, stamped as them", "teach", `update mastery_requests set status = 'scheduled', response = 'Thursday at lunch' where kind = 'oral_exam' returning resolved_by`, true, r => r.rows[0]?.resolved_by === ids.teach);
+await expect("the teacher can't rewrite what the student asked", "teach", `update mastery_requests set message = 'changed'`, false);
+await expect("a student account with an unconfirmed address sees nothing", "kidUnconfirmed", `select * from mastery_evidence`, true, r => r.rows.length === 0);
+await expect("the teacher pauses the Canvas import", "teach", `insert into mastery_sources (course_id, source, paused) values (${course}, 'canvas', true) returning paused`, true, r => r.rows[0]?.paused === true);
+await expect("another teacher can't flip it", "teach2", `update mastery_sources set paused = false returning *`, true, r => r.rows.length === 0);
+await expect("the teacher deletes a wrong piece of evidence", "teach", `delete from mastery_evidence where title = 'Unit 2 quiz' returning id`, true, r => r.rows.length === 1);
+await expect("every change is in the log", "teach", `select action from mastery_log order by id`, true, r => ["mastery_roster_insert", "mastery_evidence_insert", "student_accounts_insert", "mastery_requests_insert", "mastery_requests_update", "mastery_sources_insert", "mastery_evidence_delete"].every(a => r.rows.some(x => x.action === a)));
+await expect("nobody edits the log", "admin", `update mastery_log set action = 'x' returning id`, true, r => r.rows.length === 0);
+await expect("nobody deletes the log", "admin", `delete from mastery_log returning id`, true, r => r.rows.length === 0);
+await expect("the teacher can't log as someone else", "teach", `insert into mastery_log (course_id, actor, action) values (${course}, '${ids.admin}', 'import')`, false);
+await expect("the teacher reads their roster's Canvas ids", "teach", `select * from external_ids where system = 'canvas'`, true);
+await expect("a view-only account sees no mastery course", "viewer", `select * from mastery_courses`, true, r => r.rows.length === 0);
+await expect("...or evidence", "viewer", `select * from mastery_evidence`, true, r => r.rows.length === 0);
+await expect("...and can't start a course", "viewer", `insert into mastery_courses (title, slug, config_key) values ('X', 'Xcourse', 'ap-physics-1')`, false);
+await expect("admin turns the student sign-in off", "admin", `update student_accounts set active = false returning person_id`, true, r => r.rows.length === 1);
+await expect("then the student sees nothing", "kid", `select * from mastery_courses`, true, r => r.rows.length === 0);
+await expect("revoking mastery_records consent", "admin", `update consents set revoked_at = now() where scope = 'mastery_records' and revoked_at is null and person_id = ${real} returning id`, true, r => r.rows.length === 1);
+await expect("...stops new evidence", "teach", ev("teach", "proficient"), false);
 
 const exposed = await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef");
 const noneExposed = exposed.rows.length === 0; if (noneExposed) pass++; else fail++;

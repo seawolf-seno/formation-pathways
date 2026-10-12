@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPersonProfile, getRoster, logAccess, requireStaff } from "@/lib/sor/queries";
+import { masterySummaryFor } from "@/lib/mastery/queries";
+import { allStandards } from "@/lib/mastery/config";
+import { studentStatuses } from "@/lib/mastery/rules";
 import { describeSent, pathwayInput } from "@/lib/sor/ai-input";
 import { SentToAi } from "@/components/sor/SentToAi";
 import { displayName } from "@/lib/sor/types";
@@ -55,6 +58,9 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   if (!profile) notFound();
   await logAccess(staff, "view_person", id);
 
+  // Mastery Hub courses this staff member teaches (RLS: the course's own
+  // teacher or an admin); empty until the hub's migration is applied.
+  const mastery = await masterySummaryFor(id);
   const { person, admissions, enrollment, courses, classHistory, evidence, observations, drafts, consents, sparks, classReflections } = profile;
   const enjoyed = latestReflections(classReflections);
   const hasClasses = classesForReflection(courses, classHistory).length > 0;
@@ -315,6 +321,37 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               </div>
             )}
           </Section>
+
+          {mastery.length > 0 && (
+            <Section title="Paths toward mastery" source="Mastery Hub">
+              <ul className="space-y-3 text-sm">
+                {mastery.map(({ course, config, evidence: pieces }) => {
+                  const statuses = [...studentStatuses(config, pieces).values()];
+                  const strong = statuses.filter((st) => st.level === "extending" || st.level === "proficient");
+                  const titles = new Map(allStandards(config).map((st) => [st.code, st.title]));
+                  return (
+                    <li key={course.id}>
+                      <p className="text-[var(--color-ink)]">
+                        <Link href={`/mastery/${course.slug}/students/${person.id}`} className="font-semibold underline">
+                          {course.title}
+                        </Link>
+                        : proficient or beyond on {strong.length} of {statuses.length} standards.
+                      </p>
+                      {strong.some((st) => st.level === "extending") && (
+                        <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
+                          Going further on:{" "}
+                          {strong.filter((st) => st.level === "extending").slice(0, 5).map((st) => titles.get(st.code)).join(", ")}
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
+                Levels in words only; scores stay in the Mastery Hub and never reach a Pathway or an AI draft.
+              </p>
+            </Section>
+          )}
 
           <Section title="What staff have seen" source="Voice & text capture">
             {observations.length === 0 ? (

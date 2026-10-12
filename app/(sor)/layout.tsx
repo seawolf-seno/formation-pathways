@@ -25,6 +25,11 @@ export default async function SorLayout({ children }: { children: React.ReactNod
                 Samples
               </Link>
             )}
+            {(staff.role === "admin" || staff.role === "teacher") && (
+              <Link href="/mastery" className="font-medium text-[var(--color-pacific)] hover:text-white">
+                Mastery
+              </Link>
+            )}
             {canAdmin && (
               <Link href="/season" className="font-medium text-[var(--color-pacific)] hover:text-white">
                 Season

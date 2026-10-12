@@ -41,6 +41,12 @@ export async function requireStaff(): Promise<StaffMember> {
     .select("user_id, email, display_name, role, active")
     .eq("user_id", user.id)
     .maybeSingle();
+  if (!data || !data.active) {
+    // A student with a Mastery Hub sign-in belongs on their own page (RLS
+    // shows a non-staff account only its own student_accounts row).
+    const { data: student } = await supabase.from("student_accounts").select("person_id").limit(1);
+    if (student?.length) redirect("/me");
+  }
   if (!data) redirect("/login?error=not-staff");
   if (!data.active) redirect(`/login?error=${looksLikeStudentAddress(data.email) ? "student" : "pending"}`);
   const { user_id, email, display_name, role } = data as StaffMember;
