@@ -12,7 +12,8 @@ export const metadata = { title: "Suggested resources · Formation Pathways" };
  */
 export default async function ResourceReviewPage() {
   const staff = await requireStaff();
-  if (staff.role !== "admin" && staff.role !== "teacher") redirect("/capture");
+  // A view-only account may look (sample students only, by RLS); approving is refused.
+  if (staff.role !== "admin" && staff.role !== "teacher" && staff.role !== "viewer") redirect("/capture");
   const [{ ready, pending, decided }, roster] = await Promise.all([getResourcesForReview(), getRoster()]);
   const people = new Map(roster.map((p) => [p.id, p]));
 

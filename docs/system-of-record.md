@@ -304,6 +304,25 @@ roster on stage. Then, by seno (real student details, so not an agent):
    ever holds an account back for a person to decide. Accounts approved before
    the migration are not changed; `/pilot` counts the student addresses that
    have access so an admin can check each one.
+
+   **View only (sample students)** is the role for someone who needs to check
+   that the pages still work without being staff, such as a student
+   contributor (migration `20261018000000_view_only_accounts.sql`). An admin
+   picks it on `/pilot`; nobody gets it by signing in. Such an account:
+   - sees **fictional sample students only**: the people list and the
+     per-student tables a teacher can read, for samples and nothing else. A
+     real student's row is never returned, whatever page asks;
+   - **cannot save, send or create anything.** The database gives it no write
+     rule except its own access-log entries, and every Server Action refuses
+     it first (`requireActingStaff`, `tests/view-only.test.mjs`), so nothing
+     reaches Claude or another service either;
+   - starts at `/pilot/samples`, can open the person page, Study Hub, class
+     reflections, Spark and `/pilot/resources`, and is turned away from the
+     fictional demo in production (it is open in local development).
+   In the database a viewer is not "staff": `private.is_staff()` is false for
+   it, so a policy written the usual way leaves it out by default. A new table
+   a viewer should see needs its own `…_viewer_read` policy using
+   `private.viewer_sees(person_id)`.
 6. **Try it on fiction.** Go to `/pilot`, click *Load fictional sample pilot*,
    then run all three imports (sample mode), open a student, click *Draft*,
    and capture on `/capture`.
