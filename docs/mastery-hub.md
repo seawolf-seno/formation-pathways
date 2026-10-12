@@ -22,7 +22,7 @@ The teacher can rename one under **Course settings**.
 | Route | Who | What |
 |---|---|---|
 | `/mastery` | teachers, admins | Every mastery course they teach, in any subject; start a course; load a fictional sample class |
-| `/mastery/APPhysics1` | that course's teacher (or an admin) | Requests waiting, the class map (unit or topic view), course settings (address, Canvas id, **finished through Unit N**), the video shelf, sources with pause switches, roster and student sign-ins |
+| `/mastery/APPhysics1` | that course's teacher (or an admin) | Requests waiting, the class map (unit or topic view, and a **source switch**: all / Canvas / Khan Academy / AP Classroom / oral exams), course settings (address, Canvas id, **finished through Unit N**), the video shelf, sources with pause switches, roster and student sign-ins |
 | `/mastery/APPhysics1/oral` | same | Phone-sized oral exam / observation updater: student → standard → tap a level → optional spoken note |
 | `/mastery/APPhysics1/students/[id]` | same | The student's own page, plus removing evidence and adding evidence by hand |
 | `/mastery/APPhysics1/log` | same | Every import and every change, newest first |
@@ -122,16 +122,76 @@ All the numbers are in the standards file, so a teacher can change them without 
   `Unit 4 Progress Check`, which counts on each topic in that unit), and Canvas **Outcome
   results** whose outcome title starts with a code. Anything else is skipped and counted
   in the summary, never guessed.
-- **When it runs:** when the teacher opens the course page, if the last check is older
-  than six hours, or when they press "Check Canvas now". A sample course adds one
-  fictional quiz instead.
-- **Not built: a nightly job with nobody signed in.** Every hub read and write runs as
-  the signed-in user, so RLS is the authorization (no service-role key). A nightly job
-  would need its own narrowly granted database role. That's a decision for seno.
+- **When it runs:** every three hours, automatically, once the scheduled import is switched on
+  (below). It also runs when the teacher opens the course page (if the last check is over six
+  hours old) and on **Check Canvas now**. A sample course adds one fictional quiz instead.
+- What counts, in order: a standard code in the title (`[2.5]`), a unit (`Unit 2 Test` counts for
+  each topic in the unit), or the standard's **name or alias** (`Newton's second law` → 2.5).
+  Each standard in the standards file has `aliases` for Khan skill names and common headings.
+  When one name sits inside a longer one, only the longer counts: "Rotational form of Newton's
+  second law" is 5.6, not 2.5. A title that names more than three standards is too general and
+  counts for none.
 
-### AP Classroom and Khan Academy (export drop-in)
+### Automatic imports (nobody signed in)
 
-Download the report as CSV, open the course, choose the source and drop the file in. The
+A Vercel Cron job calls `/api/cron/mastery` every three hours in production (`vercel.json`). It
+connects as **`mastery_importer`** (`20261020000000_mastery_importer.sql`), a Postgres role made
+for this one job. It is **not** the service-role key and not a staff account.
+
+What the role can do:
+- read real courses that have a Canvas course id, their rosters, and those students' Canvas ids;
+- read which import keys a course already has;
+- add Canvas and Khan evidence;
+- record each run.
+
+What it can't do: read a name, a score, a level, an observation or a draft; set a level; touch a
+sample course; or change or delete anything. RLS, the consent trigger and the roster check apply
+to every row it adds. Rows it adds have no person recorded and show as automatic, and the log
+says "Canvas checked automatically" by "System". Guarded by the "automatic imports" cases in
+`supabase/tests/rls.test.mjs`.
+
+**Switching it on** (seno, staging first, then production):
+
+1. Apply the migration. The role starts **without** a login.
+2. In the SQL editor, generate a long random password (e.g. `openssl rand -base64 32`) and run:
+   ```sql
+   alter role mastery_importer with login password '<the password>';
+   ```
+   Keep the password out of chat, Fizzy and the repo.
+3. Supabase → **Connect** → **Session pooler**. Copy the connection string and change its user
+   from `postgres.<project-ref>` to `mastery_importer.<project-ref>`, with the new password.
+4. Vercel → formation-pathways → Settings → Environment Variables, **Production** only:
+   - `MASTERY_IMPORTER_DATABASE_URL`: that string (mark it Sensitive);
+   - `CRON_SECRET`: another long random string;
+   - optional `MASTERY_IMPORTER_CA_CERT`: the certificate from Supabase → Database settings →
+     SSL. With it, the database's identity is verified as well as encrypted.
+5. Redeploy. Vercel → **Cron Jobs** lists `/api/cron/mastery`; **Run** it once. Each course's
+   Canvas card then says "Automatic: …" and the log shows the run.
+
+Until those are set the job answers "not switched on" and does nothing. Pausing Canvas on a
+course stops the automatic import for that course too.
+
+### Khan Academy: through Canvas, no uploads
+
+Khan Academy offers no API to individual teachers. Its official grade sync puts Khan
+assignments and scores into **Canvas** automatically, usually within minutes. It needs a
+**Khan Academy Districts** partnership with **Clever LMS Connect**
+([Khan help](https://support.khanacademy.org/hc/en-us/articles/38767915838861)). Once that's on,
+there's nothing to upload:
+- Canvas assignments that launch Khan Academy (or whose title says "Khan Academy") are saved as
+  **Khan Academy** evidence, not Canvas;
+- Khan skill names map to standards through the standards file's `aliases`;
+- the source switch on the class map shows what Khan alone says.
+
+Without Districts, the free *Khan2Canvas* Google Sheets add-on copies Khan scores into Canvas
+assignments, and the hub then reads them the same way. Student data passes through that third
+party, so it needs a privacy review first. As a last resort, the drop-in still takes a Khan CSV.
+
+### AP Classroom (export drop-in)
+
+AP Classroom can't send scores anywhere, so this is the one source that comes in by hand. Download
+each progress check's report as CSV, open the course and drop the files in together (up to 20 at
+once). Each is read and previewed, and one Save keeps them all. The
 reader (`lib/mastery/exports.ts`) accepts:
 
 - **one row per assessment** (student, title, score / points possible / percent / level,
@@ -197,7 +257,6 @@ address in a private window.
 
 ## Not built yet (each needs a decision)
 
-- A nightly import with nobody signed in (see Canvas above).
 - AI-written next steps. Today they're deterministic links from the standards file.
   Anything AI would go through `lib/sor/ai-input.ts` and never include scores.
 - Feeding mastery into pathway drafts. The pilot page shows it in words; the drafting

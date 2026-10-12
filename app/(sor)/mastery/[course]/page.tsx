@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { addablePeople, findCourse, getCourseBundle, requireMasteryTeacher } from "@/lib/mastery/queries";
 import { syncCanvasIfDue } from "@/lib/mastery/sync";
+import { isScheduledImportConfigured } from "@/lib/mastery/scheduled";
 import { standardOptions } from "@/lib/mastery/config";
 import { displayName } from "@/lib/sor/types";
-import { ClassMap } from "@/components/mastery/ClassMap";
+import { ClassMap, SOURCE_FILTERS, type SourceFilter } from "@/components/mastery/ClassMap";
 import { ExportDrop } from "@/components/mastery/ExportDrop";
 import { CanvasControls, CourseSettings, DeleteSampleCourse, RequestInbox, RosterPanel, SourceSwitch, type SourceRow } from "@/components/mastery/TeacherTools";
 import { VideoShelf } from "@/components/mastery/VideoShelf";
@@ -12,17 +13,17 @@ import { shortDate } from "@/components/mastery/levels";
 
 export const metadata = { title: "Mastery Hub · Formation Pathways", robots: { index: false, follow: false } };
 
-const SOURCE_LABEL = { canvas: "Canvas", ap_classroom: "AP Classroom reports", khan: "Khan Academy reports" } as const;
+const SOURCE_LABEL = { canvas: "Canvas", ap_classroom: "AP Classroom reports", khan: "Khan Academy (through Canvas)" } as const;
 
 /**
  * One course for its teacher: requests waiting, the class map, where the
  * evidence comes from (with on/off switches), and the roster with student
  * sign-ins.
  */
-export default async function CoursePage({ params, searchParams }: { params: Promise<{ course: string }>; searchParams: Promise<{ unit?: string }> }) {
+export default async function CoursePage({ params, searchParams }: { params: Promise<{ course: string }>; searchParams: Promise<{ unit?: string; source?: string }> }) {
   const staff = await requireMasteryTeacher();
   const { course: address } = await params;
-  const { unit } = await searchParams;
+  const { unit, source } = await searchParams;
   const found = await findCourse(address);
   if (!found) notFound();
   // One spelling per course: /mastery/apphysics1 → /mastery/APPhysics1.
@@ -43,6 +44,7 @@ export default async function CoursePage({ params, searchParams }: { params: Pro
     return { source, label: SOURCE_LABEL[source], paused: s?.paused ?? false, lastRun: s?.last_run_at ?? null, summary: s?.last_summary ?? null };
   });
   const people = await addablePeople(course.is_sample);
+  const automatic = isScheduledImportConfigured() && !course.is_sample;
   const options = standardOptions(config);
 
   return (
@@ -92,7 +94,14 @@ export default async function CoursePage({ params, searchParams }: { params: Pro
 
       <section>
         <h2 className="mb-3 font-display text-xl text-[var(--color-navy-ink)]">The class</h2>
-        <ClassMap courseSlug={course.slug} config={config} roster={roster} evidence={evidence} unit={unit ?? null} />
+        <ClassMap
+          courseSlug={course.slug}
+          config={config}
+          roster={roster}
+          evidence={evidence}
+          unit={unit ?? null}
+          source={source && source in SOURCE_FILTERS ? (source as SourceFilter) : null}
+        />
       </section>
 
       <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
@@ -136,8 +145,11 @@ export default async function CoursePage({ params, searchParams }: { params: Pro
                     <CanvasControls courseId={course.id} isSample={course.is_sample} paused={row.paused} />
                     {canvasNote && <p className="mt-2 text-sm text-[var(--color-ink-muted)]">Checked on opening: {canvasNote}</p>}
                     <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
-                      Counts graded work whose title names a standard (&quot;Unit 2 quiz [2.5, 2.7]&quot;) and Canvas Outcome results
-                      whose title starts with one. Checked automatically when you open this page, at most every six hours.
+                      Counts graded work whose title names a standard by code (&quot;Unit 2 quiz [2.5, 2.7]&quot;), by unit
+                      (&quot;Unit 2 Test&quot;) or by name (&quot;Newton&apos;s second law&quot;), and Canvas Outcome results.{" "}
+                      {automatic
+                        ? "Checked automatically every three hours, and when you open this page."
+                        : "Checked when you open this page (at most every six hours). Automatic checks every few hours are built but not switched on yet."}
                     </p>
                   </>
                 ) : row.source === "ap_classroom" ? (
@@ -148,12 +160,17 @@ export default async function CoursePage({ params, searchParams }: { params: Pro
                       paused={Object.fromEntries(sourceRows.map((r) => [r.source, r.paused]))}
                     />
                     <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
-                      Download the report from AP Classroom (or Khan Academy, or any gradebook) as CSV and drop it here. You
-                      see what will be saved before anything is. No passwords, no scraping.
+                      AP Classroom has no way to send scores anywhere, so its reports come in by hand: download the CSV from each
+                      progress check and drop them here together. You see what will be saved before anything is. No passwords,
+                      no scraping.
                     </p>
                   </>
                 ) : (
-                  <p className="text-xs text-[var(--color-ink-muted)]">Use the drop-in above and pick Khan Academy. Mastery words (Familiar, Proficient, Mastered) become levels.</p>
+                  <p className="text-xs text-[var(--color-ink-muted)]">
+                    No uploads: Khan Academy work counts when it reaches Canvas (Khan&apos;s grade sync for Canvas, via Clever LMS
+                    Connect), and Khan skill names map to standards on their own. Until that sync is on, the drop-in above takes a
+                    Khan CSV as a fallback.
+                  </p>
                 )}
               </div>
             </div>

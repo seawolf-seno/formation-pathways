@@ -11,50 +11,71 @@ const SOURCES = [
   { value: "other", label: "Another gradebook" },
 ];
 
+interface DroppedFile {
+  name: string;
+  text: string;
+  preview: ExportPreview | null;
+  error: string | null;
+}
+
 /**
- * The drop-in for a report downloaded from AP Classroom, Khan Academy or any
- * gradebook. Two steps: read it and show exactly what would be saved, then
- * save. The file is read in the browser and sent as text; nothing is kept
- * except the evidence the teacher saves.
+ * The drop-in for reports downloaded from AP Classroom (or, until Khan
+ * Academy arrives through Canvas, Khan or any gradebook). Drop several files
+ * at once, for example every progress check from one unit. Each is read and
+ * shown before anything is saved; one Save keeps them all. Files are read in
+ * the browser and sent as text; only the evidence you save is kept.
  */
 export function ExportDrop({ courseId, standards, paused }: { courseId: string; standards: StandardOption[]; paused: Record<string, boolean> }) {
   const [source, setSource] = useState("ap_classroom");
-  const [text, setText] = useState<string | null>(null);
-  const [fileName, setFileName] = useState("");
+  const [files, setFiles] = useState<DroppedFile[]>([]);
   const [fallback, setFallback] = useState("");
-  const [preview, setPreview] = useState<ExportPreview | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
 
-  const read = (csv: string, fb = fallback) =>
+  const readAll = (list: { name: string; text: string }[], fb = fallback, src = source) =>
     start(async () => {
       setMessage(null);
-      const res = await previewExportAction(courseId, source, csv, fb);
-      if (!res.ok) {
-        setPreview(null);
-        return setMessage(res.error);
+      const out: DroppedFile[] = [];
+      for (const f of list) {
+        const res = await previewExportAction(courseId, src, f.text, fb);
+        out.push({ ...f, preview: res.ok ? res.preview : null, error: res.ok ? null : res.error });
       }
-      setPreview(res.preview);
+      setFiles(out);
     });
 
-  async function onFile(file: File | undefined) {
-    if (!file) return;
-    if (file.size > 900_000) return setMessage("That file is too big (900 KB at most). Export one class at a time.");
-    const csv = await file.text();
-    setFileName(file.name);
-    setText(csv);
-    read(csv);
+  async function onFiles(list: FileList | null) {
+    if (!list?.length) return;
+    const picked: { name: string; text: string }[] = [];
+    for (const file of Array.from(list).slice(0, 20)) {
+      if (file.size > 900_000) {
+        setMessage(`${file.name} is too big (900 KB at most). Export one class at a time.`);
+        return;
+      }
+      picked.push({ name: file.name, text: await file.text() });
+    }
+    readAll(picked);
   }
+
+  const ready = files.filter((f) => f.preview && f.preview.evidence > 0);
+  const total = ready.reduce((n, f) => n + (f.preview?.evidence ?? 0), 0);
+  const unmapped = [...new Set(files.flatMap((f) => f.preview?.unmappedTitles ?? []))];
+  const unmatched = [...new Set(files.flatMap((f) => f.preview?.unmatched ?? []))];
 
   const save = () =>
     start(async () => {
-      if (!text) return;
-      const res = await saveExportAction(courseId, source, text, fallback);
-      if (!res.ok) return setMessage(res.error);
-      setMessage(res.saved ? `Saved ${res.saved} new piece${res.saved === 1 ? "" : "s"} of evidence.` : "Nothing new: this report's results are already in.");
-      setPreview(null);
-      setText(null);
+      let saved = 0;
+      const problems: string[] = [];
+      for (const f of ready) {
+        const res = await saveExportAction(courseId, source, f.text, fallback);
+        if (res.ok) saved += res.saved;
+        else problems.push(`${f.name}: ${res.error}`);
+      }
+      setMessage(
+        (saved ? `Saved ${saved} new piece${saved === 1 ? "" : "s"} of evidence.` : "Nothing new: these results are already in.") +
+          (problems.length ? ` Not saved: ${problems.join("; ")}` : ""),
+      );
+      setFiles([]);
       router.refresh();
     });
 
@@ -65,8 +86,7 @@ export function ExportDrop({ courseId, standards, paused }: { courseId: string; 
           value={source}
           onChange={(e) => {
             setSource(e.target.value);
-            setPreview(null);
-            setText(null);
+            if (files.length) readAll(files, fallback, e.target.value);
           }}
           className={`${field} w-auto`}
         >
@@ -78,20 +98,30 @@ export function ExportDrop({ courseId, standards, paused }: { courseId: string; 
           ))}
         </select>
         <label className={`${quiet} cursor-pointer`}>
-          {fileName ? `Change file (${fileName})` : "Choose the CSV export…"}
-          <input type="file" accept=".csv,text/csv" className="sr-only" onChange={(e) => onFile(e.target.files?.[0])} />
+          {files.length ? `Change files (${files.length})` : "Choose CSV exports…"}
+          <input type="file" accept=".csv,text/csv" multiple className="sr-only" onChange={(e) => onFiles(e.target.files)} />
         </label>
       </div>
 
-      {pending && !preview && <p className="text-sm text-[var(--color-ink-muted)]">Reading…</p>}
+      {pending && !files.length && <p className="text-sm text-[var(--color-ink-muted)]">Reading…</p>}
 
-      {preview && (
+      {files.length > 0 && (
         <div className="space-y-3 rounded-2xl border border-[var(--color-border)] bg-white p-4 text-sm">
-          <p className="text-[var(--color-ink)]">
-            <strong>{preview.evidence}</strong> piece{preview.evidence === 1 ? "" : "s"} of evidence for <strong>{preview.students}</strong> student
-            {preview.students === 1 ? "" : "s"}, from {preview.rows} result{preview.rows === 1 ? "" : "s"} in the file. Anything already saved is skipped.
-          </p>
-          {preview.sampleRows.length > 0 && (
+          <ul className="space-y-1">
+            {files.map((f) => (
+              <li key={f.name} className="text-[var(--color-ink)]">
+                <strong className="font-medium">{f.name}</strong>
+                <span className="text-[var(--color-ink-muted)]">
+                  {" "}
+                  ·{" "}
+                  {f.preview
+                    ? `${f.preview.evidence} piece${f.preview.evidence === 1 ? "" : "s"} for ${f.preview.students} student${f.preview.students === 1 ? "" : "s"}`
+                    : f.error}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {ready[0]?.preview?.sampleRows.length ? (
             <table className="w-full text-left text-xs">
               <thead className="text-[var(--color-ink-muted)]">
                 <tr>
@@ -102,7 +132,7 @@ export function ExportDrop({ courseId, standards, paused }: { courseId: string; 
                 </tr>
               </thead>
               <tbody>
-                {preview.sampleRows.map((r, i) => (
+                {ready.flatMap((f) => f.preview!.sampleRows.slice(0, 3)).slice(0, 10).map((r, i) => (
                   <tr key={i} className="border-t border-[var(--color-border)]">
                     <td className="py-1 pr-2">{r.student}</td>
                     <td className="pr-2">{r.title}</td>
@@ -112,11 +142,11 @@ export function ExportDrop({ courseId, standards, paused }: { courseId: string; 
                 ))}
               </tbody>
             </table>
-          )}
-          {preview.unmappedTitles.length > 0 && (
+          ) : null}
+          {unmapped.length > 0 && (
             <div className="rounded-lg bg-[var(--color-gold-light)] p-3">
               <p className="text-[var(--color-navy-ink)]">
-                These name no standard, so they aren&apos;t counted unless you pick one for them: {preview.unmappedTitles.join("; ")}
+                These name no standard, so they aren&apos;t counted unless you pick one for them: {unmapped.slice(0, 15).join("; ")}
               </p>
               <div className="mt-2 max-w-sm">
                 <StandardSelect
@@ -126,20 +156,19 @@ export function ExportDrop({ courseId, standards, paused }: { courseId: string; 
                   required={false}
                   onChange={(v) => {
                     setFallback(v);
-                    if (text) read(text, v);
+                    readAll(files, v);
                   }}
                 />
               </div>
             </div>
           )}
-          {preview.unmatched.length > 0 && (
+          {unmatched.length > 0 && (
             <p className="text-[var(--color-ink-muted)]">
-              Not on this course&apos;s roster (exact name or school email needed), so skipped: {preview.unmatched.join("; ")}
+              Not on this course&apos;s roster (exact name or school email needed), so skipped: {unmatched.slice(0, 20).join("; ")}
             </p>
           )}
-          {preview.skipped.length > 0 && <p className="text-[var(--color-ink-muted)]">Cells that weren&apos;t a score or level, ignored: {preview.skipped.join("; ")}</p>}
-          <button onClick={save} disabled={pending || !preview.evidence} className={button}>
-            {pending ? "Saving…" : `Save ${preview.evidence} piece${preview.evidence === 1 ? "" : "s"}`}
+          <button onClick={save} disabled={pending || !total} className={button}>
+            {pending ? "Working…" : `Save ${total} piece${total === 1 ? "" : "s"}${ready.length > 1 ? ` from ${ready.length} files` : ""}`}
           </button>
         </div>
       )}

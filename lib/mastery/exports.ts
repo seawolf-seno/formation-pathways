@@ -72,9 +72,40 @@ export function readScore(cell: string): { score: number; max: number } | null {
   return null;
 }
 
+/** Lowercase words only: "Newton’s 2nd-law!" → "newtons 2nd law". */
+export function normalizeName(s: string): string {
+  return s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/['’`]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** Standards whose title (two words or more) or one of whose aliases appears
+ *  whole in the assignment title: "Newton's second law practice" → 2.5. A
+ *  one-word title ("Work", "Power") only counts as an alias would: on its
+ *  own it's too common to trust. When one match sits inside a longer one
+ *  ("second law" in "rotational form of Newton's second law"), only the
+ *  longer counts. More than three matches means the title is too general,
+ *  and none count. */
+export function standardsByName(title: string, config: MasteryConfig): string[] {
+  const t = ` ${normalizeName(title)} `;
+  const hits: { code: string; phrase: string }[] = [];
+  for (const s of allStandards(config)) {
+    const own = normalizeName(s.title);
+    const phrases = [...(own.includes(" ") ? [own] : []), ...s.aliases.map(normalizeName)].filter((p) => p && t.includes(` ${p} `));
+    if (phrases.length) hits.push({ code: s.code, phrase: phrases.sort((a, b) => b.length - a.length)[0] });
+  }
+  const kept = hits.filter((h) => !hits.some((o) => o !== h && o.phrase.length > h.phrase.length && ` ${o.phrase} `.includes(` ${h.phrase} `)));
+  return kept.length <= 3 ? kept.map((h) => h.code) : [];
+}
+
 /** Standard codes a title names, as whole tokens ("Quiz [2.5, 2.7]",
  *  "SP1 practice"), else every standard of the unit it names ("Unit 2
- *  Progress Check"), else none. */
+ *  Progress Check"), else standards it names in words ("Newton's second
+ *  law"), else none. */
 export function standardsInTitle(title: string, config: MasteryConfig): string[] {
   const codes = allStandards(config).map((s) => s.code);
   const named = codes.filter((c) => new RegExp(`(^|[^A-Za-z0-9.])${c.replace(/\./g, "\\.")}($|[^A-Za-z0-9]|\\.(?!\\d))`, "i").test(title));
@@ -84,7 +115,7 @@ export function standardsInTitle(title: string, config: MasteryConfig): string[]
     const group = config.groups.find((g) => g.unitNumber === Number(unit[1]));
     if (group) return group.standards.map((s) => s.code);
   }
-  return [];
+  return standardsByName(title, config);
 }
 
 function standardsInCell(cell: string, config: MasteryConfig): string[] {

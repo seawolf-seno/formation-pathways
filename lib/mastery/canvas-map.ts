@@ -18,6 +18,19 @@ export interface CanvasSubmission {
   score: number | null;
   graded_at: string | null;
   workflow_state?: string;
+  /** The external tool's launch address, when the assignment is one (Khan
+   *  Academy via Clever LMS Connect or LTI). */
+  tool_url?: string | null;
+}
+
+/** Work that came from Khan Academy into Canvas (an official sync, or a
+ *  score copied over): counted as Khan evidence, not Canvas. */
+export function isKhanAssignment(s: Pick<CanvasSubmission, "tool_url" | "assignment_name">): boolean {
+  let host = "";
+  try {
+    host = s.tool_url ? new URL(s.tool_url).hostname : "";
+  } catch {}
+  return /(^|\.)khanacademy\.org$/.test(host) || /\bkhan academy\b/i.test(s.assignment_name);
 }
 
 export interface CanvasOutcomeResult {
@@ -51,7 +64,7 @@ export function canvasEvidence(
       evidence.push({
         person_id: person,
         standard_code: code,
-        source: "canvas",
+        source: isKhanAssignment(s) ? "khan" : "canvas",
         title: s.assignment_name.slice(0, 200),
         score: s.score,
         max_score: s.points_possible,
