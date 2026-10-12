@@ -26,7 +26,7 @@ export async function fetchCanvasMastery(
     score: number | null;
     graded_at: string | null;
     workflow_state: string;
-    assignment?: { name: string; points_possible: number | null };
+    assignment?: { name: string; points_possible: number | null; external_tool_tag_attributes?: { url?: string } | null };
   }>(`/courses/${canvasCourseId}/students/submissions`, {
     "student_ids[]": canvasUserIds,
     "include[]": ["assignment"],
@@ -70,6 +70,7 @@ export async function fetchCanvasMastery(
       score: s.score,
       graded_at: s.graded_at,
       workflow_state: s.workflow_state,
+      tool_url: s.assignment?.external_tool_tag_attributes?.url ?? null,
     })),
     outcomeResults: outcomeResults.map((r) => ({ ...r, outcome_title: titles.get(r.outcome_id) ?? "" })),
   };

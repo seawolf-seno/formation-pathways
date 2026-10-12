@@ -55,6 +55,9 @@ export interface Video {
 export interface Standard {
   code: string;
   title: string;
+  /** Other names for it (a Khan Academy skill, a textbook heading), so an
+   *  assignment titled that way counts toward this standard. */
+  aliases: string[];
   resources: Resource[];
   videos: Video[];
 }
@@ -235,7 +238,9 @@ export function parseMasteryConfig(raw: unknown): MasteryConfig {
         if (!CODE.test(sc)) throw new Error(`${sc}: letters, numbers, dots and dashes only`);
         if (seen.has(sc)) throw new Error(`${sc}: used twice`);
         seen.add(sc);
-        return { code: sc, title: text(s.title, `${sc} title`), resources: parseResources(s.resources, sc), videos: parseVideos(s.videos, sc) };
+        const aliases = s.aliases === undefined ? [] : Array.isArray(s.aliases) ? s.aliases.map((a, ai) => text(a, `${sc} alias ${ai + 1}`, 120)) : null;
+        if (!aliases) throw new Error(`${sc}: aliases must be a list`);
+        return { code: sc, title: text(s.title, `${sc} title`), aliases, resources: parseResources(s.resources, sc), videos: parseVideos(s.videos, sc) };
       }),
     };
   });

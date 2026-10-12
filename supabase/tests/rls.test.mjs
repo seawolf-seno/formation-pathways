@@ -481,7 +481,9 @@ console.log(`${vLeaver ? "PASS" : "FAIL"}  an account with access removed can't 
 // built on has_role('admin') and is_staff(), and current_student() matches only
 // a registered student sign-in, which an active staff address can't have
 // (cases under "Mastery Hub" below check a viewer gets nothing).
-const open = await db.query(`select tablename || '.' || policyname as p from pg_policies where schemaname = 'public' and policyname <> 'staff_read' and coalesce(qual, '') || ' ' || coalesce(with_check, '') !~ (case when policyname like '%_viewer_%' then '(is_viewer|viewer_sees)\\(' else '(is_staff|has_role|teaches_course|teaches_person|current_student)\\(' end)`);
+// Only policies a signed-in account can reach count (mastery_importer's are
+// for that database role alone; cases under "automatic imports" cover them).
+const open = await db.query(`select tablename || '.' || policyname as p from pg_policies where schemaname = 'public' and (roles && array['authenticated', 'public']::name[]) and policyname <> 'staff_read' and coalesce(qual, '') || ' ' || coalesce(with_check, '') !~ (case when policyname like '%_viewer_%' then '(is_viewer|viewer_sees)\\(' else '(is_staff|has_role|teaches_course|teaches_person|current_student)\\(' end)`);
 const noneOpen = open.rows.length === 0; if (noneOpen) pass++; else fail++;
 console.log(`${noneOpen ? "PASS" : "FAIL"}  every policy names a role check, so a view-only account gets nothing by accident`, open.rows.map(r => r.p));
 const viewerWrites = await db.query(`select tablename || '.' || policyname as p from pg_policies where schemaname = 'public' and policyname like '%_viewer_%' and cmd <> 'SELECT' and policyname <> 'access_log_viewer_insert'`);
@@ -560,6 +562,41 @@ await expect("admin turns the student sign-in off", "admin", `update student_acc
 await expect("then the student sees nothing", "kid", `select * from mastery_courses`, true, r => r.rows.length === 0);
 await expect("revoking mastery_records consent", "admin", `update consents set revoked_at = now() where scope = 'mastery_records' and revoked_at is null and person_id = ${real} returning id`, true, r => r.rows.length === 1);
 await expect("...stops new evidence", "teach", ev("teach", "proficient"), false);
+
+// Mastery Hub automatic imports: the mastery_importer database role.
+async function asImporter(sql) {
+  await db.exec("reset role; select set_config('request.jwt.claim.sub', '', false); set role mastery_importer;");
+  try { return await db.query(sql); } finally { await db.exec("reset role"); }
+}
+async function expectImporter(name, sql, ok, check) {
+  let r, err;
+  try { r = await asImporter(sql); } catch (e) { err = e; }
+  const good = ok ? !err && (!check || check(r)) : !!err || (check && check(r));
+  if (good) pass++; else fail++;
+  console.log(`${good ? "PASS" : "FAIL"}  ${name}${err ? "  (" + err.message.slice(0, 90) + ")" : ""}`);
+}
+const kidReal = "'22222222-2222-2222-2222-222222222222'";
+await db.exec(`update consents set revoked_at = null where person_id = ${kidReal} and scope = 'mastery_records';
+update mastery_courses set canvas_course_id = '555' where slug = 'APPhysics1';
+insert into external_ids (person_id, system, external_id) values (${kidReal}, 'canvas', '9001') on conflict do nothing;`);
+const imp = (extra = "") => `insert into mastery_evidence (course_id, person_id, standard_code, source, title, score, max_score, external_key) values ((select id from mastery_courses where canvas_course_id = '555'), ${kidReal}, '2.5', 'canvas', 'Unit 2 quiz [2.5]', 9, 10, 'canvas:assignment:1:9'${extra})`;
+await expectImporter("the importer sees only real courses connected to Canvas", `select id from mastery_courses`, true, r => r.rows.length === 1);
+await expectImporter("...their Canvas ids", `select external_id from external_ids`, true, r => r.rows.length === 1 && r.rows[0].external_id === '9001');
+await expectImporter("...but no names", `select first_name from people`, false);
+await expectImporter("...no observations or drafts", `select * from observations`, false);
+await expectImporter("...and no scores", `select score from mastery_evidence`, false);
+await expectImporter("it adds a Canvas grade, recorded as automatic", imp(), true);
+await expectImporter("the same grade twice adds nothing", imp(), false);
+await expectImporter("it can't add an oral exam", `insert into mastery_evidence (course_id, person_id, standard_code, source, title, score, max_score) values ((select id from mastery_courses where canvas_course_id = '555'), ${kidReal}, '2.5', 'oral', 'Oral', 9, 10)`, false);
+await expectImporter("it can't set a level", `insert into mastery_evidence (course_id, person_id, standard_code, source, title, level) values ((select id from mastery_courses where canvas_course_id = '555'), ${kidReal}, '2.5', 'khan', 'x', 'extending')`, false);
+await expectImporter("it can't touch a sample course", `insert into mastery_evidence (course_id, person_id, standard_code, source, title, score, max_score) values ((select id from mastery_courses where slug = 'APPhysics1-Sample' limit 1), (select id from people where is_sample limit 1), '2.5', 'canvas', 'x', 1, 2)`, false);
+await expectImporter("it can't delete evidence", `delete from mastery_evidence returning id`, false);
+await expectImporter("it records its run", `insert into mastery_sources (course_id, source, last_run_at, last_summary) values ((select id from mastery_courses where canvas_course_id = '555'), 'canvas', now(), '1 new') on conflict (course_id, source) do update set last_run_at = excluded.last_run_at, last_summary = excluded.last_summary`, true);
+await expectImporter("it can't switch a source back on", `update mastery_sources set paused = false`, false);
+await expectImporter("it logs as the system", `insert into mastery_log (course_id, actor, action, detail) values ((select id from mastery_courses where canvas_course_id = '555'), null, 'import_canvas_scheduled', '{}')`, true);
+await expectImporter("...and as nobody else", `insert into mastery_log (course_id, actor, action) values ((select id from mastery_courses where canvas_course_id = '555'), '${ids.teach}', 'import_canvas_scheduled')`, false);
+await expect("the teacher sees the automatic grade, with no person recorded", "teach", `select recorded_by from mastery_evidence where external_key = 'canvas:assignment:1:9'`, true, r => r.rows.length === 1 && r.rows[0].recorded_by === null);
+await expect("a teacher can't add evidence without being recorded", "teach", `insert into mastery_evidence (course_id, person_id, standard_code, source, title, level) values ((select id from mastery_courses where slug = 'APPhysics1'), ${kidReal}, '2.5', 'oral', 'Oral', 'proficient') returning recorded_by`, true, r => r.rows[0]?.recorded_by === ids.teach);
 
 const exposed = await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef");
 const noneExposed = exposed.rows.length === 0; if (noneExposed) pass++; else fail++;

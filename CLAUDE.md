@@ -314,6 +314,18 @@ adults behind the scenes; students stay present, in person, with people.
   login). Agent tools: the Vercel **plugin** connector sees the school team (the claude.ai Vercel
   connector only sees seno's old personal team); `supabase-staging` MCP (local scope) is
   writable; `.mcp.json` `supabase` is production, read-only.
+- **Team staging + Mastery Hub automation (2026-10-12, branch `seno/team-staging-auto-import`, card #37)**:
+  contributors stay Vercel **Viewers** (seno can't afford more seats): they push branches to this repo
+  (fork PRs get no CI in a private repo), test with `npm run dev:staging` (`.env.staging.example`, staging's
+  public settings), and seno builds previews of their PRs with `scripts/preview-pr.sh <n>`. Staging
+  sign-in for colleagues needs seno's one-time SMTP + code template on the staging project
+  (`docs/staging.md`); then their pending staging accounts get roles on staging `/pilot`. Mastery Hub:
+  scheduled Canvas import every 3h (`vercel.json` cron → `/api/cron/mastery`) as the least-privilege
+  **`mastery_importer`** Postgres role (`20261020000000_mastery_importer.sql`; never the service role;
+  off until seno sets its password + `MASTERY_IMPORTER_DATABASE_URL` + `CRON_SECRET`); Khan Academy
+  arrives **through Canvas** (Khan Districts/Clever LMS Connect grade sync, or Khan2Canvas after a privacy
+  review), recognized as Khan and mapped by skill name via `aliases`; class-map **source switch**;
+  multi-file AP Classroom drop-in. `docs/mastery-hub.md`, `docs/staging.md`.
 - **Open PRs as of 2026-10-12**: #62 and #63 merged (their migrations are on staging; production
   is seno's). Still open:
   - #58 STEM Scholars (TheEnigmaticPhilosopher): migration still named `20261012000000_…`

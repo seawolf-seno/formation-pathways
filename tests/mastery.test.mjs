@@ -232,3 +232,38 @@ test("finished units lead next steps, even where there's no evidence yet", () =>
   assert.deepEqual(without.map((s) => s.standard.code), ["3.1", "1.2"]);
   assert.ok(without.every((s) => !s.covered));
 });
+
+test("Khan-style skill names find their standard, the most specific one only", async () => {
+  const { standardsByName, standardsInTitle } = await import("../lib/mastery/exports.ts");
+  const cases = {
+    "Newton's second law": ["2.5"],
+    "Rotational form of Newton's second law": ["5.6"],
+    "Kinetic energy": ["3.1"],
+    "Rotational kinetic energy": ["6.1"],
+    "Angular momentum": ["6.3"],
+    "Conservation of angular momentum": ["6.4"],
+    "Momentum and impulse": ["4.1", "4.2"],
+    "Projectile motion practice": ["1.5"],
+    "Free body diagrams": ["2.2"],
+    "Newton’s third law": ["2.3"],
+    "Frequency and period of SHM": ["7.2"],
+    "Week 3 homework": [],
+  };
+  for (const [title, want] of Object.entries(cases)) assert.deepEqual(standardsByName(title, config).sort(), want, title);
+  // A code or a unit in the title still wins over words.
+  assert.deepEqual(standardsInTitle("Newton's second law quiz [2.7]", config), ["2.7"]);
+  // Too general to trust: matches nothing.
+  assert.deepEqual(standardsByName("Forces, friction, springs, momentum, torque and power review", config), []);
+});
+
+test("Khan Academy work that arrives through Canvas counts as Khan", async () => {
+  const { isKhanAssignment } = await import("../lib/mastery/canvas-map.ts");
+  assert.equal(isKhanAssignment({ tool_url: "https://www.khanacademy.org/lti/launch?x=1", assignment_name: "Newton's second law" }), true);
+  assert.equal(isKhanAssignment({ tool_url: null, assignment_name: "Khan Academy: Projectile motion" }), true);
+  assert.equal(isKhanAssignment({ tool_url: "https://evilkhanacademy.org.example.com/x", assignment_name: "Quiz" }), false);
+  assert.equal(isKhanAssignment({ tool_url: null, assignment_name: "Unit 2 quiz [2.5]" }), false);
+  const { evidence } = canvasEvidence(
+    [{ user_id: "1", assignment_id: "7", assignment_name: "Newton's second law", points_possible: 100, score: 80, graded_at: "2026-10-12T00:00:00Z", workflow_state: "graded", tool_url: "https://www.khanacademy.org/lti/1" }],
+    [], new Map([["1", "p1"]]), config, "2026-10-12T00:00:00Z");
+  assert.deepEqual(evidence.map((e) => [e.standard_code, e.source]), [["2.5", "khan"]]);
+});

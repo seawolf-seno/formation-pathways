@@ -1,5 +1,5 @@
 {
-  "$comment": "Faculty-editable. Standards follow the AP Physics 1 Course and Exam Description (2024 revision): check the codes and titles against your copy. Links are deliberately course- or book-level until a teacher replaces them with exact pages (lib/mastery/config.ts checks every one is https). See docs/mastery-hub.md. Videos: chosen 2026-10-12 from widely used channels (Flipping Physics, CrashCourse, Khan Academy, Professor Dave Explains, The Organic Chemistry Tutor); every id checked against YouTube's oEmbed and titles copied from it. Not ranked by view count. A teacher swaps them freely: a YouTube address or id plus title and channel.",
+  "$comment": "Faculty-editable. Standards follow the AP Physics 1 Course and Exam Description (2024 revision): check the codes and titles against your copy. Links are deliberately course- or book-level until a teacher replaces them with exact pages (lib/mastery/config.ts checks every one is https). See docs/mastery-hub.md. Videos: chosen 2026-10-12 from widely used channels (Flipping Physics, CrashCourse, Khan Academy, Professor Dave Explains, The Organic Chemistry Tutor); every id checked against YouTube's oEmbed and titles copied from it. Not ranked by view count. A teacher swaps them freely: a YouTube address or id plus title and channel. Aliases: other names for a standard (Khan Academy skill names, common headings), so an assignment called e.g. \"Newton's second law\" counts toward 2.5 without a code in its title. Faculty-editable; a too-general title matches nothing.",
   "key": "ap-physics-1",
   "slug": "APPhysics1",
   "title": "AP Physics 1",
@@ -92,6 +92,10 @@
         {
           "code": "1.1",
           "title": "Scalars and vectors in one dimension",
+          "aliases": [
+            "vectors and scalars",
+            "vector addition"
+          ],
           "videos": [
             {
               "id": "ZYl9-iz7nR8",
@@ -103,11 +107,25 @@
         },
         {
           "code": "1.2",
-          "title": "Displacement, velocity, and acceleration"
+          "title": "Displacement, velocity, and acceleration",
+          "aliases": [
+            "average velocity",
+            "instantaneous velocity",
+            "kinematic equations",
+            "kinematics formulas",
+            "acceleration"
+          ]
         },
         {
           "code": "1.3",
           "title": "Representing motion",
+          "aliases": [
+            "motion graphs",
+            "position time graphs",
+            "velocity time graphs",
+            "position vs time",
+            "velocity vs time"
+          ],
           "videos": [
             {
               "id": "fhOqbAF1Uis",
@@ -120,6 +138,11 @@
         {
           "code": "1.4",
           "title": "Reference frames and relative motion",
+          "aliases": [
+            "relative motion",
+            "reference frames",
+            "frames of reference"
+          ],
           "videos": [
             {
               "id": "jYMU6bn5GHY",
@@ -132,6 +155,12 @@
         {
           "code": "1.5",
           "title": "Vectors and motion in two dimensions",
+          "aliases": [
+            "projectile motion",
+            "two dimensional motion",
+            "2d motion",
+            "vector components"
+          ],
           "videos": [
             {
               "id": "GiiWsXtt5GE",
@@ -215,6 +244,9 @@
         {
           "code": "2.1",
           "title": "Systems and center of mass",
+          "aliases": [
+            "center of mass"
+          ],
           "videos": [
             {
               "id": "O-q-MAYpNLI",
@@ -227,6 +259,12 @@
         {
           "code": "2.2",
           "title": "Forces and free-body diagrams",
+          "aliases": [
+            "free body diagrams",
+            "free body diagram",
+            "normal force",
+            "tension"
+          ],
           "videos": [
             {
               "id": "29YPIvj1zjc",
@@ -245,6 +283,12 @@
         {
           "code": "2.3",
           "title": "Newton's third law",
+          "aliases": [
+            "newtons third law",
+            "third law",
+            "action reaction pairs",
+            "force pairs"
+          ],
           "videos": [
             {
               "id": "bAevUhFUhV4",
@@ -257,6 +301,11 @@
         {
           "code": "2.4",
           "title": "Newton's first law",
+          "aliases": [
+            "newtons first law",
+            "first law",
+            "inertia"
+          ],
           "videos": [
             {
               "id": "7kPRD0ow-hM",
@@ -269,6 +318,11 @@
         {
           "code": "2.5",
           "title": "Newton's second law",
+          "aliases": [
+            "newtons second law",
+            "second law",
+            "net force"
+          ],
           "videos": [
             {
               "id": "j1TUpbGzPBQ",
@@ -281,6 +335,11 @@
         {
           "code": "2.6",
           "title": "Gravitational force",
+          "aliases": [
+            "universal gravitation",
+            "law of gravitation",
+            "gravitational field"
+          ],
           "videos": [
             {
               "id": "7gf6YpdvtE0",
@@ -293,6 +352,11 @@
         {
           "code": "2.7",
           "title": "Kinetic and static friction",
+          "aliases": [
+            "friction",
+            "static friction",
+            "kinetic friction"
+          ],
           "videos": [
             {
               "id": "fo_pmp5rtzo",
@@ -305,6 +369,10 @@
         {
           "code": "2.8",
           "title": "Spring forces",
+          "aliases": [
+            "hookes law",
+            "spring force"
+          ],
           "videos": [
             {
               "id": "EbVeoJBjHTw",
@@ -317,6 +385,11 @@
         {
           "code": "2.9",
           "title": "Circular motion",
+          "aliases": [
+            "centripetal force",
+            "centripetal acceleration",
+            "uniform circular motion"
+          ],
           "videos": [
             {
               "id": "bpFK2VCRHUs",
@@ -389,23 +462,43 @@
       "standards": [
         {
           "code": "3.1",
-          "title": "Translational kinetic energy"
+          "title": "Translational kinetic energy",
+          "aliases": [
+            "kinetic energy"
+          ]
         },
         {
           "code": "3.2",
-          "title": "Work"
+          "title": "Work",
+          "aliases": [
+            "work energy theorem",
+            "work done by a force"
+          ]
         },
         {
           "code": "3.3",
-          "title": "Potential energy"
+          "title": "Potential energy",
+          "aliases": [
+            "gravitational potential energy",
+            "spring potential energy",
+            "elastic potential energy"
+          ]
         },
         {
           "code": "3.4",
-          "title": "Conservation of energy"
+          "title": "Conservation of energy",
+          "aliases": [
+            "conservation of energy",
+            "conservation of mechanical energy",
+            "energy conservation"
+          ]
         },
         {
           "code": "3.5",
-          "title": "Power"
+          "title": "Power",
+          "aliases": [
+            "power"
+          ]
         }
       ],
       "videos": [
@@ -469,19 +562,34 @@
       "standards": [
         {
           "code": "4.1",
-          "title": "Linear momentum"
+          "title": "Linear momentum",
+          "aliases": [
+            "momentum"
+          ]
         },
         {
           "code": "4.2",
-          "title": "Change in momentum and impulse"
+          "title": "Change in momentum and impulse",
+          "aliases": [
+            "impulse",
+            "impulse momentum theorem"
+          ]
         },
         {
           "code": "4.3",
-          "title": "Conservation of linear momentum"
+          "title": "Conservation of linear momentum",
+          "aliases": [
+            "conservation of momentum"
+          ]
         },
         {
           "code": "4.4",
-          "title": "Elastic and inelastic collisions"
+          "title": "Elastic and inelastic collisions",
+          "aliases": [
+            "collisions",
+            "elastic collisions",
+            "inelastic collisions"
+          ]
         }
       ],
       "videos": [
@@ -546,27 +654,51 @@
       "standards": [
         {
           "code": "5.1",
-          "title": "Rotational kinematics"
+          "title": "Rotational kinematics",
+          "aliases": [
+            "angular velocity",
+            "angular acceleration",
+            "angular displacement"
+          ]
         },
         {
           "code": "5.2",
-          "title": "Connecting linear and rotational motion"
+          "title": "Connecting linear and rotational motion",
+          "aliases": [
+            "tangential velocity",
+            "tangential speed",
+            "arc length"
+          ]
         },
         {
           "code": "5.3",
-          "title": "Torque"
+          "title": "Torque",
+          "aliases": [
+            "torque"
+          ]
         },
         {
           "code": "5.4",
-          "title": "Rotational inertia"
+          "title": "Rotational inertia",
+          "aliases": [
+            "moment of inertia"
+          ]
         },
         {
           "code": "5.5",
-          "title": "Rotational equilibrium"
+          "title": "Rotational equilibrium",
+          "aliases": [
+            "static equilibrium"
+          ]
         },
         {
           "code": "5.6",
-          "title": "Newton's second law in rotational form"
+          "title": "Newton's second law in rotational form",
+          "aliases": [
+            "rotational form of newtons second law",
+            "newtons second law for rotation",
+            "angular acceleration and torque"
+          ]
         }
       ],
       "videos": [
@@ -631,7 +763,10 @@
       "standards": [
         {
           "code": "6.1",
-          "title": "Rotational kinetic energy"
+          "title": "Rotational kinetic energy",
+          "aliases": [
+            "rotational energy"
+          ]
         },
         {
           "code": "6.2",
@@ -639,19 +774,36 @@
         },
         {
           "code": "6.3",
-          "title": "Angular momentum and angular impulse"
+          "title": "Angular momentum and angular impulse",
+          "aliases": [
+            "angular momentum",
+            "angular impulse"
+          ]
         },
         {
           "code": "6.4",
-          "title": "Conservation of angular momentum"
+          "title": "Conservation of angular momentum",
+          "aliases": [
+            "conservation of angular momentum"
+          ]
         },
         {
           "code": "6.5",
-          "title": "Rolling"
+          "title": "Rolling",
+          "aliases": [
+            "rolling without slipping",
+            "rolling motion"
+          ]
         },
         {
           "code": "6.6",
-          "title": "Motion of orbiting satellites"
+          "title": "Motion of orbiting satellites",
+          "aliases": [
+            "orbits",
+            "satellites",
+            "orbital motion",
+            "keplers laws"
+          ]
         }
       ],
       "videos": [
@@ -721,19 +873,33 @@
       "standards": [
         {
           "code": "7.1",
-          "title": "Defining simple harmonic motion"
+          "title": "Defining simple harmonic motion",
+          "aliases": [
+            "simple harmonic motion",
+            "shm"
+          ]
         },
         {
           "code": "7.2",
-          "title": "Frequency and period of SHM"
+          "title": "Frequency and period of SHM",
+          "aliases": [
+            "period of a pendulum",
+            "period of a mass spring system"
+          ]
         },
         {
           "code": "7.3",
-          "title": "Representing and analyzing SHM"
+          "title": "Representing and analyzing SHM",
+          "aliases": [
+            "graphs of simple harmonic motion"
+          ]
         },
         {
           "code": "7.4",
-          "title": "Energy of simple harmonic oscillators"
+          "title": "Energy of simple harmonic oscillators",
+          "aliases": [
+            "energy in simple harmonic motion"
+          ]
         }
       ],
       "videos": [
@@ -808,19 +974,38 @@
       "standards": [
         {
           "code": "8.1",
-          "title": "Internal structure and density"
+          "title": "Internal structure and density",
+          "aliases": [
+            "density"
+          ]
         },
         {
           "code": "8.2",
-          "title": "Pressure"
+          "title": "Pressure",
+          "aliases": [
+            "pressure",
+            "fluid pressure",
+            "hydrostatic pressure"
+          ]
         },
         {
           "code": "8.3",
-          "title": "Fluids and Newton's laws"
+          "title": "Fluids and Newton's laws",
+          "aliases": [
+            "buoyancy",
+            "buoyant force",
+            "archimedes principle"
+          ]
         },
         {
           "code": "8.4",
-          "title": "Fluids and conservation laws"
+          "title": "Fluids and conservation laws",
+          "aliases": [
+            "bernoullis equation",
+            "bernoulli",
+            "continuity equation",
+            "fluid flow"
+          ]
         }
       ],
       "videos": [

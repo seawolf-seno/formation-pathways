@@ -19,6 +19,7 @@ const ACTION: Record<string, string> = {
   student_accounts_update: "Student sign-in changed",
   student_accounts_delete: "Student sign-in removed",
   import_canvas: "Canvas checked",
+  import_canvas_scheduled: "Canvas checked automatically",
   import_ap_classroom: "AP Classroom report saved",
   import_khan: "Khan Academy report saved",
 };
