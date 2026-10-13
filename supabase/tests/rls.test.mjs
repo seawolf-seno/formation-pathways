@@ -625,6 +625,58 @@ await expect("shared next steps are read-only", "teach", `update mastery_next_st
 await expect("a shared one can't be deleted", "teach", `delete from mastery_next_steps where status = 'shared' returning id`, true, r => r.rows.length === 0);
 await expect("a draft can be", "teach", `delete from mastery_next_steps where status = 'draft' returning id`, true, r => r.rows.length === 1);
 
+// Mastery Hub browser extension: token-only access, Khan key skills, tagged resources.
+const physicsId = (await db.query("select id from mastery_courses where slug = 'APPhysics1'")).rows[0].id;
+const theirsId = (await db.query(`insert into mastery_courses (title, slug, config_key, teacher_id) values ('Admin physics', 'AdminPhysics', 'ap-physics-1', '${ids.admin}') returning id`)).rows[0].id;
+const physics = `'${physicsId}'`;
+const sqlJson = (o) => JSON.stringify(o).replace(/'/g, "''");
+await expect("a teacher connects the extension", "teach", `insert into mastery_extension_tokens (token_hash, label) values (${hash("ext-good")}, 'My Chrome') returning staff_id`, true, r => r.rows[0]?.staff_id === ids.teach);
+await expect("a connection is always the maker's own", "teach", `insert into mastery_extension_tokens (token_hash, staff_id) values (${hash("ext-x")}, '${ids.admin}') returning staff_id`, true, r => r.rows[0]?.staff_id === ids.teach);
+await expect("admissions can't connect one", "adm", `insert into mastery_extension_tokens (token_hash) values (${hash("ext-adm")})`, false);
+await expect("another teacher can't see the connection", "teach2", `select * from mastery_extension_tokens`, true, r => r.rows.length === 0);
+await expectAnon("a wrong token gets nothing", `select mastery_ext_context('nope') as c`, true, r => r.rows[0].c === null);
+await expectAnon("the token gets the teacher's own courses and roster", `select mastery_ext_context('ext-good') as c`, true, (r) => {
+  const c = r.rows[0].c; const phys = c?.courses?.find((x) => x.slug === "APPhysics1");
+  return c && phys && phys.roster.length === 1 && c.courses.every((x) => x.slug !== "Theirs");
+});
+const sync = (payload) => `select mastery_ext_khan_sync('ext-good', ${physics}, '${sqlJson(payload)}'::jsonb) as r`;
+const skills = [
+  { id: "x1", title: "Newton's second law", unit: "Force and translational dynamics" },
+  { id: "x2", title: "Free body diagrams", unit: "Force and translational dynamics" },
+  { id: "x3", title: "Friction", unit: "Force and translational dynamics" },
+  { id: "x4", title: "Springs", unit: "Force and translational dynamics" },
+];
+await expectAnon("the first sync keeps the skill catalog, adds no evidence yet", sync({ skills, links: [{ kaid: "kaid_kid1", person: "22222222-2222-2222-2222-222222222222" }, { kaid: "kaid_other", person: "11111111-1111-1111-1111-111111111111" }], levels: [] }), true, r => r.rows[0].r.skills === 4 && r.rows[0].r.links === 1 && r.rows[0].r.added === 0);
+await expect("the teacher picks key skills and maps them", "teach", `update mastery_khan_skills set chosen = true, standard_code = case skill_id when 'x1' then '2.5' when 'x2' then '2.2' else '2.7' end where skill_id in ('x1','x2','x3') returning skill_id`, true, r => r.rows.length === 3);
+await expect("a fourth key skill in the same unit is refused", "teach", `update mastery_khan_skills set chosen = true, standard_code = '2.8' where skill_id = 'x4'`, false);
+await expect("a key skill needs a standard", "teach", `update mastery_khan_skills set chosen = true, standard_code = null where skill_id = 'x1'`, false);
+const levels = [
+  { person: "22222222-2222-2222-2222-222222222222", skill: "x1", level: "mastered" },
+  { person: "22222222-2222-2222-2222-222222222222", skill: "x2", level: "proficient" },
+  { person: "22222222-2222-2222-2222-222222222222", skill: "x3", level: "familiar" },
+  { person: "22222222-2222-2222-2222-222222222222", skill: "x4", level: "mastered" },
+  { person: "11111111-1111-1111-1111-111111111111", skill: "x1", level: "mastered" },
+];
+await expectAnon("only key skills at proficient or mastered become evidence", sync({ skills: [], links: [], levels }), true, r => r.rows[0].r.added === 2);
+await expect("mastered counts as Extending, proficient as Proficient", "teach", `select standard_code, level, recorded_by from mastery_evidence where source = 'khan' and external_key like 'khan:%' order by standard_code`, true, r => r.rows.length === 2 && r.rows[0].standard_code === "2.2" && r.rows[0].level === "proficient" && r.rows[1].level === "extending" && r.rows[1].recorded_by === null);
+await expectAnon("the same sync again adds nothing", sync({ skills: [], links: [], levels }), true, r => r.rows[0].r.added === 0);
+await expectAnon("not another teacher's course", `select mastery_ext_khan_sync('ext-good', '${theirsId}', '{"skills":[],"links":[],"levels":[]}'::jsonb)`, false);
+await expect("the teacher pauses Khan", "teach", `insert into mastery_sources (course_id, source, paused) values (${physics}, 'khan', true) on conflict (course_id, source) do update set paused = true returning paused`, true, r => r.rows[0]?.paused === true);
+await expectAnon("a paused source refuses the sync", sync({ skills: [], links: [], levels }), false);
+await expect("...and turns it back on", "teach", `update mastery_sources set paused = false where source = 'khan' returning id`, false);
+await db.exec(`update mastery_sources set paused = false where source = 'khan'`);
+const tag = (extra) => `select mastery_ext_tag('ext-good', ${physics}, '${sqlJson({ kind: "other", title: "Great friction demo", url: "https://example.org/friction", standard: "2.7", ...extra })}'::jsonb) as id`;
+await expectAnon("the teacher tags a page for a standard", tag({}), true, r => !!r.rows[0].id);
+await expectAnon("a YouTube video needs its id", tag({ kind: "video", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }), false);
+await expectAnon("...and with it, is saved", tag({ kind: "video", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", video_id: "dQw4w9WgXcQ", channel: "Someone" }), true);
+await expectAnon("only https pages", tag({ url: "javascript:alert(1)" }), false);
+await expect("the student sees the tagged resources", "kid", `select title from mastery_course_resources`, true, r => r.rows.length === 2);
+await expect("...but never Khan links, key skills or connections", "kid", `select (select count(*) from mastery_khan_links) + (select count(*) from mastery_khan_skills) + (select count(*) from mastery_extension_tokens) as n`, true, r => Number(r.rows[0].n) === 0);
+await expect("the teacher revokes the connection", "teach", `update mastery_extension_tokens set revoked_at = now() where label = 'My Chrome' returning token_hash`, true, r => r.rows.length === 1);
+await expect("a revoked connection can't come back", "teach", `update mastery_extension_tokens set revoked_at = null where label = 'My Chrome'`, false);
+await expectAnon("a revoked token gets nothing", `select mastery_ext_context('ext-good') as c`, true, r => r.rows[0].c === null);
+await expectAnon("...and can't sync", sync({ skills: [], links: [], levels }), false);
+
 const exposed = await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef");
 const noneExposed = exposed.rows.length === 0; if (noneExposed) pass++; else fail++;
 console.log(`${noneExposed ? "PASS" : "FAIL"}  no SECURITY DEFINER function in the API-exposed public schema`, exposed.rows.map(r => r.proname));

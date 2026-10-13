@@ -19,7 +19,14 @@ export async function proxy(request: NextRequest) {
   // /w/[code]: an inquiring family's shared pathway and its card image
   // (docs/family-sharing.md), read-only like the demo shares.
   // Vercel Cron: the route checks CRON_SECRET itself and touches no session.
-  if (path.startsWith("/api/cron/")) return NextResponse.next();
+  // The Mastery Hub browser extension: its routes take only the extension's
+  // token, checked again by the database on every call.
+  if (path.startsWith("/api/cron/") || path.startsWith("/api/mastery/extension/")) {
+    const response = NextResponse.next();
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return response;
+  }
   if (path.startsWith("/share/") || path.startsWith("/from/") || path.startsWith("/w/")) {
     // A public preview must not become a bypass for POSTed staff Server Actions.
     if (request.method !== "GET" && request.method !== "HEAD") {

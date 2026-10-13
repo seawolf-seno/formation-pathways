@@ -419,10 +419,12 @@ export function CourseSettings({
   finishedThrough,
   units,
   isSample,
+  khanClassCode = null,
 }: {
   courseId: string;
   slug: string;
   canvasCourseId: string | null;
+  khanClassCode?: string | null;
   finishedThrough: number | null;
   units: { number: number; title: string }[];
   isSample: boolean;
@@ -462,6 +464,10 @@ export function CourseSettings({
       <label className="text-xs text-[var(--color-ink-muted)]">
         Canvas course id
         <input name="canvas_course_id" defaultValue={canvasCourseId ?? ""} inputMode="numeric" disabled={isSample} placeholder={isSample ? "Sample: none" : "From the Canvas address"} className={`${field} mt-1`} />
+      </label>
+      <label className="text-xs text-[var(--color-ink-muted)]">
+        Khan Academy class code
+        <input name="khan_class_code" defaultValue={khanClassCode ?? ""} maxLength={12} placeholder="e.g. 7PZVAQDF" className={`${field} mt-1 uppercase`} />
       </label>
       <div className="flex items-center gap-3 sm:col-span-3">
         <button disabled={pending} className={quiet}>
