@@ -19,6 +19,7 @@ import type {
 import { VIEW_ONLY_MESSAGE } from "./types";
 import type { FunnelCount } from "./funnel";
 import { validateStudentSparks } from "./sparks";
+import { getStemProfile } from "./stem-queries";
 import { tableNotThereYet, validateClassReflections, type ReflectionClass } from "./class-reflections";
 import { classKey, type ClassResource } from "./class-resources";
 import { looksLikeStudentAddress } from "./student-address";
@@ -211,6 +212,7 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
   }
   const mastery = await masteryForPerson(id);
   return {
+    stem: await getStemProfile(id),
     person: person as Person,
     externalIds: externalIds.data ?? [],
     consents: consents.data ?? [],
