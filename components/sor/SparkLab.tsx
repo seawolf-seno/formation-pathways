@@ -45,6 +45,7 @@ export function SparkLab({
   starters,
   cards,
   genres,
+  skillQuestions,
 }: {
   personId: string;
   firstName: string;
@@ -54,8 +55,10 @@ export function SparkLab({
   classic: { questions: string[]; interests: SparkOption[]; pairs: SparkChoicePair[] };
   starters: string[];
   cards: SparkOption[];
-  /** The media step is the same in all three formats, so it isn't part of the comparison. */
+  /** The tail cards (skills, then media) are the same in all three formats,
+   *  so neither is part of the comparison. */
   genres: SparkOption[];
+  skillQuestions: string[];
 }) {
   const [phase, setPhase] = useState<Phase>({ kind: "intro" });
   const [results, setResults] = useState<[StudentSparks | null, StudentSparks | null]>([null, null]);
@@ -135,6 +138,7 @@ export function SparkLab({
         interests={classic.interests}
         pairs={classic.pairs}
         genres={genres}
+        skillQuestions={skillQuestions}
         isSample={isSample}
         onFinish={(s) => finishLeg(phase.leg, s)}
       />
@@ -148,6 +152,8 @@ export function SparkLab({
     ...all.flatMap((s) => s.answers.map((a) => ({ label: a.text.length > 40 ? `${a.text.slice(0, 39)}…` : a.text, bright: true }))),
     ...all.flatMap((s) => s.channels.map((c) => ({ label: `▶ ${c}`, bright: false }))),
     ...all.flatMap((s) => s.genres.map((g) => ({ label: g, bright: false }))),
+    ...all.flatMap((s) => (s.canTeach ?? []).map((t) => ({ label: t, bright: true }))),
+    ...all.flatMap((s) => (s.growing ?? []).map((g) => ({ label: g, bright: false }))),
   ];
 
   return (
@@ -175,10 +181,10 @@ export function SparkLab({
         )}
 
         {phase.kind === "leg" && pair[phase.leg] === "starters" && (
-          <SparkStarters key={phase.leg} starters={starters} genres={genres} onFinish={(s) => finishLeg(phase.leg, s)} />
+          <SparkStarters key={phase.leg} starters={starters} genres={genres} skillQuestions={skillQuestions} onFinish={(s) => finishLeg(phase.leg, s)} />
         )}
         {phase.kind === "leg" && pair[phase.leg] === "swipe" && (
-          <SparkSwipe key={phase.leg} cards={cards} genres={genres} onFinish={(s) => finishLeg(phase.leg, s)} />
+          <SparkSwipe key={phase.leg} cards={cards} genres={genres} skillQuestions={skillQuestions} onFinish={(s) => finishLeg(phase.leg, s)} />
         )}
 
         {phase.kind === "felt" && (

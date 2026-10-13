@@ -1,0 +1,17 @@
+# The two skill questions, asked as the second-to-last card of every Spark.
+# Faculty: order matters and is not decorative. The first line is the question
+# answered with pride, the second the one answered as an intention, and the
+# card asks them in that order on purpose — a student who has just said what
+# they're good at will tell you what they're working on. Reverse them and the
+# second question reads as a correction.
+#
+# Exactly two question lines; "#" lines are notes like this one and are
+# ignored. There is deliberately no third question: this card is not a
+# self-assessment, and a student is never asked to rate, rank or score
+# anything about themselves (see the project rule "compass, never dossier").
+# "I could teach a 10-minute class on…" also exists as a sentence starter in
+# spark-starters.txt. That one is free text and lands in their answers; this
+# one is the structured version every format asks, so staff and a draft always
+# have it. Keep the wording close if you edit either.
+What could you teach someone else how to do?
+What are you trying to get better at right now?

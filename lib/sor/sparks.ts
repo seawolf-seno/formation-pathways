@@ -44,6 +44,17 @@ export interface StudentSparks {
   /** Media genres they tapped: what actually fills their feed. Weaker evidence
    *  than the rest of a Spark, and the prompt says so. */
   genres: string[];
+  /** What they say they could teach someone, and what they're trying to get
+   *  better at. The two halves of "skill" a teenager can answer without
+   *  ranking themselves: `canTeach` is said with pride, `growing` is said as
+   *  an intention. Deliberately **not** a level — the Mastery Hub's ladder
+   *  (lib/mastery/config.ts) is derived from teacher-marked evidence, and
+   *  putting self-report on it would turn a Spark into a self-assessment
+   *  score, which is the dossier the whole product refuses to be. These stay
+   *  words, and reach a draft as the same `strong` / `still growing` shape the
+   *  Mastery Hub already hands it (lib/mastery/rules.ts's masterySummary). */
+  canTeach: string[];
+  growing: string[];
   /** Which Spark format produced these (absent on sessions before the lab). */
   format?: SparkFormat;
   lab?: SparkLabMeta;
@@ -75,6 +86,10 @@ export function validateStudentSparks(raw: unknown): { ok: true; sparks: Student
     .slice(0, 10);
   const channels = [...new Set((Array.isArray(r.channels) ? r.channels : []).map((c) => clip(c, 80)).filter(Boolean))].slice(0, 15);
   const genres = [...new Set((Array.isArray(r.genres) ? r.genres : []).map((g) => clip(g, 60)).filter(Boolean))].slice(0, 20);
+  const skills = (key: "canTeach" | "growing") =>
+    [...new Set((Array.isArray(r[key]) ? (r[key] as unknown[]) : []).map((s) => clip(s, 160)).filter(Boolean))].slice(0, 5);
+  const canTeach = skills("canTeach");
+  const growing = skills("growing");
   if (!answers.length && !picks.length) {
     return { ok: false, error: "Light up at least one spark: answer a question or tap something you love." };
   }
@@ -82,7 +97,7 @@ export function validateStudentSparks(raw: unknown): { ok: true; sparks: Student
   const lab = format ? validateLabMeta(r.lab) : undefined;
   return {
     ok: true,
-    sparks: { answers, picks, leanings, channels, genres, ...(format ? { format } : {}), ...(lab ? { lab } : {}) },
+    sparks: { answers, picks, leanings, channels, genres, canTeach, growing, ...(format ? { format } : {}), ...(lab ? { lab } : {}) },
   };
 }
 
@@ -144,6 +159,21 @@ export function sparksForPrompt(s: StudentSparks): string {
       )}. This is what they end up watching, not what they want — use it for texture and the words they'd recognise, and never build a pathway on a genre alone.`
     );
   }
+  // Skills, in the same words the Mastery Hub hands a draft ("solid on …",
+  // "still growing on …"), so one vocabulary covers both. The difference is
+  // that these are the student's own claim rather than marked evidence, which
+  // is why the second line says plainly that naming something is the opposite
+  // of a weakness: a teenager only volunteers it when they intend to close it.
+  if ((s.canTeach ?? []).length) {
+    lines.push(`- They say they could teach someone: ${s.canTeach.join("; ")}. Their own words about what they are solid on — strong evidence, and a real starting point for a pathway.`);
+  }
+  if ((s.growing ?? []).length) {
+    lines.push(
+      `- Still growing on, in their words: ${s.growing.join(
+        "; "
+      )}. They volunteered this, which makes it an intention and not a deficit. Write it as the next thing they're reaching for. Never call it a weakness, a gap or a concern, and never rank it against anything.`
+    );
+  }
   return lines.join("\n");
 }
 
@@ -164,6 +194,8 @@ export function mergeSparks(sessions: SparkSession[]): StudentSparks | null {
   const leanings = new Map<string, StudentSparks["leanings"][number]>();
   const channels = new Set<string>();
   const genres = new Set<string>();
+  const canTeach = new Set<string>();
+  const growing = new Set<string>();
   for (const { sparks } of sessions) {
     for (const a of sparks.answers) {
       const key = `${a.prompt}\n${a.text}`.toLowerCase();
@@ -179,6 +211,8 @@ export function mergeSparks(sessions: SparkSession[]): StudentSparks | null {
     }
     for (const c of sparks.channels) channels.add(c);
     for (const g of sparks.genres ?? []) genres.add(g);
+    for (const t of sparks.canTeach ?? []) canTeach.add(t);
+    for (const g of sparks.growing ?? []) growing.add(g);
   }
   return {
     answers: [...answers.values()].slice(0, 16),
@@ -186,6 +220,8 @@ export function mergeSparks(sessions: SparkSession[]): StudentSparks | null {
     leanings: [...leanings.values()].slice(0, 15),
     channels: [...channels].slice(0, 20),
     genres: [...genres].slice(0, 20),
+    canTeach: [...canTeach].slice(0, 10),
+    growing: [...growing].slice(0, 10),
   };
 }
 

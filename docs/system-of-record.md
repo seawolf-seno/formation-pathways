@@ -101,6 +101,32 @@ signed-in device, a full-screen night sky that fills with stars:
 - **Interests** that float on screen: tap once if you love it, twice if
   you're obsessed (from `prompts/spark-interests.txt`, plus their own).
 - **This or that** (`prompts/spark-choices.txt`).
+- **What they can do**, one card with two questions (`prompts/spark-skills.txt`,
+  faculty-editable, exactly two lines and the order matters): what they could
+  teach someone, then what they're trying to get better at. Both skippable,
+  together or separately; both become stars.
+
+  This is the answer to "we need clear skill levels", and it is deliberately
+  **not** a level. The Mastery Hub already has the ladder
+  (`lib/mastery/config.ts`: beginning → developing → proficient → extending),
+  and it is derived from evidence a teacher marked. Asking a 15-year-old to
+  place themselves on it would turn a Spark into a self-assessment score — a
+  dossier the student wrote about themselves, which is worse than one we wrote.
+  So Spark reuses the Mastery Hub's *projection* instead of its ladder: words
+  only, reaching a draft as the same "solid on … / still growing on …" shape
+  `masterySummary` already hands it (`lib/mastery/rules.ts`). One vocabulary,
+  two sources — marked evidence on one side, the student's own claim on the
+  other.
+
+  The second question is the fragile one. A teenager reads "what are you bad
+  at" into it unless told otherwise, so the card says plainly that it isn't
+  about weakness and the drafting prompt is told the same: a volunteered
+  intention is the opposite of a deficit, never a gap or a concern, never
+  ranked. The staff view styles both halves identically for the same reason —
+  a student page has no failure states, and that is the one place a careless
+  colour choice would invent one. A "could teach" answer is usually the best
+  source for a pathway's `startingPoint`, since someone who can teach a thing
+  has already done it.
 - **What they actually watch**, one card with two questions: media genres they
   tap (`prompts/spark-media.txt`) and up to three creators, channels, podcasts
   or artists they type. Only what they tap or type is saved.

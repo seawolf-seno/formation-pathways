@@ -7,9 +7,10 @@ import { saveStudentSparksAction, submitFamilySparksAction } from "@/lib/sor/act
 import type { StudentSparks } from "@/lib/sor/sparks";
 import type { SparkChoicePair, SparkOption } from "@/lib/spark";
 import { CreatorsStep, type SparkMedia } from "./SparkCreators";
+import { SparkSkills, type SparkSkills as Skills } from "./SparkSkills";
 import "./spark-sky.css";
 
-type Step = "intro" | "ask" | "pull" | "lean" | "channels" | "reveal";
+type Step = "intro" | "ask" | "pull" | "lean" | "skills" | "channels" | "reveal";
 
 interface Star {
   id: string;
@@ -100,6 +101,7 @@ export function SparkSky({
   interests,
   pairs,
   genres,
+  skillQuestions,
   isSample,
   onFinish,
 }: {
@@ -111,6 +113,8 @@ export function SparkSky({
   pairs: SparkChoicePair[];
   /** Media genres for the last step: what fills their feed. */
   genres: SparkOption[];
+  /** The two skill questions (prompts/spark-skills.txt), in order. */
+  skillQuestions: string[];
   isSample: boolean;
   /** Spark Lab: skip the intro, and hand the sparks back instead of saving
    *  them and showing the sky (the lab saves, and asks how it felt). */
@@ -127,6 +131,7 @@ export function SparkSky({
   const [leanings, setLeanings] = useState<StudentSparks["leanings"]>([]);
   const [chosen, setChosen] = useState<string | null>(null);
   const [media, setMedia] = useState<SparkMedia>({ channels: [], genres: [] });
+  const [skills, setSkills] = useState<Skills>({ canTeach: [], growing: [] });
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -143,8 +148,14 @@ export function SparkSky({
       ...leanings.map((l) => ({ id: `l:${l.a}|${l.b}`, label: l.choice || `${l.a} + ${l.b}`, bright: false })),
       ...media.channels.map((c) => ({ id: `c:${c}`, label: c, bright: false })),
       ...media.genres.map((g) => ({ id: `g:${g}`, label: g, bright: false })),
+      // Something they could teach is one of the brightest things a student
+      // says about themselves, so it reads as one. What they're reaching for
+      // earns a star too: "everything you share becomes a star" has to hold
+      // for the harder answer as well, or the card teaches them to skip it.
+      ...skills.canTeach.map((t) => ({ id: `t:${t}`, label: short(t), bright: true })),
+      ...skills.growing.map((g) => ({ id: `w:${g}`, label: short(g), bright: false })),
     ],
-    [answers, picks, leanings, media]
+    [answers, picks, leanings, media, skills]
   );
 
   function keepAnswer() {
@@ -208,7 +219,7 @@ export function SparkSky({
     setTimeout(() => {
       setChosen(null);
       if (pi + 1 < pairs.length) setPi(pi + 1);
-      else setStep("channels");
+      else setStep("skills");
     }, 650);
   }
 
@@ -253,6 +264,8 @@ export function SparkSky({
       leanings,
       channels: said.channels,
       genres: said.genres,
+      canTeach: skills.canTeach,
+      growing: skills.growing,
     };
   }
 
@@ -441,6 +454,20 @@ export function SparkSky({
               </button>
             )}
           </div>
+        )}
+
+        {/* Skills in words, never on a ladder: see the note in SparkSkills.tsx
+            for why a self-placed level would make this a self-assessment
+            score. Asked after the quick taps, when a student is warmed up and
+            answering in sentences again. */}
+        {step === "skills" && (
+          <SparkSkills
+            questions={skillQuestions}
+            onDone={(said) => {
+              setSkills(said);
+              setStep("channels");
+            }}
+          />
         )}
 
         {/* The student taps the genres and names the creators instead of handing

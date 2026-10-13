@@ -65,6 +65,8 @@ export default async function SparkPage({
   const interests = parseVocabLines(readPrompt("spark-interests.txt"));
   const pairs = parseChoiceLines(readPrompt("spark-choices.txt"));
   const genres = parseVocabLines(readPrompt("spark-media.txt"));
+  // Two lines, in order: the proud question then the intention. See the file.
+  const skillQuestions = readPrompt("spark-skills.txt").split("\n").map((q) => q.trim()).filter((q) => q && !q.startsWith("#"));
 
   if (query.format !== "classic") {
     // Lab sittings so far (counted by their first leg), for the rotation.
@@ -90,6 +92,7 @@ export default async function SparkPage({
         starters={readPrompt("spark-starters.txt").split("\n").map((q) => q.trim()).filter(Boolean)}
         cards={cards}
         genres={genres}
+        skillQuestions={skillQuestions}
       />
     );
   }
@@ -102,6 +105,7 @@ export default async function SparkPage({
       interests={interests}
       pairs={pairs}
       genres={genres}
+      skillQuestions={skillQuestions}
       isSample={person.is_sample}
     />
   );

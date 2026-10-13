@@ -41,11 +41,14 @@ export default async function FamilySparkPage({ params }: { params: Promise<{ to
   }
 
   const questions = readPrompt("student-spark-questions.txt").split("\n").map((q) => q.trim()).filter(Boolean);
+  // Two lines, in order: the proud question then the intention. See the file.
+  const skillQuestions = readPrompt("spark-skills.txt").split("\n").map((q) => q.trim()).filter((q) => q && !q.startsWith("#"));
   return (
     <SparkSky
       target={{ kind: "family", token }}
       firstName={firstName}
       questions={questions}
+      skillQuestions={skillQuestions}
       interests={parseVocabLines(readPrompt("spark-interests.txt"))}
       pairs={parseChoiceLines(readPrompt("spark-choices.txt"))}
       genres={parseVocabLines(readPrompt("spark-media.txt"))}

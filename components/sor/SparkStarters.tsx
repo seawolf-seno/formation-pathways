@@ -6,6 +6,7 @@ import { specificDetails } from "@/lib/sor/spark-lab";
 import type { StudentSparks } from "@/lib/sor/sparks";
 import type { SparkOption } from "@/lib/spark";
 import { CreatorsStep } from "./SparkCreators";
+import { SparkSkills, type SparkSkills as Skills } from "./SparkSkills";
 
 /**
  * Spark Lab format "starters": finish a sentence instead of answering an open
@@ -15,10 +16,13 @@ import { CreatorsStep } from "./SparkCreators";
 export function SparkStarters({
   starters,
   genres,
+  skillQuestions,
   onFinish,
 }: {
   starters: string[];
   genres: SparkOption[];
+  /** The two skill questions (prompts/spark-skills.txt), in order. */
+  skillQuestions: string[];
   onFinish: (s: StudentSparks) => void;
 }) {
   const [i, setI] = useState(0);
@@ -28,6 +32,7 @@ export function SparkStarters({
   const [pending, setPending] = useState<StudentSparks["answers"][number] | null>(null);
   const [example, setExample] = useState("");
   const [creators, setCreators] = useState(false);
+  const [skills, setSkills] = useState<Skills | null>(null);
   const dictation = useDictation(setDraft);
 
   function next(answer: StudentSparks["answers"][number] | null) {
@@ -55,7 +60,9 @@ export function SparkStarters({
   }
 
   if (creators) {
-    return <CreatorsStep genres={genres} onDone={(media) => onFinish({ answers, picks: [], leanings: [], ...media })} />;
+    // The tail is the same two cards in every format: skills, then media.
+    if (!skills) return <SparkSkills questions={skillQuestions} onDone={setSkills} />;
+    return <CreatorsStep genres={genres} onDone={(media) => onFinish({ answers, picks: [], leanings: [], ...skills, ...media })} />;
   }
 
   if (pending) {

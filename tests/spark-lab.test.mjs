@@ -111,3 +111,42 @@ test("summarizeLab: genres counted separately, never folded into sparks used", (
   assert.equal(byFormat.swipe.genresUsed, null);
   assert.equal(byFormat.swipe.genresDrafted, 0);
 });
+
+// The skills card is shared by all three formats, so it is counted the same
+// way genres are: on its own, never inside `usedShare`. The two shares are
+// reported apart because the gap between them is the signal — if far fewer
+// students answer "what are you working on" than "what could you teach", the
+// card doesn't feel safe enough to be honest in.
+test("summarizeLab: skills counted separately, and the two questions apart", () => {
+  const leg = (format, sparks, person = "p1") => ({
+    person_id: person,
+    created_at: "2026-10-06T10:00:00Z",
+    sparks: { answers: [], picks: [], leanings: [], channels: [], ...sparks, format, lab: { labId: person, seconds: 300, order: 1 } },
+  });
+  const drafts = ["p1", "p2"].map((person_id) => ({
+    person_id,
+    created_at: "2026-10-06T11:00:00Z",
+    pathways: [{ name: "Second Life", firstSemester: "x", mentorArchetype: "x", stretchChallenge: "x", fourYearHorizon: [], hook: "replace a bike chain" }],
+  }));
+  const sessions = [
+    // Both questions answered; the draft echoed the proud one only.
+    leg("starters", { canTeach: ["replace a bike chain"], growing: ["speaking in front of a class"] }),
+    // Skipped the second question, which is exactly what the gap measures.
+    leg("starters", { canTeach: ["true a wheel"], growing: [] }, "p2"),
+    // Saved before the skills card existed: no keys at all.
+    leg("swipe", { picks: [{ label: "Music", obsessed: false }] }),
+  ];
+  const byFormat = Object.fromEntries(summarizeLab(sessions, drafts).map((f) => [f.format, f]));
+  assert.equal(byFormat.starters.saidCanTeach, 1);
+  assert.equal(byFormat.starters.saidGrowing, 0.5);
+  assert.equal(byFormat.starters.skillsDrafted, 2);
+  // p1: 1 of 2 echoed, p2: 0 of 1. Averaged across sessions, not pooled.
+  assert.equal(byFormat.starters.skillsUsed, 0.25);
+  // A skill a pathway grew from must not count as a spark for the format.
+  assert.equal(byFormat.starters.sparks, 0);
+  assert.equal(byFormat.starters.usedShare, null);
+  // Old sessions read as nothing said rather than throwing.
+  assert.equal(byFormat.swipe.saidCanTeach, 0);
+  assert.equal(byFormat.swipe.saidGrowing, 0);
+  assert.equal(byFormat.swipe.skillsUsed, null);
+});

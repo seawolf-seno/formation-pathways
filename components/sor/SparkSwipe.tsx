@@ -4,6 +4,7 @@ import { useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 import type { SparkOption } from "@/lib/spark";
 import type { StudentSparks } from "@/lib/sor/sparks";
 import { CreatorsStep } from "./SparkCreators";
+import { SparkSkills, type SparkSkills as Skills } from "./SparkSkills";
 
 const THRESHOLD = 80;
 const MIN_BEFORE_DONE = 8;
@@ -16,10 +17,13 @@ const MIN_BEFORE_DONE = 8;
 export function SparkSwipe({
   cards,
   genres,
+  skillQuestions,
   onFinish,
 }: {
   cards: SparkOption[];
   genres: SparkOption[];
+  /** The two skill questions (prompts/spark-skills.txt), in order. */
+  skillQuestions: string[];
   onFinish: (s: StudentSparks) => void;
 }) {
   const [i, setI] = useState(0);
@@ -28,6 +32,7 @@ export function SparkSwipe({
   const [why, setWhy] = useState<string | null>(null);
   const [whyDraft, setWhyDraft] = useState("");
   const [creators, setCreators] = useState(false);
+  const [skills, setSkills] = useState<Skills | null>(null);
   const [drag, setDrag] = useState({ x: 0, y: 0 });
   const origin = useRef<{ x: number; y: number } | null>(null);
 
@@ -68,7 +73,9 @@ export function SparkSwipe({
   }
 
   if (creators) {
-    return <CreatorsStep genres={genres} onDone={(media) => onFinish({ answers, picks, leanings: [], ...media })} />;
+    // The tail is the same two cards in every format: skills, then media.
+    if (!skills) return <SparkSkills questions={skillQuestions} onDone={setSkills} />;
+    return <CreatorsStep genres={genres} onDone={(media) => onFinish({ answers, picks, leanings: [], ...skills, ...media })} />;
   }
 
   if (why) {

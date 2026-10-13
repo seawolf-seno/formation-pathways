@@ -399,6 +399,23 @@ adults behind the scenes; students stay present, in person, with people.
   about their feed do anything?" has an answer in a month; expect a low share, which is the
   design working rather than failing. Not yet seen on a preview or checked against real Claude
   output.
+- **Spark's skills card (2026-10-13, same branch, card #16's "clear skill levels")**: a new
+  second-to-last card in every format (`components/sor/SparkSkills.tsx`,
+  `prompts/spark-skills.txt` — exactly two lines, the proud question first, order is
+  load-bearing) asking what they could teach someone and what they're trying to get better at.
+  New `canTeach` / `growing` on `StudentSparks` (jsonb, **no migration**; old rows read as
+  `[]`). Deliberately **not a level**: the Mastery Hub's ladder (`lib/mastery/config.ts`) is
+  derived from teacher-marked evidence, and self-placement on it would make a Spark a
+  self-assessment score — the dossier the product refuses to be. So this reuses the Mastery
+  Hub's *projection* instead (`lib/mastery/rules.ts`'s `masterySummary`), reaching a draft as
+  the same "solid on … / still growing on …" words. One vocabulary, two sources. The prompt is
+  told a volunteered "working on" is an intention and never a deficit, gap or concern, and that
+  a "could teach" answer is usually the best source for a pathway's `startingPoint`. The staff
+  view styles both halves identically (no failure states on a student page). Shared card, so
+  like genres it stays out of the Spark Lab's "Used in pathways" and gets its own rows; the gap
+  between "Said what they could teach" and "Said what they're working on" is the thing to watch
+  — if the second lags far behind, the card isn't safe enough to be honest in and the *wording*
+  changes, not the student. Clicked through at 375×812; not checked against real Claude output.
 - **Next concrete actions**:
   1. Production migrations `20261017`, `20261018` (merged), then `20261019` (Mastery Hub, when
      merged); #58 after its rename, via staging first.

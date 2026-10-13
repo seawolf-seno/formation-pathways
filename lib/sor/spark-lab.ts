@@ -100,6 +100,17 @@ export interface FormatSummary {
   genres: number;
   genresUsed: number | null;
   genresDrafted: number;
+  /** The skills card is shared too, and kept out of `usedShare` for the same
+   *  reason: a shared card must not flatter whichever format it arrived with.
+   *  These are shares of sessions, not counts, because both questions are
+   *  skippable and the gap between the two is the number worth watching —
+   *  "could teach" is answered with pride and "working on" takes nerve, so if
+   *  the second runs far behind the first, the card doesn't feel safe enough
+   *  to be honest in and the wording needs changing, not the student. */
+  saidCanTeach: number;
+  saidGrowing: number;
+  skillsUsed: number | null;
+  skillsDrafted: number;
 }
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
@@ -143,6 +154,7 @@ export function summarizeLab(sessions: LabSession[], drafts: LabDraft[]): Format
     const shares: number[] = [];
     const shaped: number[] = [];
     const genreShares: number[] = [];
+    const skillShares: number[] = [];
     for (const s of mine) {
       // The newest draft for this student made after this session.
       const draft = drafts
@@ -155,6 +167,14 @@ export function summarizeLab(sessions: LabSession[], drafts: LabDraft[]): Format
       if (genres.length) {
         genreShares.push(
           genres.filter((g) => sparkUses(g, draft.pathways, { short: true }).length > 0).length / genres.length
+        );
+      }
+      // Counted before the guard below, like genres: a session where the only
+      // thing said was a skill still answers the skills question.
+      const skills = [...(s.sparks.canTeach ?? []), ...(s.sparks.growing ?? [])];
+      if (skills.length) {
+        skillShares.push(
+          skills.filter((k) => sparkUses(k, draft.pathways, { short: true }).length > 0).length / skills.length
         );
       }
       const texts = sparkTexts(s.sparks);
@@ -179,6 +199,10 @@ export function summarizeLab(sessions: LabSession[], drafts: LabDraft[]): Format
       genres: mean(mine.map((s) => (s.sparks.genres ?? []).length)),
       genresDrafted: genreShares.length,
       genresUsed: genreShares.length ? mean(genreShares) : null,
+      saidCanTeach: mean(mine.map((s) => ((s.sparks.canTeach ?? []).length ? 1 : 0))),
+      saidGrowing: mean(mine.map((s) => ((s.sparks.growing ?? []).length ? 1 : 0))),
+      skillsDrafted: skillShares.length,
+      skillsUsed: skillShares.length ? mean(skillShares) : null,
     };
   });
 }
