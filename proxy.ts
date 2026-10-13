@@ -10,7 +10,7 @@ import { createServerClient } from "@supabase/ssr";
 // signed-in @pacificachristian.org account too, and every demo page and
 // action also requires active staff (lib/demo-access.ts): its Claude calls
 // cost money, and a pending or deactivated account passes this check.
-const SOR_PREFIXES = ["/pilot", "/capture", "/season", "/pathway", "/mastery", "/me"];
+const SOR_PREFIXES = ["/pilot", "/capture", "/season", "/pathway", "/mastery", "/me", "/stem"];
 
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
@@ -41,7 +41,7 @@ export async function proxy(request: NextRequest) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
     return response;
   }
-  if (path.startsWith("/spark/") || path === "/discover" || path.startsWith("/discover/") || path.startsWith("/welcome/")) {
+  if (path.startsWith("/spark/") || path === "/discover" || path.startsWith("/discover/") || path.startsWith("/welcome/") || path.startsWith("/scholars/")) {
     // The deliberate public WRITE surfaces, both with no school sign-in:
     // - /spark/[token]: an applicant's Spark survey (fictional demo).
     //   submitSparkResponseAction (lib/actions.ts) is scoped by spark_token to
@@ -59,6 +59,8 @@ export async function proxy(request: NextRequest) {
     //   functions family_page/family_share/family_stop_sharing, which check
     //   the token; its page registers two actions (lib/family-actions.ts).
     //   See docs/family-sharing.md.
+    // - /scholars/[token]: STEM workspace; token-scoped database functions
+    //   enforce expiry, active coordinator, consent and limited student writes.
     const response = NextResponse.next();
     response.headers.set("Cache-Control", "no-store");
     response.headers.set("Referrer-Policy", "no-referrer");
