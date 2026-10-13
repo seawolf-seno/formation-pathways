@@ -2,9 +2,9 @@
 //
 // - Khan Academy: when Khan's skills report loads in your browser (you open
 //   it, or the extension opens it in a background tab every three hours),
-//   match its students to your hub roster here, keep only your KEY skills at
-//   proficient or mastered, and send that to the hub. Unmatched Khan students
-//   stay in this browser; you can link them in the popup.
+//   match its students to your hub roster here and send every skill's level
+//   for them to the hub, which sorts skills into your learning objectives.
+//   Unmatched Khan students stay in this browser; link them in the popup.
 // - Tagging: the popup saves the page you're on for one of your classes.
 //
 // It talks only to your hub, with the connection token you created on
@@ -65,13 +65,16 @@ async function processKhan(tabId) {
 
     // The skill catalog: titles and Khan units (course content, no students).
     const meta = new Map();
-    for (const unit of p.exercises?.data?.courseById?.unitChildren ?? []) {
+    (p.exercises?.data?.courseById?.unitChildren ?? []).forEach((unit, i) => {
+      // "Unit 3: …" if Khan says so, else its place in the course.
+      const named = /\bunit\s*(\d{1,2})\b/i.exec(unit.translatedTitle || "");
+      const unitNumber = named ? Number(named[1]) : i + 1;
       for (const c of unit.filteredContent ?? []) {
-        const v = { title: c.translatedTitle, unit: unit.translatedTitle };
+        const v = { title: c.translatedTitle, unit: unit.translatedTitle, unitNumber };
         if (c.id) meta.set(c.id, v);
         if (c.contentId) meta.set(c.contentId, v);
       }
-    }
+    });
     const report = p.skills?.data?.teacherOverallProgressReport?.skillsLevels ?? [];
     const skills = report.flatMap((l) => (meta.has(l.skillId) ? [{ id: l.skillId, ...meta.get(l.skillId) }] : []));
 
@@ -88,17 +91,17 @@ async function processKhan(tabId) {
       } else unmatched.push({ kaid: s.kaid, name: s.coachNickname });
     }
 
-    // Levels for your key skills only, at the two levels that count.
-    const key = new Set((course.khan_key_skills || []).map((k) => k.id));
+    // Every level, for every skill, for students on your roster. The hub
+    // keeps them all; proficient and mastered count toward objectives.
     const words = new Set();
     const levels = [];
     for (const l of report) {
+      if (!meta.has(l.skillId)) continue;
       for (const sl of l.studentLevels ?? []) {
         words.add(String(sl.skillLevel));
-        if (!key.has(l.skillId)) continue;
-        const level = countedLevel(sl.skillLevel);
         const person = known.get(sl.studentKaid);
-        if (level && person) levels.push({ person, skill: l.skillId, level });
+        const level = countedLevel(sl.skillLevel) ?? String(sl.skillLevel || "").toLowerCase().replace(/[^a-z_ -]/g, "").slice(0, 30);
+        if (person && level) levels.push({ person, skill: l.skillId, level });
       }
     }
 
@@ -108,9 +111,7 @@ async function processKhan(tabId) {
       ok: true,
       courseId: course.id,
       courseTitle: course.title,
-      message: key.size
-        ? `${result.added} new piece${result.added === 1 ? "" : "s"} of evidence from ${key.size} key skill${key.size === 1 ? "" : "s"}.`
-        : `${skills.length} Khan skills sent. Pick your key skills on the course page, then sync again.`,
+      message: `${result.levels} Khan levels updated across ${skills.length} skills; ${result.added} new piece${result.added === 1 ? "" : "s"} of evidence. Sort any new skills into objectives on the course's Setup page.`,
       skillsSeen: skills.length,
       skillsWithoutTitle: report.length - skills.length,
       levelWordsSeen: [...words].sort(),

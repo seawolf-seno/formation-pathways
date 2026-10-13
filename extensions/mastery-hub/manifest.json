@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Pacifica Mastery Hub",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Sends your Khan Academy key skills to the Formation Pathways Mastery Hub, and tags pages as resources for your classes.",
   "permissions": ["storage", "alarms", "activeTab"],
   "host_permissions": [

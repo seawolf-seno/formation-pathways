@@ -65,6 +65,9 @@ export default async function TeacherStudentPage({ params }: { params: Promise<{
         audience="teacher"
         courseIdForTeacher={courseId}
         finishedThrough={bundle.course.finished_through}
+        grades={bundle.grades.filter((g) => g.person_id === personId)}
+        khanSkills={bundle.khanSkills}
+        khanLevels={bundle.khanLevels.filter((k) => k.person_id === personId)}
       />
       <section className="rounded-2xl border border-[var(--color-border)] bg-white p-4">
         <h2 className="mb-3 font-display text-lg text-[var(--color-navy-ink)]">Add evidence by hand</h2>

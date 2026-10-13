@@ -1,7 +1,8 @@
 import "server-only";
 import { getSorClient } from "@/lib/sor/supabase-server";
 import type { EvidenceDraft } from "./exports";
-import { canvasEvidence } from "./canvas-map";
+import { canvasEvidence, rollupGrades } from "./canvas-map";
+import { outcomeCodes } from "./canvas-outcomes";
 import { fetchCanvasMastery, isLiveCanvasConfigured } from "./canvas";
 import { sampleCanvasRun } from "./sample";
 import type { CourseBundle } from "./queries";
@@ -61,9 +62,17 @@ export async function runCanvasSync(bundle: CourseBundle, actor: string): Promis
       .eq("system", "canvas")
       .in("person_id", bundle.roster.map((s) => s.id));
     const personByCanvasId = new Map((ids ?? []).map((r) => [String(r.external_id), r.person_id as string]));
-    const { submissions, outcomeResults } = await fetchCanvasMastery(course.canvas_course_id, [...personByCanvasId.keys()]);
-    const { evidence, unmapped } = canvasEvidence(submissions, outcomeResults, personByCanvasId, bundle.config, new Date().toISOString());
+    const codes = outcomeCodes(bundle.config);
+    const { submissions, outcomeResults, rollups, outcomes } = await fetchCanvasMastery(course.canvas_course_id, [...personByCanvasId.keys()]);
+    const { evidence, unmapped } = canvasEvidence(submissions, outcomeResults, personByCanvasId, bundle.config, new Date().toISOString(), codes);
     const saved = await insertEvidence(course.id, evidence);
+    const grades = rollupGrades(rollups, outcomes, personByCanvasId, codes);
+    if (grades.length) {
+      const { error } = await supabase
+        .from("mastery_objective_grades")
+        .upsert(grades.map((g) => ({ ...g, course_id: course.id, updated_at: new Date().toISOString() })), { onConflict: "course_id,person_id,standard_code" });
+      if (error && !/does not exist|schema cache/.test(error.message)) throw new Error(error.message);
+    }
     const missing = bundle.roster.length - personByCanvasId.size;
     summary =
       `${saved} new piece${saved === 1 ? "" : "s"} of evidence.` +

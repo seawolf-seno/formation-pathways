@@ -1,7 +1,8 @@
 import "server-only";
 import { timingSafeEqual } from "crypto";
 import { Client } from "pg";
-import { canvasEvidence } from "./canvas-map";
+import { canvasEvidence, rollupGrades } from "./canvas-map";
+import { outcomeCodes } from "./canvas-outcomes";
 import { fetchCanvasMastery, isLiveCanvasConfigured } from "./canvas";
 import { parseMasteryConfig } from "./config";
 import { fileStandardSet } from "./standard-sets";
@@ -79,8 +80,24 @@ export async function runScheduledImport(now = new Date()): Promise<ScheduledRun
           [course.id],
         );
         const personByCanvasId = new Map(ids.map((r) => [String(r.external_id), r.person_id]));
-        const { submissions, outcomeResults } = await fetchCanvasMastery(course.canvas_course_id, [...personByCanvasId.keys()]);
-        const { evidence, unmapped } = canvasEvidence(submissions, outcomeResults, personByCanvasId, config, now.toISOString());
+        const codes = outcomeCodes(config);
+        const { submissions, outcomeResults, rollups, outcomes } = await fetchCanvasMastery(course.canvas_course_id, [...personByCanvasId.keys()]);
+        const { evidence, unmapped } = canvasEvidence(submissions, outcomeResults, personByCanvasId, config, now.toISOString(), codes);
+        // Canvas's own objective scores: update, else add (this role can't
+        // read the scores it writes, so no upsert).
+        for (const g of rollupGrades(rollups, outcomes, personByCanvasId, codes)) {
+          const upd = await db.query(
+            `update public.mastery_objective_grades set score = $4, max_score = $5, label = $6, updated_at = $7
+             where course_id = $1 and person_id = $2 and standard_code = $3`,
+            [course.id, g.person_id, g.standard_code, g.score, g.max_score, g.label, now.toISOString()],
+          );
+          if (!upd.rowCount)
+            await db.query(
+              `insert into public.mastery_objective_grades (course_id, person_id, standard_code, score, max_score, label, updated_at)
+               values ($1, $2, $3, $4, $5, $6, $7)`,
+              [course.id, g.person_id, g.standard_code, g.score, g.max_score, g.label, now.toISOString()],
+            );
+        }
         const { rows: existing } = await db.query<{ person_id: string; standard_code: string; external_key: string }>(
           "select person_id, standard_code, external_key from public.mastery_evidence where course_id = $1 and external_key is not null",
           [course.id],

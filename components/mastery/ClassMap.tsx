@@ -20,6 +20,7 @@ export type SourceFilter = keyof typeof SOURCE_FILTERS;
  * where the class as a whole is.
  */
 export function ClassMap({
+  basePath,
   courseSlug,
   config,
   roster,
@@ -27,6 +28,8 @@ export function ClassMap({
   unit,
   source = null,
 }: {
+  /** Where the unit and source switches link (default: the dashboard). */
+  basePath?: string;
   courseSlug: string;
   config: MasteryConfig;
   roster: RosterStudent[];
@@ -43,7 +46,7 @@ export function ClassMap({
     if (u) q.set("unit", u);
     if (src) q.set("source", src);
     const qs = q.toString();
-    return `/mastery/${courseSlug}${qs ? `?${qs}` : ""}`;
+    return `${basePath ?? `/mastery/${courseSlug}`}${qs ? `?${qs}` : ""}`;
   };
   const columns = group
     ? group.standards.map((s) => ({ key: s.code, label: s.code, title: s.title }))
@@ -107,14 +110,14 @@ export function ClassMap({
             {rows.map(({ student, cells }) => (
               <tr key={student.id} className="border-t border-[var(--color-border)]">
                 <th className="sticky left-0 whitespace-nowrap bg-white px-3 py-1.5 text-left font-normal">
-                  <Link href={`/mastery/${courseSlug}/students/${student.id}`} className="text-[var(--color-navy)] hover:underline">
+                  <Link href={`/mastery/${courseSlug}?student=${student.id}${group ? `&unit=${group.code}` : ""}`} className="text-[var(--color-navy)] hover:underline">
                     {student.preferred_name || student.first_name} {student.last_name}
                   </Link>
                 </th>
                 {cells.map((level, i) => (
                   <td key={columns[i].key} className="px-1 py-1.5 text-center">
                     <Link
-                      href={`/mastery/${courseSlug}/students/${student.id}`}
+                      href={`/mastery/${courseSlug}?student=${student.id}${group ? `&unit=${group.code}` : ""}`}
                       title={`${columns[i].title}: ${levelLabel(config, level)}`}
                       className={`mx-auto flex h-8 w-10 items-center justify-center rounded-md text-xs font-semibold ${LEVEL_STYLE[level ?? "none"].cell}`}
                     >
