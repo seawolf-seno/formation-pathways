@@ -392,8 +392,13 @@ adults behind the scenes; students stay present, in person, with people.
   type. New `genres` on `StudentSparks` (jsonb, **no migration**; old rows read as `[]`).
   Genres are named in the prompt as the weakest evidence in a Spark — texture and vocabulary,
   never the thing a pathway is about (`sparksForPrompt`, `prompts/ruakh-today.txt`) — and the
-  staff view deliberately shows no "→ pathway" trace under one. Not yet seen on a preview or
-  checked against real Claude output.
+  staff view deliberately shows no "→ pathway" trace under one. Because of that the Spark Lab's
+  "Used in pathways" can't see genres at all, so `/pilot/spark-lab` counts them on two rows of
+  their own ("Genres tapped", "Genres in a pathway") that are explicitly *not* a comparison
+  between formats — the media card is identical in all three. They exist so that "did asking
+  about their feed do anything?" has an answer in a month; expect a low share, which is the
+  design working rather than failing. Not yet seen on a preview or checked against real Claude
+  output.
 - **Next concrete actions**:
   1. Production migrations `20261017`, `20261018` (merged), then `20261019` (Mastery Hub, when
      merged); #58 after its rename, via staging first.

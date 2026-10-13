@@ -76,3 +76,38 @@ test("summarizeLab: reactions, head to head on both sides, and sparks used by a 
   assert.equal(byFormat.classic.sessions, 0);
   assert.equal(byFormat.classic.usedShare, null);
 });
+
+// Genres are counted on their own so that "did asking about their feed do
+// anything?" has an answer, and kept out of `usedShare` so a tapped genre can
+// never flatter a format or reward the inference the prompt forbids.
+test("summarizeLab: genres counted separately, never folded into sparks used", () => {
+  const leg = (format, sparks) => ({
+    person_id: "p1",
+    created_at: "2026-10-06T10:00:00Z",
+    sparks: { answers: [], picks: [], leanings: [], channels: [], ...sparks, format, lab: { labId: "p1", seconds: 300, order: 1 } },
+  });
+  const drafts = [
+    {
+      person_id: "p1",
+      created_at: "2026-10-06T11:00:00Z",
+      pathways: [{ name: "Second Life", firstSemester: "x", mentorArchetype: "x", stretchChallenge: "x", fourYearHorizon: [], hook: "making & fixing on a workbench" }],
+    },
+  ];
+  const sessions = [
+    // One genre the draft echoed, one it didn't, and no other sparks at all.
+    leg("starters", { genres: ["Making & fixing", "Anime"] }),
+    // A session from before the media step existed: no `genres` key at all.
+    leg("swipe", { picks: [{ label: "Music", obsessed: false }] }),
+  ];
+  const byFormat = Object.fromEntries(summarizeLab(sessions, drafts).map((f) => [f.format, f]));
+  assert.equal(byFormat.starters.genres, 2);
+  assert.equal(byFormat.starters.genresUsed, 0.5);
+  assert.equal(byFormat.starters.genresDrafted, 1);
+  // The echoed genre must not count as a spark a pathway grew from.
+  assert.equal(byFormat.starters.sparks, 0);
+  assert.equal(byFormat.starters.usedShare, null);
+  // Old sessions read as zero genres rather than throwing.
+  assert.equal(byFormat.swipe.genres, 0);
+  assert.equal(byFormat.swipe.genresUsed, null);
+  assert.equal(byFormat.swipe.genresDrafted, 0);
+});

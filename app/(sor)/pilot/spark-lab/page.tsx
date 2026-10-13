@@ -68,6 +68,19 @@ export default async function SparkLabPage({ searchParams }: { searchParams: Pro
       help: "Of the draft's pathways, how many grew from this session (average).",
       value: (f) => one(f.pathwaysShaped),
     },
+    // The media step is the same in all three formats, so these two rows aren't
+    // a format comparison: they're here to answer "did asking about their feed
+    // do anything?", which the rows above deliberately can't.
+    {
+      label: "Genres tapped",
+      help: "The last card is the same in every format, so this isn't a comparison between them: it's how many genres a student bothers to tap.",
+      value: (f) => one(f.genres),
+    },
+    {
+      label: "Genres in a pathway",
+      help: "Of sessions drafted afterwards: the share of their tapped genres a pathway echoed. Expected to be low — the prompt is told to use a genre only for texture, never as the thing a pathway is about.",
+      value: (f) => (f.genresDrafted ? `${pct(f.genresUsed)} (${f.genresDrafted})` : "no drafts yet"),
+    },
   ];
 
   return (
