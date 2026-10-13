@@ -690,6 +690,70 @@ await expectImporter("the importer updates a score (update, then insert if new)"
 await expectImporter("...and adds a new one", `insert into mastery_objective_grades (course_id, person_id, standard_code, score, max_score, label, updated_at) values (${physics}, '22222222-2222-2222-2222-222222222222', 'o102', 2, 4, 'Approaching', now())`, true);
 await expectImporter("...but can't read the other columns", `select score from mastery_objective_grades`, false);
 
+// The Study Hub for a signed-in student (Fizzy #32): their own classes, what
+// they enjoy, links they suggest. Nothing about anyone else, and saving still
+// needs student_voice consent and a teacher's approval before others see a link.
+const me = "22222222-2222-2222-2222-222222222222";
+const mate = "55555555-5555-5555-5555-555555555555";
+const consentFor = (person, scope) => `insert into consents (person_id, scope, granted_by, granted_on, evidence) select '${person}', '${scope}', 'Parent Kid', '2026-10-13', 'Signed form' where not exists (select 1 from consents where person_id = '${person}' and scope = '${scope}' and revoked_at is null);`;
+const theirLink = (cls, title, status) => `insert into class_resources (person_id, class_title, title, url, kind, created_by, status) values ('${mate}', '${cls}', '${title}', 'https://example.org/${title.toLowerCase().replace(/\W+/g, "-")}', 'Practice', '${ids.teach}', '${status}');`;
+await db.exec(`update student_accounts set active = true where person_id = '${me}';
+update consents set revoked_at = now() where person_id = '${me}' and scope = 'student_voice' and revoked_at is null;
+insert into people (id, first_name, last_name, stage) values ('${mate}', 'Class', 'Mate', 'enrolled');
+${consentFor(me, "import_records")}
+${consentFor(mate, "student_voice")}
+insert into course_history (person_id, section_id, school_year, course_title) values ('${me}', 'k1', '2026-2027', 'Spanish III'), ('${me}', 'k2', '2026-2027', 'AP Physics 1');
+insert into course_enrollments (person_id, canvas_course_id, course_name) values ('${me}', '900', 'Chemistry');
+${theirLink("Spanish III", "Verb drills", "approved")}
+${theirLink("Spanish III", "Not this one", "declined")}
+${theirLink("Spanish III", "Still waiting", "pending")}
+${theirLink("Biology", "Cells", "approved")}
+insert into class_reflections (person_id, reflections, created_by) values ('${mate}', '{"classes":[]}', '${ids.teach}');`);
+const myRefl = (person = me, by = "null", extra = "") => `insert into class_reflections (person_id, reflections, created_by${extra ? ", created_at" : ""}) values ('${person}', '{"classes":[{"key":"blackbaud:k1","title":"Spanish III","loved":true}]}', ${by}${extra ? `, '${extra}'` : ""}) returning created_by, created_at`;
+const myLink = (extra = {}) => {
+  const row = { person_id: me, class_title: "Spanish III", title: "Subjunctive song", url: "https://example.org/song", kind: "Video", ...extra };
+  return `insert into class_resources (${Object.keys(row).join(", ")}, created_by) values (${Object.values(row).map((v) => `'${v}'`).join(", ")}, null) returning status, created_by`;
+};
+await expect("a signed-in student sees their own classes", "kid", `select course_title from course_history`, true, r => r.rows.length === 2 && r.rows.every((x) => x.course_title !== "Biology"));
+await expect("...and their own Canvas courses", "kid", `select course_name from course_enrollments`, true, r => r.rows.length === 1 && r.rows[0].course_name === "Chemistry");
+await expect("the student can't change their schedule", "kid", `insert into course_history (person_id, section_id, school_year, course_title) values ('${me}', 'k9', '2026-2027', 'Biology')`, false);
+await expect("the page can tell student voice isn't agreed yet", "kid", `select student_voice_on() as on`, true, r => r.rows[0].on === false);
+await expect("the student's reflections are refused without student_voice consent", "kid", myRefl(), false);
+await expect("...and so is a link", "kid", myLink(), false);
+await db.exec(consentFor(me, "student_voice"));
+await expect("with consent, the page can tell", "kid", `select student_voice_on() as on`, true, r => r.rows[0].on === true);
+await expect("the student saves what they enjoy, with no staff member recorded, stamped now", "kid", myRefl(me, "null", "2020-01-01"), true, r => r.rows[0]?.created_by === null && new Date(r.rows[0].created_at).getFullYear() > 2020);
+await expect("the student can't save for another student", "kid", myRefl(mate), false);
+await expect("the student can't save in a staff member's name", "kid", myRefl(me, `'${ids.teach}'`), false);
+await expect("a staff member can't save with nobody recorded", "teach", myRefl(me), false);
+await expect("...nor can a view-only account", "viewer", myRefl(me), false);
+await expect("the student reads only their own reflections", "kid", `select person_id from class_reflections`, true, r => r.rows.length === 1 && r.rows[0].person_id === me);
+await expect("the student can't rewrite or delete one", "kid", `delete from class_reflections returning id`, true, r => r.rows.length === 0);
+for (let i = 0; i < 4; i++) await as("kid", myRefl());
+await expect("a sixth save in a day is refused", "kid", myRefl(), false);
+await expect("the student suggests a link for their own class, unreviewed", "kid", myLink(), true, r => r.rows[0]?.status === "pending" && r.rows[0]?.created_by === null);
+await expect("not for a class that isn't on their schedule", "kid", myLink({ class_title: "Biology" }), false);
+await expect("not already approved", "kid", myLink({ status: "approved" }), false);
+await expect("not for another student", "kid", myLink({ person_id: mate }), false);
+await expect("a staff member can't suggest with nobody recorded", "teach", myLink(), false);
+await expect("the student sees only the rows they suggested", "kid", `select person_id from class_resources`, true, r => r.rows.length === 1 && r.rows[0].person_id === me);
+await expect("the student can't approve their own link", "kid", `update class_resources set status = 'approved' returning id`, true, r => r.rows.length === 0);
+await expect("approved links for their classes arrive with no student or reviewer", "kid", `select * from class_links_for_student()`, true, r => r.rows.length === 1 && r.rows[0].title.startsWith("Verb drills") && Object.keys(r.rows[0]).sort().join() === "class_key,id,kind,note,title,url");
+await expect("a link the student suggested can't be handed to a staff member", "admin", `update class_resources set created_by = '${ids.teach}' where person_id = '${me}'`, false);
+await expect("a teacher approves the student's link, and is recorded", "teach", `update class_resources set status = 'approved' where person_id = '${me}' returning reviewed_by_name, created_by`, true, r => r.rows[0]?.reviewed_by_name === "Teach" && r.rows[0]?.created_by === null);
+await expect("then it's among the approved links for that class", "kid", `select title from class_links_for_student() order by title`, true, r => r.rows.length === 2 && r.rows[0].title === "Subjunctive song");
+for (let i = 0; i < 10; i++) await as("kid", myLink({ url: `https://example.org/more-${i}` }));
+await expect("an eleventh link waiting for a teacher is refused", "kid", myLink({ url: "https://example.org/more-10" }), false);
+await expect("a staff member gets nothing from the student's link list", "teach", `select * from class_links_for_student()`, true, r => r.rows.length === 0);
+await expect("a stranger gets nothing either", "stranger", `select (select count(*) from class_links_for_student())::int as n, student_voice_on() as on`, true, r => r.rows[0].n === 0 && r.rows[0].on === false);
+await expectAnon("anon can't ask for a student's links", `select * from class_links_for_student()`, false);
+await expectAnon("...or whether student voice is on", `select student_voice_on()`, false);
+await expect("an unconfirmed address sees no classes", "kidUnconfirmed", `select (select count(*) from course_history) + (select count(*) from class_reflections) + (select count(*) from class_resources) as n`, true, r => Number(r.rows[0].n) === 0);
+await db.exec(`update student_accounts set active = false where person_id = '${me}'`);
+await expect("with the sign-in turned off, the student reads nothing", "kid", `select (select count(*) from course_history) + (select count(*) from class_reflections) + (select count(*) from class_resources) + (select count(*) from class_links_for_student()) as n`, true, r => Number(r.rows[0].n) === 0);
+await expect("...and saves nothing", "kid", myLink({ url: "https://example.org/after" }), false);
+await db.exec(`update student_accounts set active = true where person_id = '${me}'`);
+
 const exposed = await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef");
 const noneExposed = exposed.rows.length === 0; if (noneExposed) pass++; else fail++;
 console.log(`${noneExposed ? "PASS" : "FAIL"}  no SECURITY DEFINER function in the API-exposed public schema`, exposed.rows.map(r => r.proname));

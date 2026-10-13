@@ -265,6 +265,20 @@ adults behind the scenes; students stay present, in person, with people.
   Still open for #32, each needing a decision first: student sign-in (none exists), file
   uploads (storage, scanning, copyright), and open questions that build a no-numbers "where
   you are" narrative.
+- **Study Hub for a signed-in student (2026-10-13, branch `samuel/student-study-hub`, card
+  #32)**: `/study` (and `/study/classes` for reflections), using the Mastery Hub's student
+  sign-in (`requireStudent`), linked from the `/me` header. The student reads only their own
+  classes, reflections and suggested links (new `*_student_read` policies); other students'
+  approved links come only through `class_links_for_student()` (no suggester, reviewer or
+  dates). Saving needs `student_voice` consent (`student_voice_on()` tells the page) and is
+  written with `created_by` null = the student themselves (`lib/sor/student-actions.ts`,
+  guarded by `tests/student-study.test.mjs`); `private.student_study_guard` checks the row is
+  theirs, the class is on their schedule, and caps (10 links waiting, 5 reflection saves a
+  day). **Needs seno to apply `20261024000000_student_study_hub.sql`**; until then the link is
+  hidden and `/study` says it isn't on yet. Not tried in a browser as a signed-in student
+  (the migration isn't on staging). Open for leadership: `student_voice` wording (it describes
+  a conversation with staff), and student sign-ins are created under `mastery_records`
+  consent, which doesn't mention the Study Hub. File uploads still need a decision.
 - **Always a next step (2026-10-09, branch `seno/always-next-step`, card #29)**: every family
   page ends with `components/discover/NextSteps.tsx`: the pathway (on its way / share it / ask for
   one), invite a family with their referral code, start the application. `NEXT_STEP_LINKS` in

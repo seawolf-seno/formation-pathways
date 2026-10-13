@@ -153,9 +153,44 @@ app, into Formation Pathways (Fizzy card #32).
   chapter) show only for that course.
 - **Nothing about performance.** The page shows nothing about how a student
   is doing in a class, and opening it is logged (`open_study_hub`). The
-  library itself needs no migration. There is still no student login: a
-  student using this alone, uploading files, or answering questions each
-  needs a decision first (see CLAUDE.md).
+  library itself needs no migration. A student can also open their own
+  Study Hub signed in (next section). Uploading files still needs a
+  decision first (see CLAUDE.md).
+
+### The Study Hub for a signed-in student (`/study`)
+
+A student with a sign-in (their teacher registers their school address on a
+Mastery Hub course page; see `docs/mastery-hub.md`) opens the same Study Hub
+themselves at `/study`, with a **Study Hub** link in the header of their
+mastery pages (`/me`). Third step of folding Study Hub in (Fizzy #32).
+
+- **Only what is theirs.** Every read runs as the student, and the database
+  returns their own classes, what they said they enjoy and the links they
+  suggested. They read nothing about another student.
+- **Approved links carry no names.** A row in `class_resources` says who
+  suggested it, so other students' approved links reach a student only
+  through `class_links_for_student()`, which returns the link, its kind and
+  the note: never the student, the reviewer or the dates.
+- **Saving still needs `student_voice` consent.** With it, **Tell us what
+  you enjoy** (`/study/classes`) and **Add something that helped you** save
+  as the student, with no staff member recorded (`created_by` is empty; that
+  is how a student's own row is told from one saved with an adult). Without
+  it the page is read-only. A link still goes to `/pilot/resources` and
+  reaches other students only after a teacher or admin approves it.
+- **Checked again by the database.** The row must be the signed-in
+  student's own, a link must be for a class on their schedule, and one
+  account can have at most ten links waiting and five saved reflections a
+  day (`private.student_study_guard`).
+- **Nothing is logged in the access log** for a student opening their own
+  page (that log is for staff opening a student's record); what they save is
+  its own record.
+
+Migration `20261024000000_student_study_hub.sql` (no new table or column; 34
+RLS cases). Until it is applied the link is hidden and `/study` says it
+isn't switched on yet. **Open for leadership:** the `student_voice` form
+describes a conversation with staff, and here the student saves on their
+own; and a student sign-in is created under the Mastery Hub consent, which
+doesn't mention the Study Hub.
 
 ### Links students add: suggested, then approved by a teacher
 
