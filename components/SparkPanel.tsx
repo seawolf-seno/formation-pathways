@@ -72,8 +72,15 @@ export function SparkPanel({ applicant }: { applicant: Applicant }) {
           {response.choices.length > 0 && (
             <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
               This or that: {response.choices.map((c, i) => (
-                <span key={i} className="mr-1 inline-block rounded-full border border-[var(--color-border)] px-2 py-0.5 text-[var(--color-ink)]">
-                  {c}
+                <span
+                  key={i}
+                  className={`mr-1 inline-block rounded-full px-2 py-0.5 ${
+                    c === null
+                      ? "border border-dashed border-[var(--color-border)] text-[var(--color-ink-muted)]"
+                      : "border border-[var(--color-border)] text-[var(--color-ink)]"
+                  }`}
+                >
+                  {c ?? "Both"}
                 </span>
               ))}
             </p>

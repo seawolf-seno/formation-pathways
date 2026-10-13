@@ -159,6 +159,12 @@ export function SparkLab({
               About five minutes each. No right answers, nothing graded. After each one, tell us if it felt like you. We&apos;re
               figuring out which way works best for students, so honest beats nice.
             </p>
+            {/* The lab skips SparkSky's intro, so the audience has to be named
+                here or these two sittings are the only ones that never say it. */}
+            <p className="spark-who">
+              Teachers and advisors here read your sparks, and so does admissions. It isn&apos;t graded
+              or scored and it doesn&apos;t count toward anything. Skip anything you&apos;d rather not answer.
+            </p>
             <button className="spark-go" onClick={() => startLeg(0)}>Start the first one ✦</button>
           </div>
         )}

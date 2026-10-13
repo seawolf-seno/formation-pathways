@@ -33,7 +33,10 @@ export interface StudentSparks {
   answers: { prompt: string; text: string; via: "voice" | "text" }[];
   /** Interests they tapped; `obsessed` ones they tapped twice. */
   picks: { label: string; obsessed: boolean }[];
-  /** "This or that": the side they chose for each pair shown. */
+  /** "This or that": the side they chose for each pair shown, or `""` where
+   *  they said it was genuinely both. "Both" is a real answer, not a skip —
+   *  forcing a side on a student who is into many things invents a preference
+   *  they never stated. */
   leanings: { a: string; b: string; choice: string }[];
   /** YouTube channels they chose to share from their own watch history (read
    *  on their device; only these names leave it). */
@@ -65,7 +68,7 @@ export function validateStudentSparks(raw: unknown): { ok: true; sparks: Student
       const x = l as { a?: unknown; b?: unknown; choice?: unknown };
       return { a: clip(x.a, 60), b: clip(x.b, 60), choice: clip(x.choice, 60) };
     })
-    .filter((l) => l.a && l.b && (l.choice === l.a || l.choice === l.b))
+    .filter((l) => l.a && l.b && (l.choice === "" || l.choice === l.a || l.choice === l.b))
     .slice(0, 10);
   const channels = [...new Set((Array.isArray(r.channels) ? r.channels : []).map((c) => clip(c, 80)).filter(Boolean))].slice(0, 15);
   if (!answers.length && !picks.length) {
@@ -106,7 +109,26 @@ export function sparksForPrompt(s: StudentSparks): string {
   const liked = s.picks.filter((p) => !p.obsessed).map((p) => p.label);
   if (obsessed.length) lines.push(`- Things they're obsessed with: ${obsessed.join(", ")}`);
   if (liked.length) lines.push(`- Things they enjoy: ${liked.join(", ")}`);
-  if (s.leanings.length) lines.push(`- How they lean: ${s.leanings.map((l) => `${l.choice} (over ${l.choice === l.a ? l.b : l.a})`).join("; ")}`);
+  // A student who tapped a lot and marked nothing an obsession reads, in a bare
+  // list, exactly like a student who had little to say — and the draft then
+  // picks one item and calls it their passion. Say the shape out loud instead.
+  if (s.picks.length >= 8 || (s.picks.length >= 5 && !obsessed.length)) {
+    lines.push(
+      `- The shape of that: ${s.picks.length} things tapped${
+        obsessed.length ? "" : ", none of them marked an obsession"
+      }. They are into a lot at once and deep in no single one yet. That is their answer, not a gap in it — do not promote one of these to "their passion".`
+    );
+  }
+  const leaned = s.leanings.filter((l) => l.choice);
+  const bothSides = s.leanings.filter((l) => !l.choice);
+  if (leaned.length) lines.push(`- How they lean: ${leaned.map((l) => `${l.choice} (over ${l.choice === l.a ? l.b : l.a})`).join("; ")}`);
+  if (bothSides.length) {
+    lines.push(
+      `- They would not pick a side on: ${bothSides
+        .map((l) => `${l.a} vs ${l.b}`)
+        .join("; ")}. They said both, so treat these as genuinely both — not as a missing answer, and not as a weak version of either side.`
+    );
+  }
   if (s.channels.length) lines.push(`- YouTube channels they chose to share: ${s.channels.join(", ")}`);
   return lines.join("\n");
 }

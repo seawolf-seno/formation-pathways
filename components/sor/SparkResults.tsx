@@ -110,8 +110,26 @@ export function SparkResults({
                 <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">This or that</p>
                 <ul className="mt-1 flex flex-wrap gap-1.5 text-xs">
                   {s.sparks.leanings.map((l) => (
-                    <li key={l.a + l.b} className="rounded-full border border-[var(--color-border)] px-2.5 py-1">
-                      <b>{l.choice}</b> <span className="text-[var(--color-ink-muted)]">over {l.choice === l.a ? l.b : l.a}</span>
+                    <li
+                      key={l.a + l.b}
+                      className={`rounded-full px-2.5 py-1 ${
+                        l.choice ? "border border-[var(--color-border)]" : "border border-dashed border-[var(--color-border)]"
+                      }`}
+                    >
+                      {l.choice ? (
+                        <>
+                          <b>{l.choice}</b>{" "}
+                          <span className="text-[var(--color-ink-muted)]">over {l.choice === l.a ? l.b : l.a}</span>
+                        </>
+                      ) : (
+                        // They said both. Show it as both, never as a blank or a side.
+                        <>
+                          <b>Both</b>{" "}
+                          <span className="text-[var(--color-ink-muted)]">
+                            {l.a} and {l.b}
+                          </span>
+                        </>
+                      )}
                     </li>
                   ))}
                 </ul>

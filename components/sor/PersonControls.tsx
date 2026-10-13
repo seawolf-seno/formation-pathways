@@ -215,6 +215,7 @@ type EditablePathway = {
   milestones?: { when: string; title: string; detail: string; spark?: string }[];
   glimpse?: string;
   hook?: string;
+  startingPoint?: string;
   whyNow?: string;
   whyNowSource?: string;
 };
@@ -226,6 +227,7 @@ type TextKey =
   | "horizon"
   | "glimpse"
   | "hook"
+  | "startingPoint"
   | "whyNow"
   | "whyNowSource";
 type Milestone = { when: string; title: string; detail: string; spark?: string };
@@ -255,6 +257,7 @@ export function EditPathwaysPanel({
       horizon: p.fourYearHorizon.join("\n"),
       glimpse: p.glimpse ?? "",
       hook: p.hook ?? "",
+      startingPoint: p.startingPoint ?? "",
       whyNow: p.whyNow ?? "",
       whyNowSource: p.whyNowSource ?? "",
       // Always four editable steps; blank ones are dropped on save.
@@ -320,6 +323,10 @@ export function EditPathwaysPanel({
           <label className="block text-xs text-[var(--color-ink-muted)]">
             Grows from (the one detail that is only theirs, in their words)
             <input value={row.hook} onChange={(e) => set(i, "hook", e.target.value)} className={`${input} mt-1`} />
+          </label>
+          <label className="block text-xs text-[var(--color-ink-muted)]">
+            Where they are now (what they have already done, in the second person; a stage, never a level or a score)
+            <textarea value={row.startingPoint} onChange={(e) => set(i, "startingPoint", e.target.value)} rows={2} className={area} />
           </label>
           <label className="block text-xs text-[var(--color-ink-muted)]">
             Next semester

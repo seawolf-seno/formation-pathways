@@ -13,6 +13,7 @@ import type { GeneratedPathway, PathwayMilestone } from "./types";
 export const MILESTONE_LIMITS = { min: 3, max: 5, when: 40, title: 80, detail: 400, spark: 60 } as const;
 export const GLIMPSE_MAX = 600;
 export const HOOK_MAX = 160;
+export const STARTING_POINT_MAX = 240;
 export const WHY_NOW_MAX = 400;
 export const WHY_NOW_SOURCE_MAX = 80;
 
@@ -43,14 +44,41 @@ export function sanitizeGlimpse(value: unknown): string | undefined {
   return g || undefined;
 }
 
+/** Scales and scores, which a starting point may never be (product principle
+ *  #2: "no numeric scores on students anywhere"). Plain counts of things a
+ *  student actually did are fine and are the point — "three Roblox games",
+ *  "two seasons" — so only unambiguous scale constructs are listed here, and
+ *  rank adjectives are not: "advanced" is a real course name at Pacifica. */
+const SCORED = [
+  /\b\d+\s*(?:\/|out of)\s*\d+\b/i, // 3/5, 7 out of 10
+  /\b(?:level|stage|tier|phase|step)\s*\d+\b/i, // level 2
+  /\b\d+\s*(?:%|percent\b)/i, // 80%, 80 percent
+  /\b(?:scores?|scored|rating|ranked?|ranks|percentile|grade of)\b/i,
+  /\b[A-F][+-]?\s+(?:grade|average)\b/, // B+ average
+];
+
+/** Where the student already stands, or nothing. Dropped rather than rewritten
+ *  if it arrives as a rank: a stage with a number in it is a score in nicer
+ *  clothes, and no adult signed off on scoring a teenager. */
+export function sanitizeStartingPoint(value: unknown): string | undefined {
+  const s = clip(value, STARTING_POINT_MAX);
+  if (!s || SCORED.some((re) => re.test(s))) return undefined;
+  return s;
+}
+
 /** The optional "what makes it theirs" fields: a hook in the student's words,
- *  and a why-now that only stands with its source (no unsourced world claims). */
-export function sanitizeUniqueness(raw: Record<string, unknown>): Pick<GeneratedPathway, "hook" | "whyNow" | "whyNowSource"> {
+ *  where they already stand, and a why-now that only stands with its source
+ *  (no unsourced world claims). */
+export function sanitizeUniqueness(
+  raw: Record<string, unknown>
+): Pick<GeneratedPathway, "hook" | "startingPoint" | "whyNow" | "whyNowSource"> {
   const hook = clip(raw.hook, HOOK_MAX);
+  const startingPoint = sanitizeStartingPoint(raw.startingPoint);
   const whyNow = clip(raw.whyNow, WHY_NOW_MAX);
   const whyNowSource = clip(raw.whyNowSource, WHY_NOW_SOURCE_MAX);
   return {
     ...(hook ? { hook } : {}),
+    ...(startingPoint ? { startingPoint } : {}),
     ...(whyNow && whyNowSource ? { whyNow, whyNowSource } : {}),
   };
 }
