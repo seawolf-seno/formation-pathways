@@ -9,7 +9,8 @@ const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  // YouTube's own thumbnails on the Mastery Hub's video shelf (links out; nothing embedded).
+  "img-src 'self' data: blob: https://i.ytimg.com",
   "font-src 'self'",
   "connect-src 'self'",
   "media-src 'self' blob:",
@@ -63,7 +64,7 @@ const nextConfig: NextConfig = {
   // runtime, so the deployment trace can't see them. Ship them with every
   // server route.
   outputFileTracingIncludes: {
-    "/*": ["./prompts/**/*", "./fixtures/sample/**/*", "./fixtures/world-signals.json", "./supabase/migrations/**/*", "./public/brand/**/*", "./assets/fonts/**/*"],
+    "/*": ["./prompts/**/*", "./fixtures/sample/**/*", "./fixtures/world-signals.json", "./fixtures/study-library.json", "./supabase/migrations/**/*", "./public/brand/**/*", "./assets/fonts/**/*"],
   },
 };
 

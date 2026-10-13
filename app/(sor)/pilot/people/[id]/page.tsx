@@ -1,9 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPersonProfile, getRoster, logAccess, requireStaff } from "@/lib/sor/queries";
+import { masterySummaryFor } from "@/lib/mastery/queries";
+import { allStandards } from "@/lib/mastery/config";
+import { studentStatuses } from "@/lib/mastery/rules";
 import { describeSent, pathwayInput } from "@/lib/sor/ai-input";
 import { SentToAi } from "@/components/sor/SentToAi";
 import { displayName } from "@/lib/sor/types";
+import { classesForReflection, latestReflections } from "@/lib/sor/class-reflections";
 import { audienceForStage, PATHWAY_PLAN } from "@/lib/types";
 import { PathwaysDisplay } from "@/components/PathwaysDisplay";
 import { TagChip } from "@/components/TagChips";
@@ -54,13 +58,19 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
   if (!profile) notFound();
   await logAccess(staff, "view_person", id);
 
-  const { person, admissions, enrollment, courses, classHistory, evidence, observations, drafts, consents, sparks } = profile;
+  // Mastery Hub courses this staff member teaches (RLS: the course's own
+  // teacher or an admin); empty until the hub's migration is applied.
+  const mastery = await masterySummaryFor(id);
+  const { person, admissions, enrollment, courses, classHistory, evidence, observations, drafts, consents, sparks, classReflections } = profile;
+  const enjoyed = latestReflections(classReflections);
+  const hasClasses = classesForReflection(courses, classHistory).length > 0;
   const voiceConsent = person.is_sample || consents.some((c) => c.scope === "student_voice" && !c.revoked_at);
   const name = displayName(person);
   const isAdmin = staff.role === "admin";
   const canDraft = staff.role === "admin" || staff.role === "admissions";
-  // RLS: student_sparks is readable by admin, admissions and teacher only.
-  const canReadSparks = canDraft || staff.role === "teacher";
+  // RLS: student_sparks and class_reflections are readable by admin, admissions and teacher only,
+  // and by a view-only account for fictional sample students.
+  const canReadSparks = canDraft || staff.role === "teacher" || staff.role === "viewer";
   const aiConsent = person.is_sample || consents.some((c) => c.scope === "ai_drafting" && !c.revoked_at);
   const latest = drafts[0];
   const plan = PATHWAY_PLAN[audienceForStage(person.stage)];
@@ -166,6 +176,62 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               )}
             </Section>
           </div>
+          {profile.classReflectionsReady && (
+          <div id="classes" className="scroll-mt-6">
+            <Section title="Classes they enjoy" source="Class reflections, in their words">
+              {!canReadSparks ? (
+                <Empty>Class reflections are visible to teachers, admissions and admins.</Empty>
+              ) : (
+                <div className="space-y-3 text-sm">
+                  {enjoyed.length > 0 && (
+                    <ul className="grid gap-3 sm:grid-cols-2">
+                      {enjoyed.map((c) => (
+                        <li key={c.key} className="rounded-xl border border-[var(--color-border)] bg-[var(--color-canvas)] p-4">
+                          <p className="flex flex-wrap items-baseline justify-between gap-2">
+                            <span className="font-medium text-[var(--color-navy-ink)]">{c.title}</span>
+                            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold text-[var(--color-navy-ink)] ${c.loved ? "bg-[var(--color-gold-light)]" : "bg-[var(--color-pacific-light)]"}`}>
+                              {c.loved ? "Loves it ✦" : "Enjoys it"}
+                            </span>
+                          </p>
+                          {c.liked.length > 0 && (
+                            <p className="mt-2">
+                              {c.liked.map((l) => (
+                                <span key={l} className="mb-1 mr-1 inline-block rounded-full bg-white px-2.5 py-1 text-xs">{l}</span>
+                              ))}
+                            </p>
+                          )}
+                          {c.note && <p className="mt-2 italic text-[var(--color-ink)]">&ldquo;{c.note}&rdquo;</p>}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {enjoyed.length > 0 && (
+                    <p className="text-xs text-[var(--color-ink-muted)]">
+                      Only classes {person.preferred_name || person.first_name} chose are listed. A class that isn&apos;t listed means nothing either way.
+                      {" "}Last sitting {new Date(classReflections[0].created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}.
+                    </p>
+                  )}
+                  {!voiceConsent ? (
+                    enjoyed.length === 0 && <Empty>No class reflections yet. They need student-voice consent (Consent box) first.</Empty>
+                  ) : !hasClasses ? (
+                    enjoyed.length === 0 && <Empty>No class reflections yet. Import their schedule (Blackbaud or Canvas) on the pilot page first.</Empty>
+                  ) : enjoyed.length > 0 ? (
+                    <Link href={`/pathway/${person.id}/classes`} className="font-semibold underline">Reflect on classes again →</Link>
+                  ) : (
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="max-w-md text-[var(--color-ink-muted)]">
+                        Everyone takes much the same classes. Sit with {person.preferred_name || person.first_name} and find out which ones they enjoy, and what makes them good.
+                      </p>
+                      <Link href={`/pathway/${person.id}/classes`} className="rounded-lg bg-[var(--color-navy)] px-3 py-2 text-sm font-medium text-white">
+                        Start class reflections
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Section>
+          </div>
+          )}
           <Section title="Where they've been" source="Finalsite">
             {!admissions ? (
               <Empty>{canDraft ? "No admissions data imported yet." : "Admissions files are visible to the admissions office."}</Empty>
@@ -246,6 +312,14 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
                     ))}
                   </ul>
                 )}
+                {hasClasses && (
+                  <p>
+                    <Link href={`/pathway/${person.id}/study`} className="font-semibold underline">
+                      Open the Study Hub with {person.preferred_name || person.first_name} →
+                    </Link>{" "}
+                    <span className="text-xs text-[var(--color-ink-muted)]">their classes, each with free study resources</span>
+                  </p>
+                )}
                 {comments.length > 0 && (
                   <div className="grid gap-3 sm:grid-cols-2">
                     {comments.map((e) => (
@@ -259,6 +333,37 @@ export default async function PersonPage({ params }: { params: Promise<{ id: str
               </div>
             )}
           </Section>
+
+          {mastery.length > 0 && (
+            <Section title="Paths toward mastery" source="Mastery Hub">
+              <ul className="space-y-3 text-sm">
+                {mastery.map(({ course, config, evidence: pieces }) => {
+                  const statuses = [...studentStatuses(config, pieces).values()];
+                  const strong = statuses.filter((st) => st.level === "extending" || st.level === "proficient");
+                  const titles = new Map(allStandards(config).map((st) => [st.code, st.title]));
+                  return (
+                    <li key={course.id}>
+                      <p className="text-[var(--color-ink)]">
+                        <Link href={`/mastery/${course.slug}/students/${person.id}`} className="font-semibold underline">
+                          {course.title}
+                        </Link>
+                        : proficient or beyond on {strong.length} of {statuses.length} standards.
+                      </p>
+                      {strong.some((st) => st.level === "extending") && (
+                        <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
+                          Going further on:{" "}
+                          {strong.filter((st) => st.level === "extending").slice(0, 5).map((st) => titles.get(st.code)).join(", ")}
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+              <p className="mt-3 text-xs text-[var(--color-ink-muted)]">
+                Levels in words only; scores stay in the Mastery Hub and never reach a Pathway or an AI draft.
+              </p>
+            </Section>
+          )}
 
           <Section title="What staff have seen" source="Voice & text capture">
             {observations.length === 0 ? (

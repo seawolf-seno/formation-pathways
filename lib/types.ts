@@ -108,6 +108,11 @@ export interface GeneratedPathway {
   /** Optional: the one distinctive detail this pathway grows from, in the
    *  student's own words (a prior school, a project, a hobby, one sentence). */
   hook?: string;
+  /** Optional: where this student already stands on this pathway, named from
+   *  the evidence ("you have built three Roblox games on your own"). A stage,
+   *  never a rank: no scale, no score, no placing them against other students
+   *  (product principle #2). `firstSemester` is the step that comes after it. */
+  startingPoint?: string;
   /** Optional: one sentence on why this pathway is timely, from a dated
    *  public podcast item (lib/world-signals.ts). Never a promise or contact. */
   whyNow?: string;

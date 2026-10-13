@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { cardContent, type PublicShare } from "@/lib/family-share";
+import { PAGE_DISCLOSURE, cardContent, type PublicShare } from "@/lib/family-share";
 import { PacificaLogo } from "@/components/PacificaLogo";
 import { SeawolfSurf } from "@/components/sor/SeawolfSurf";
 import "@/components/family-pathways.css";
@@ -39,6 +39,7 @@ export function SharedPathway({ share, cardSrc }: { share: PublicShare; cardSrc:
               Pacifica drafts a Formation Pathway for every family who tells us about their child, and a teacher or admissions
               staff member reviews and signs each one. An invitation, not a prediction.
             </p>
+            {share.thanks && <p className="wsh-fine">{PAGE_DISCLOSURE}</p>}
           </div>
 
           {/* eslint-disable-next-line @next/next/no-img-element */}

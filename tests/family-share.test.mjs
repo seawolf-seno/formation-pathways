@@ -50,3 +50,14 @@ test("the caption and every share link carry the link", () => {
     assert.ok(t.href.includes(encodeURIComponent(url)), t.id);
   }
 });
+
+test("the reward disclosure is added only while thank-yous are on, and kept if edited out", async () => {
+  const { withDisclosure, SHARE_DISCLOSURE, defaultCaption } = await import("../lib/family-share.ts");
+  const url = "https://example.org/w/abc";
+  assert.ok(!defaultCaption("Wren", "X", url).includes(SHARE_DISCLOSURE));
+  assert.ok(defaultCaption("Wren", "X", url, true).endsWith(SHARE_DISCLOSURE));
+  assert.ok(withDisclosure("My own words", true).endsWith(SHARE_DISCLOSURE));
+  assert.equal(withDisclosure("My own words", false), "My own words");
+  const once = withDisclosure("Hi", true);
+  assert.equal(withDisclosure(once, true), once);
+});

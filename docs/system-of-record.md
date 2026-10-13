@@ -131,6 +131,84 @@ The browser calls two invoker functions that wrap SECURITY DEFINER functions
 in the private schema (migration `20261004150000_spark_family_links.sql`;
 19 RLS cases, including calls made as `anon`).
 
+### Study Hub: their classes and free study resources
+
+**Open the Study Hub with [name]** (person page, "Where they are now") opens
+`/pathway/[personId]/study` on the adult's own signed-in device: the
+student's classes for the latest school year, straight from the schedule
+already imported (Blackbaud class history plus Canvas), each with the shared
+study library's free links for that subject (past exams, practice, open
+textbooks, reference) and what the student said they enjoy about it. It is
+the first step of folding Study Hub, a student's separate `study-commons`
+app, into Formation Pathways (Fizzy card #32).
+
+- **The library** is `fixtures/study-library.json`, which faculty can edit:
+  subjects, the title phrases that put a class in a subject (first match
+  wins, so the specific subject goes first), and links. It started from
+  Study Commons' curated links. Links only: nothing is mirrored, and each
+  publisher's terms apply. Only `https://` links are shown
+  (`lib/sor/study-library.ts`).
+- **No guessing.** A class whose title matches no subject shows "Nothing
+  shared for this class yet"; course-specific links (an AP archive, a unit's
+  chapter) show only for that course.
+- **Nothing about performance.** The page shows nothing about how a student
+  is doing in a class, and opening it is logged (`open_study_hub`). The
+  library itself needs no migration. There is still no student login: a
+  student using this alone, uploading files, or answering questions each
+  needs a decision first (see CLAUDE.md).
+
+### Links students add: suggested, then approved by a teacher
+
+On the Study Hub, **Add something that helped you** under a class lets the
+student suggest a link for it: the address, what it is, what kind of thing
+(video, practice, reading, reference, past exam) and, if they like, why it
+helped. Second step of folding Study Hub in (Fizzy #32).
+
+- **Links only.** No file is uploaded or stored, and nothing is mirrored.
+  Only `https://` links with no sign-in details are accepted (checked in the
+  app and again by the database).
+- **A teacher or admin decides.** A suggestion is saved unreviewed. It shows
+  on other students' Study Hubs, for a class with the same title, only after
+  it is approved at `/pilot/resources` ("Resources" in the top bar for
+  teachers and admins). The database records who decided, from the
+  signed-in account. A review can tidy the title, kind or note, but not the
+  link, the class or the student; a decision can be reversed.
+- **No names to other students.** Approved links say "Found by Pacifica
+  students" and "A student said: …". Staff see who suggested each one. A
+  student sees their own waiting ones, and never a declined label.
+- **Same rules as the rest of student voice.** `class_resources` (migration
+  `20261017000000_class_resources.sql`) needs the `student_voice` consent,
+  is written as the signed-in adult, and is removed if the student is
+  withdrawn. Until the migration is applied the button and the review list
+  are hidden and the Study Hub is unchanged.
+
+### Class reflections: which classes they enjoy
+
+Nearly every student takes the same classes, so a schedule says little about
+one of them. What a student enjoys in a class is theirs alone. On their page,
+**Start class reflections** opens `/pathway/[personId]/classes` on the adult's
+own signed-in device (first step of folding Study Hub in, Fizzy card #32):
+
+- **Their classes**, from the latest school year of Blackbaud class history
+  plus any Canvas course not already listed. Tap once for a class they like,
+  twice for one they love.
+- **What makes it good**, for each class they chose: taps from
+  `prompts/class-reflection-likes.txt` (faculty can edit it) and one sentence,
+  spoken or typed, about what they'd keep doing even if it wasn't assigned.
+
+Enjoyment only. A class the student doesn't tap is not recorded, and there is
+no rating, number or "didn't like it" anywhere. Saving uses the same rules as
+Spark: the **`student_voice`** consent (database trigger), written as the
+signed-in adult (`class_reflections`, migration
+`20261014000000_class_reflections.sql`), readable by admin, admissions and
+teachers. Only the student's own classes are kept, titled from their schedule
+rather than from the browser. Until the migration is applied the feature is
+hidden (no section on the person page, no prompt on the Study Hub) and
+nothing else changes. The next draft gets them as `classReflections`
+through the same name-removal step as everything else, and the prompt treats
+them like sparks: the signal is what they enjoy in a class, never the course
+itself, and a class they left out means nothing.
+
 **AI for real students is a separate switch.** `ANTHROPIC_API_KEY` alone runs
 AI for the fictional demo and the six sample students only. A real student's
 details reach Claude only when the family consented (`ai_drafting`) **and**
@@ -211,10 +289,40 @@ roster on stage. Then, by seno (real student details, so not an agent):
    `@pacificachristian.org` address creates a **pending** Staff account (a
    database trigger; subdomains like `@students.…` never match). Pending
    accounts see nothing. Admins approve them, set roles, or remove access in
-   the Staff section of `/pilot`. Once you've confirmed students don't hold
-   `@pacificachristian.org` addresses, tick *Approve new sign-ins
-   automatically* there and new staff start as Staff (capture only) straight
-   away. Nobody can change their own access.
+   the Staff section of `/pilot`. Tick *Approve new sign-ins automatically*
+   there and new staff start as Staff (capture only) straight away. Nobody can
+   change their own access.
+
+   **Students have `@pacificachristian.org` addresses too.** Theirs carry a
+   number before the @, so an address with a number is never approved
+   automatically (`private.is_student_address`, migration
+   `20261016000000_student_addresses_wait.sql`; the same rule in
+   `lib/sor/student-address.ts`). It waits, the person sees "not open to
+   student accounts yet", and `/pilot` tags it *Student address*. An admin can
+   still approve one by hand (a student contributor, or a staff address that
+   happens to carry a number). The rule is a guess from the address: it only
+   ever holds an account back for a person to decide. Accounts approved before
+   the migration are not changed; `/pilot` counts the student addresses that
+   have access so an admin can check each one.
+
+   **View only (sample students)** is the role for someone who needs to check
+   that the pages still work without being staff, such as a student
+   contributor (migration `20261018000000_view_only_accounts.sql`). An admin
+   picks it on `/pilot`; nobody gets it by signing in. Such an account:
+   - sees **fictional sample students only**: the people list and the
+     per-student tables a teacher can read, for samples and nothing else. A
+     real student's row is never returned, whatever page asks;
+   - **cannot save, send or create anything.** The database gives it no write
+     rule except its own access-log entries, and every Server Action refuses
+     it first (`requireActingStaff`, `tests/view-only.test.mjs`), so nothing
+     reaches Claude or another service either;
+   - starts at `/pilot/samples`, can open the person page, Study Hub, class
+     reflections, Spark and `/pilot/resources`, and is turned away from the
+     fictional demo in production (it is open in local development).
+   In the database a viewer is not "staff": `private.is_staff()` is false for
+   it, so a policy written the usual way leaves it out by default. A new table
+   a viewer should see needs its own `…_viewer_read` policy using
+   `private.viewer_sees(person_id)`.
 6. **Try it on fiction.** Go to `/pilot`, click *Load fictional sample pilot*,
    then run all three imports (sample mode), open a student, click *Draft*,
    and capture on `/capture`.
@@ -287,7 +395,8 @@ The button is built and hidden until `GOOGLE_SIGNIN=on`.
 2. Vercel env (Production): `GOOGLE_SIGNIN=on`, then redeploy.
 3. Sign in once with Google. The staff trigger already handles Google sign-ins:
    they arrive confirmed, with the person's full name, and start as *pending*
-   until approved on `/pilot`, unless auto-approve is on.
+   until approved on `/pilot`, unless auto-approve is on (a student address
+   always waits).
 
 ## Going live per source
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { PacificaLogo } from "@/components/PacificaLogo";
 import { PathwayJourney } from "@/components/PathwayJourney";
 import type { GeneratedPathway } from "@/lib/types";
 import "@/components/family-pathways.css";
 import { ShareStudio, type ShareAction } from "./ShareStudio";
+import { NextSteps } from "./NextSteps";
 import "./family-welcome.css";
 
 const WORDS = ["", "One", "Two", "Three", "Four", "Five", "Six"];
@@ -21,13 +22,15 @@ export interface WelcomeStory {
 /**
  * What an inquiring family sees: their own words back, where their child
  * could start at Pacifica (written by people, no AI), students who came from
- * the same school, their signed Formation Pathway, and what they can share.
- * Shown to staff as a preview for now; families will reach it by an emailed
- * link (card #29).
+ * the same school, a first week here, their signed Formation Pathway, and
+ * what they can share. Families see it twice: straight after they inquire
+ * (no pathway yet, `next` says what happens), and at the private link
+ * admissions emails once the pathway is signed. Staff see it as a preview.
  */
 export function FamilyWelcome({
   familyName, parentFirstName, childFirstName, currentSchool, oneThing, matches,
   stories, sameSchool, pathways, cardBase, share, stopSharing, moreWithApplication = false,
+  firstWeek = [], thanks = false, pathwayRequested = true, next, embed = false, referralCode = null, showPlaceholders = false,
 }: {
   familyName: string;
   parentFirstName: string;
@@ -45,16 +48,32 @@ export function FamilyWelcome({
   stopSharing?: () => Promise<{ ok: boolean }>;
   /** An inquiry gets two pathways; say more come with the application. */
   moreWithApplication?: boolean;
+  /** A first week here, written by staff (lib/discover.ts FIRST_WEEK). */
+  firstWeek?: { moment: string; line: string }[];
+  /** Thank-yous are on: shares carry the disclosure. */
+  thanks?: boolean;
+  /** The family asked for a pathway (if not, the section is left out). */
+  pathwayRequested?: boolean;
+  /** Straight after the form: what happens next. */
+  next?: ReactNode;
+  /** Inside the school website's frame: no header of our own. */
+  embed?: boolean;
+  /** The family's own code, for inviting another family. */
+  referralCode?: string | null;
+  /** Staff and sample families see which next-step links are placeholders. */
+  showPlaceholders?: boolean;
 }) {
   const [selected, setSelected] = useState(0);
   const pathway = pathways?.[selected];
 
   return (
     <div className="family-experience">
-      <header className="family-header">
-        <span className="family-wordmark"><PacificaLogo /></span>
-        <span className="family-demo">For the {familyName} family</span>
-      </header>
+      {!embed && (
+        <header className="family-header">
+          <span className="family-wordmark"><PacificaLogo /></span>
+          <span className="family-demo">For the {familyName} family</span>
+        </header>
+      )}
 
       <section className="family-hero fw-hero">
         <div className="family-hero-copy">
@@ -72,6 +91,8 @@ export function FamilyWelcome({
           )}
         </div>
       </section>
+
+      {next}
 
       {matches.length > 0 && (
         <section className="family-choices fw-section">
@@ -118,6 +139,27 @@ export function FamilyWelcome({
         </section>
       )}
 
+      {firstWeek.length > 0 && (
+        <section className="family-choices fw-section">
+          <div className="family-section-heading">
+            <div>
+              <p className="family-eyebrow">A first week</p>
+              <h2>What {childFirstName} would find here</h2>
+            </div>
+            <p>From our admissions team.</p>
+          </div>
+          <ul className="fw-matches">
+            {firstWeek.map((m) => (
+              <li key={m.moment}>
+                <span className="fw-program">{m.moment}</span>
+                <span className="fw-line">{m.line}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {pathwayRequested && (
       <section className="family-choices fw-section" id="pathway">
         <div className="family-section-heading">
           <div>
@@ -166,10 +208,12 @@ export function FamilyWelcome({
           </>
         ) : (
           <p className="family-intro">
-            A member of our admissions team is preparing it from what you shared, and will send it when it&apos;s ready.
+            A member of our admissions team is preparing it from what you shared, and will email you a private link when
+            it&apos;s ready.
           </p>
         )}
       </section>
+      )}
 
       {pathways && pathway && (
         <ShareStudio
@@ -180,8 +224,18 @@ export function FamilyWelcome({
           cardBase={cardBase}
           share={share}
           stopSharing={stopSharing}
+          thanks={thanks}
         />
       )}
+
+      <NextSteps
+        childFirstName={childFirstName}
+        pathway={pathways ? "ready" : pathwayRequested ? "preparing" : "not-requested"}
+        referralCode={referralCode}
+        shareAnchor={!!pathways}
+        thanks={thanks}
+        showPlaceholders={showPlaceholders}
+      />
 
       <footer className="family-footer">
         <span>Pacifica Christian · Formation Pathways</span>

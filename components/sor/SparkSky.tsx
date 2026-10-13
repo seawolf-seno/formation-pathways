@@ -133,9 +133,13 @@ export function SparkSky({
 
   const stars: Star[] = useMemo(
     () => [
-      ...answers.map((a, i) => ({ id: `a${i}`, label: short(a.text), bright: true })),
+      // Keyed by the question and the pair, not by position: taking one answer
+      // back would otherwise renumber every star after it and send the whole sky
+      // skidding to new places, which looks like a glitch rather than an undo.
+      ...answers.map((a) => ({ id: `a:${a.prompt}`, label: short(a.text), bright: true })),
       ...[...picks.entries()].map(([label, obsessed]) => ({ id: `p:${label}`, label, bright: obsessed })),
-      ...leanings.map((l, i) => ({ id: `l${i}`, label: l.choice, bright: false })),
+      // A pair they would not split still earns its star — it says both are them.
+      ...leanings.map((l) => ({ id: `l:${l.a}|${l.b}`, label: l.choice || `${l.a} + ${l.b}`, bright: false })),
       ...[...channels].map((c) => ({ id: `c:${c}`, label: c, bright: false })),
     ],
     [answers, picks, leanings, channels]
@@ -152,6 +156,20 @@ export function SparkSky({
     setUsedVoice(false);
     if (qi + 1 < questions.length) setQi(qi + 1);
     else setStep("pull");
+  }
+  /** Back to the question before, with that answer pulled out of the sky and
+   *  put back in the box to change or leave out. A student who says the real
+   *  thing and cannot unsay it learns not to say it; nothing is saved until the
+   *  sky, so taking a star back before then costs nothing. */
+  function goBack() {
+    if (qi === 0) return;
+    if (dictation.listening) dictation.stop();
+    const prev = qi - 1;
+    const at = answers.findIndex((a) => a.prompt === questions[prev]);
+    setDraft(at >= 0 ? answers[at].text : "");
+    if (at >= 0) setAnswers((a) => a.filter((_, i) => i !== at));
+    setUsedVoice(false);
+    setQi(prev);
   }
   function toggleMic() {
     if (dictation.listening) dictation.stop();
@@ -177,16 +195,27 @@ export function SparkSky({
     setCustom("");
   }
 
+  // `""` is a real answer: both sides are true of them. Recorded, not skipped.
+  // `chosen` holds a sentinel for it so the double-tap guard and the fade still
+  // work — an empty string is falsy and would defeat both.
   function lean(choice: string) {
     if (chosen) return;
     const pair = pairs[pi];
-    setChosen(choice);
+    setChosen(choice || "\u0000both");
     setLeanings((l) => [...l, { a: pair.a, b: pair.b, choice }]);
     setTimeout(() => {
       setChosen(null);
       if (pi + 1 < pairs.length) setPi(pi + 1);
       else setStep("channels");
     }, 650);
+  }
+
+  /** Back one pair, dropping the lean that was made there. `leanings` holds one
+   *  entry per pair already answered, in order, so the last one is `pi`'s. */
+  function leanBack() {
+    if (chosen || pi === 0) return;
+    setLeanings((l) => l.slice(0, pi - 1));
+    setPi(pi - 1);
   }
 
   async function readTakeout(file: File) {
@@ -296,6 +325,16 @@ export function SparkSky({
             <p className="spark-sub">
               No right answers. Nothing&apos;s graded. Say it out loud or type it. Everything you share becomes a star.
             </p>
+            {/* Who reads this, said before the first question rather than after
+                the last one. A student deciding how honest to be is deciding it
+                now, and guessing at the audience is the thing that makes them
+                hedge. Accurate as of the policies on student_sparks: teachers,
+                advisors and admissions can read these; plain staff cannot. */}
+            <p className="spark-who">
+              Teachers and advisors here read your sparks, and so does admissions. It isn&apos;t graded
+              or scored and it doesn&apos;t count toward anything. Skip any question you want, and you
+              can go back and take a star down before you&apos;re done.
+            </p>
             <button className="spark-go" onClick={() => setStep("ask")}>Light the first one ✦</button>
           </div>
         )}
@@ -324,7 +363,14 @@ export function SparkSky({
               placeholder={dictation.supported ? "Tap the mic and just talk, or type here…" : "Type here…"}
             />
             <div className="spark-row">
-              <button className="spark-quiet" onClick={nextQuestion}>Skip</button>
+              <span className="spark-row-left">
+                {qi > 0 && (
+                  <button className="spark-quiet" onClick={goBack}>
+                    ← Back
+                  </button>
+                )}
+                <button className="spark-quiet" onClick={nextQuestion}>Skip</button>
+              </span>
               <button className="spark-go" onClick={keepAnswer} disabled={!draft.trim() && !dictation.interim}>
                 Make it a star ✦
               </button>
@@ -384,7 +430,18 @@ export function SparkSky({
                 </button>
               ))}
             </div>
-            <p className="spark-sub">No wrong side. Go with your gut.</p>
+            <button
+              className={`spark-both ${chosen === "\u0000both" ? "is-chosen" : chosen ? "is-faded" : ""}`}
+              onClick={() => lean("")}
+            >
+              Both, honestly
+            </button>
+            <p className="spark-sub">No wrong side — and &ldquo;both&rdquo; counts as an answer.</p>
+            {pi > 0 && (
+              <button className="spark-quiet" onClick={leanBack}>
+                ← Back
+              </button>
+            )}
           </div>
         )}
 

@@ -100,6 +100,7 @@ function ruakhInputFor(p: Person): RuakhInput {
     ),
     observations: [],
     studentSparks: SPARKS[first] ?? null,
+    classReflections: null,
   };
 }
 

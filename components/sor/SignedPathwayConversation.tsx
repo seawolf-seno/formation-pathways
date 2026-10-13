@@ -123,6 +123,12 @@ export function SignedPathwayConversation({
           <p className="family-eyebrow">A closer look · {String(selected + 1).padStart(2, "0")}</p>
           <h2 id="pathway-title">{pathway.name}</h2>
           <p>A possibility to explore together, with the people and experiences that can help bring it to life.</p>
+          {pathway.startingPoint && (
+            <p className="family-starting-point">
+              <span>Where you are now</span>
+              {pathway.startingPoint}
+            </p>
+          )}
           {canRecord ? (
             <div className="space-y-3">
               <label className="family-small block">

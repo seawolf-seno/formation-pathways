@@ -2,7 +2,13 @@
 
 Fizzy card #26. Today production runs in seno's personal Vercel **Hobby** team (`seno-2280s-projects`). That team is meant for personal, non-commercial use, it keeps runtime logs for only one hour, and seno is its only member. A school system holding consented student data should sit in a team the school owns, with at least two admins, longer log retention and a spend limit.
 
-The move itself is done by seno and Pacifica IT. Nothing here has been changed in Vercel or Supabase yet.
+The move itself is done by seno and Pacifica IT.
+
+## Progress (2026-10-11)
+
+- Done: the **Pacifica Christian High School** Vercel team exists; `formation-pathways` was transferred into it with its environment variables and the `formation-pathways.vercel.app` address; production deploys from `main` there.
+- Done: a **staging** Supabase project (`tavgqwdqlwpmcejzefso`, fictional data only) holds the full schema, and Vercel's **Preview** environment points at it. Production keeps the live project.
+- Left: give colleagues a role that can deploy previews (Developer; Viewers' PRs stay blocked); staging Auth URL configuration; spend limit, 2FA requirement and log retention on the new team; a school domain; the security review steps on Fizzy #26.
 
 ## Decide first
 

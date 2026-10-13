@@ -23,7 +23,8 @@ What is NOT distinctive, and must never be the seed of a pathway:
 - Courses. Nearly every Pacifica student takes the same classes, so "they
   take Biology / AP Lang / Bible" says nothing about who they are. A course
   matters only through what a teacher wrote about THIS student's work in it,
-  or what the student made there. Never name a pathway after a subject.
+  what the student made there, or what the student said they enjoy about it.
+  Never name a pathway after a subject.
 - Generic virtues every application claims ("hard-working", "loves helping
   people", "likes learning new things") unless the student gave a concrete
   instance; then the instance is the hook, not the virtue.
@@ -34,12 +35,45 @@ harder, not wider: one specific detail, the school they came from, a single
 unusual sentence, is enough to build a pathway on. Do not pad with generic
 options; a thin file still deserves pathways only this kid would get.
 
+WHEN THE EVIDENCE IS WIDE, NOT THIN (the student who is into everything)
+Thin and wide are different problems, and the paragraph above is only for
+thin. Some students have no single big thing: they tapped ten interests
+instead of three, they are a little into many things and deep in none of
+them yet. That is information, not the absence of it. Do not quietly promote
+one interest to "their passion" and build the file on it. This is the most
+common way these pathways go wrong, and this student spots it immediately,
+because they know they never said that.
+
+For them the range is the distinctive thing. Find the hook in the shape of
+it rather than in one of its parts:
+- What runs through many of them at once: not the topic but the move. They
+  keep ending up as the one who figures out what nobody else will touch, or
+  the one who gets the group working, or the one who cannot leave a thing
+  alone until they know how it works. Use their words for it if they gave
+  you any.
+- A combination no one else would have. For a wide file this is the main
+  event: two or three interests that rarely show up in the same person beat
+  any one of them alone. Prefer combination hooks wherever the evidence
+  supports them, staying inside the per-interest cap in Step 2.
+- What the breadth is good for: the specific kind of work that needs someone
+  who can move between things. "Well-rounded" says nothing about anybody.
+Name the range out loud in at least one pathway, in plain words, so they
+recognize themselves. Being into many things is a true description of a
+person, not a failure to have chosen yet.
+Never tell this student to narrow down, pick a lane, focus, or commit.
+
 STEP 2: {{N_UPPER}} PATHWAYS, ALL DIFFERENT
 Write exactly {{N_UPPER}} pathways.
 - Each grows from a DIFFERENT hook from Step 1, and its "hook" field names
   that detail in the student's own words (max ~12 words, quoted or closely
   echoed; e.g. "the bike shop at my uncle's garage", "why do bats sleep
   upside down?").
+- A hook may also be a pattern across several of their interests rather than
+  one thing they named, which is usually the case for a wide file. Then the
+  "hook" field states the pattern in the same plain, concrete way (e.g.
+  "fixes it, then teaches whoever broke it", "six hobbies, all with
+  engines"): still short, still about them, just not a single quote. Never
+  invent a quotation they did not say to fill this field.
 - {{COMBO_RULE}}
 - {{FIELD_RULE}}
 - No two pathways may grow from the same hook or the same pair of hooks,
@@ -54,6 +88,27 @@ Write exactly {{N_UPPER}} pathways.
   Scholar", "Servant Leader", "Future Entrepreneur", "The Scholar",
   "Creative Artist", "Global Citizen", "Faith and Service", "Leadership
   Track", "Pre-Med Path". Names should sound like this student.
+
+WHERE THEY ALREADY STAND ("startingPoint", one per pathway)
+Say where this student already is on this pathway before naming what comes
+next, so the first step reads as the next thing rather than the first thing.
+One sentence, built only from what is in the evidence, written in the second
+person like the glimpse ("you have...") because it is meant to be read back
+to the student.
+- Name what they have already done, in plain concrete terms: "you have
+  rebuilt two bikes start to finish, including the wheel truing", "you have
+  run the sound board for three school productions". Counting things they
+  actually did is good and is the point.
+- It is a stage, never a rank. No scale, no score, no percentage, no letter,
+  no "level 2", no "intermediate", and never a comparison with other
+  students or with their grade. There is no ladder here and no top of it.
+- If the evidence does not say where they stand on this particular thing,
+  omit the field. Never guess at a stage, and never pad it with how they
+  "show promise" or are "developing well": that is a judgment dressed as an
+  observation, and nobody signed it.
+- Not a repeat of the hook, and not the first step. The hook is what makes it
+  theirs, the startingPoint is where they already are, "firstSemester" is
+  what they do next.
 
 STEP 3: CONNECT TO THE WORLD RIGHT NOW (at most {{WHY_NOW_MAX}} of the pathways)
 The user message may end with a "WORLD RIGHT NOW" block: numbered, dated

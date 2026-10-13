@@ -4,7 +4,7 @@ The staff hub is `/stem`; students use a private `/scholars/[token]` link. A rea
 
 ## Setup
 
-1. The repository owner applies `supabase/migrations/20261012000000_stem_scholars.sql` to the school database using the SQL editor or `supabase db push`. Agents must not apply live migrations or read real student tables. Before this, `/stem` shows a setup message and existing profiles continue to work.
+1. The repository owner applies `supabase/migrations/20261025000000_stem_scholars.sql` to the school database using the SQL editor or `supabase db push`. Agents must not apply live migrations or read real student tables. Before this, `/stem` shows a setup message and existing profiles continue to work.
 2. Sign in as an active admin, open **The distinction**, replace the suggested requirements with the school's official wording, save, then approve. The four starting requirements are suggestions, not school policy. There are no student scores, ranks or badges. An optional application deadline is enforced on submission.
 3. Add checked mentor/alumni entries and opportunities. Mentor contact details are staff-only. Opportunities stay drafts until published; expired opportunities disappear from student pages.
 4. Add an existing consented student to the hub. An admin manages student voice consent on the student's Formation Pathways profile. Meetings additionally need staff observations consent. The leadership pilot gate must be open for real students. No new student identities are created here.

@@ -13,7 +13,7 @@ import { DEMO_FAMILIES } from "@/lib/discover-demo";
 import { audienceForStage, FORMATION_TAGS, PATHWAY_PLAN, type FormationTag, type GeneratedPathway } from "@/lib/types";
 import { sanitizeGlimpse, sanitizeMilestones, sanitizeUniqueness } from "@/lib/pathway-journey";
 import { getSorClient } from "./supabase-server";
-import { getCaptureRoster, getInquiry, getPersonProfile, getRoster, logAccess, requireStaff } from "./queries";
+import { getCaptureRoster, getInquiry, getPersonProfile, getRoster, logAccess, requireActingStaff } from "./queries";
 import { matchPeople } from "./match";
 import { runImport, type ImportOutcome } from "./importers/run";
 import { runFunnelImport, type FunnelImportOutcome } from "./importers/run-funnel";
@@ -23,6 +23,8 @@ import { checkBlackbaudUser } from "./importers/blackbaud";
 import { blackbaudConnection, FLOW_COOKIE, TOKEN_COOKIE } from "./blackbaud-auth";
 import { cookies } from "next/headers";
 import { validateStudentSparks } from "./sparks";
+import { classesForReflection, tableNotThereYet, validateClassReflections } from "./class-reflections";
+import { validateResourceSuggestion } from "./class-resources";
 import {
   INQUIRY_STATUSES,
   displayName,
@@ -49,7 +51,7 @@ const fail = (e: unknown): { ok: false; error: string } => {
 };
 
 async function requireRole(...roles: StaffMember["role"][]): Promise<StaffMember> {
-  const staff = await requireStaff();
+  const staff = await requireActingStaff();
   if (!roles.includes(staff.role)) throw new Error(`This needs the ${roles.join(" or ")} role.`);
   return staff;
 }
@@ -159,7 +161,7 @@ export async function setGateAction(formData: FormData): Promise<Result> {
   }
 }
 
-const STAFF_ROLES: StaffMember["role"][] = ["admin", "admissions", "teacher", "staff"];
+const STAFF_ROLES: StaffMember["role"][] = ["admin", "admissions", "teacher", "staff", "viewer"];
 
 /** Approve, change the role of, or deactivate a staff member. Never your own
  *  row, so an admin can't lock themselves (and everyone else) out. */
@@ -364,6 +366,8 @@ export async function recordConsentAction(formData: FormData): Promise<Result> {
         recorded_by: staff.user_id,
       }))
     );
+    if (error && /mastery_records/.test(error.message))
+      return { ok: false, error: "The Mastery Hub consent needs its database migration first (20261019000000_mastery_hub.sql). Record the others without it." };
     if (error) return fail(error);
     await logAccess(staff, "record_consent", personId, { scopes });
     revalidatePath("/pilot");
@@ -549,6 +553,8 @@ export async function updateInquiryStatusAction(id: string, status: string): Pro
     if (!data?.length) throw new Error("That inquiry isn't available.");
     await logAccess(staff, "inquiry_status", null, { inquiry: id, status });
     revalidatePath("/pilot/inquiries");
+    revalidatePath("/pilot/inquiries/referrals");
+    revalidatePath(`/pilot/inquiries/${id}`);
     return { ok: true };
   } catch (e) {
     return fail(e);
@@ -709,6 +715,99 @@ export async function createFamilyLinkAction(inquiryId: string): Promise<Result<
   }
 }
 
+// ---------------------------------------------------------------- referrals and thank-yous
+
+/** Admin records leadership's decision on referral thank-yous (what, when,
+ *  how many), or turns them off. The database refuses cash and an
+ *  unrecorded approval. docs/referrals.md. */
+export async function setReferralThanksDecisionAction(formData: FormData): Promise<Result> {
+  try {
+    const staff = await requireRole("admin");
+    const open = formData.get("open") === "true";
+    const what = String(formData.get("what") ?? "").trim();
+    const on = formData.get("on") === "enrolled" ? "enrolled" : "applied";
+    const cap = Number(formData.get("cap"));
+    const approvedBy = String(formData.get("approved_by") ?? "").trim();
+    const reference = String(formData.get("approval_reference") ?? "").trim();
+    if (open && (!what || !approvedBy || !reference)) {
+      return { ok: false, error: "Enter what the thank-you is, who approved it and where that approval lives." };
+    }
+    if (open && !(Number.isInteger(cap) && cap >= 1 && cap <= 10)) return { ok: false, error: "The cap is 1 to 10 per family." };
+    const supabase = await getSorClient();
+    const { error } = await supabase
+      .from("pilot_settings")
+      .update(
+        open
+          ? {
+              referral_thanks_open: true,
+              referral_thanks_what: what,
+              referral_thanks_on: on,
+              referral_thanks_cap: cap,
+              referral_thanks_approved_by: approvedBy,
+              referral_thanks_approval_reference: reference,
+              referral_thanks_approved_at: new Date().toISOString(),
+            }
+          : { referral_thanks_open: false }
+      )
+      .eq("id", true);
+    if (error) {
+      if (/referral_thanks_not_cash/.test(error.message)) return { ok: false, error: "A thank-you can't be cash or a cash equivalent." };
+      return fail(error);
+    }
+    await logAccess(staff, open ? "referral_thanks_open" : "referral_thanks_close", null, open ? { what, on, cap, approvedBy, reference } : {});
+    revalidatePath("/pilot/inquiries/referrals");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Admissions confirms that a family came through another family's link.
+ *  The database checks it's the code that brought them and not the same family. */
+export async function confirmReferralAction(referredInquiryId: string): Promise<Result> {
+  try {
+    const staff = await requireRole("admin", "admissions");
+    const supabase = await getSorClient();
+    const { data: referred } = await supabase.from("inquiries").select("id, referred_by_code").eq("id", referredInquiryId).maybeSingle();
+    if (!referred?.referred_by_code) throw new Error("This family didn't come through another family's link.");
+    const { data: referrer } = await supabase.from("inquiries").select("id").eq("share_code", referred.referred_by_code).maybeSingle();
+    if (!referrer) throw new Error("The family whose link it was isn't available.");
+    const { error } = await supabase
+      .from("referral_thanks")
+      .insert({ referred_inquiry_id: referred.id, referrer_inquiry_id: referrer.id });
+    if (error) return fail(error.code === "23505" ? new Error("Already confirmed.") : error);
+    await logAccess(staff, "referral_confirm", null, { inquiry: referred.id, referrer: referrer.id });
+    revalidatePath("/pilot/inquiries/referrals");
+    revalidatePath(`/pilot/inquiries/${referred.id}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** The next step for a thank-you: approve, record it sent, or decline with a
+ *  note. The database records who did each step and enforces the rules. */
+export async function stepReferralThanksAction(id: string, step: "approved" | "sent" | "declined", note?: string): Promise<Result> {
+  try {
+    const staff = await requireRole("admin", "admissions");
+    if (!["approved", "sent", "declined"].includes(step)) throw new Error("Unknown step.");
+    const supabase = await getSorClient();
+    const { data, error } = await supabase
+      .from("referral_thanks")
+      .update({ status: step, ...(step === "declined" ? { note: (note ?? "").trim().slice(0, 500) } : {}) })
+      .eq("id", id)
+      .select("id, referred_inquiry_id");
+    if (error) return fail(error);
+    if (!data?.length) throw new Error("That referral isn't available.");
+    await logAccess(staff, `referral_thanks_${step}`, null, { referral: id });
+    revalidatePath("/pilot/inquiries/referrals");
+    revalidatePath(`/pilot/inquiries/${data[0].referred_inquiry_id}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 /** Ends every private link for a family (their public shares are separate:
  *  the family stops those, or the inquiry is closed). */
 export async function endFamilyLinksAction(inquiryId: string): Promise<Result> {
@@ -758,7 +857,7 @@ export async function matchCaptureAction(
   transcript: string
 ): Promise<Result<{ candidates: { id: string; name: string; stage: string }[]; confident: boolean }>> {
   try {
-    await requireStaff();
+    await requireActingStaff();
     const roster = await getCaptureRoster();
     const matches = matchPeople(transcript, roster);
     const candidates = matches.map((m) => ({
@@ -782,7 +881,7 @@ export async function draftCaptureAction(
   Result<{ cleanText: string; tags: FormationTag[]; disciplineFlag: string | null; aiUsed: boolean; aiNote: string | null }>
 > {
   try {
-    const staff = await requireStaff();
+    const staff = await requireActingStaff();
     const profile = await getPersonProfile(personId);
     if (!profile) return { ok: false, error: "Student not found." };
     if (!hasConsent(profile, "ai_drafting")) {
@@ -831,7 +930,7 @@ export async function saveCaptureAction(input: {
   disciplineFlag: string | null;
 }): Promise<Result> {
   try {
-    const staff = await requireStaff();
+    const staff = await requireActingStaff();
     const tags = input.tags.filter((t): t is FormationTag => (FORMATION_TAGS as readonly string[]).includes(t));
     const supabase = await getSorClient();
     const { error } = await supabase.from("observations").insert({
@@ -929,6 +1028,17 @@ export async function updateDraftPathwaysAction(input: {
     if (pathways.length < plan.keepMin) {
       throw new Error(`Keep at least ${plan.keepMin} ${plan.keepMin === 1 ? "pathway" : "pathways"}.`);
     }
+    // Said out loud rather than silently deleted: a staff member who typed
+    // "level 3 of 5" here should learn why it can't be saved, not watch their
+    // sentence vanish. No scores on students (product principle #2).
+    const scored = input.pathways.find(
+      (p, i) => String(p.startingPoint ?? "").trim() && !pathways[i]?.startingPoint
+    );
+    if (scored) {
+      throw new Error(
+        `"Where they are now" can't be a score or a level — say what they've already done instead (in "${clip(scored.name, 60)}").`
+      );
+    }
     if (pathways.some((p) => !p.name || !p.firstSemester)) {
       throw new Error("Each pathway needs a name and a first-semester description.");
     }
@@ -953,7 +1063,7 @@ export async function updateDraftPathwaysAction(input: {
  *  signed in. The database refuses it without student_voice consent. */
 export async function saveStudentSparksAction(input: { personId: string; sparks: unknown }): Promise<Result> {
   try {
-    const staff = await requireStaff();
+    const staff = await requireActingStaff();
     const checked = validateStudentSparks(input.sparks);
     if (!checked.ok) return { ok: false, error: checked.error };
     const supabase = await getSorClient();
@@ -980,6 +1090,105 @@ export async function saveStudentSparksAction(input: { personId: string; sparks:
   }
 }
 
+/** Save which classes a student enjoys and what makes each one good, as the
+ *  adult who's signed in. Only the student's own classes are kept, with the
+ *  titles from their schedule. The database refuses it without student_voice
+ *  consent. */
+export async function saveClassReflectionsAction(input: { personId: string; reflections: unknown }): Promise<Result> {
+  try {
+    const staff = await requireActingStaff();
+    const profile = await getPersonProfile(input.personId);
+    if (!profile) return { ok: false, error: "Student not found." };
+    const checked = validateClassReflections(input.reflections, classesForReflection(profile.courses, profile.classHistory));
+    if (!checked.ok) return { ok: false, error: checked.error };
+    const supabase = await getSorClient();
+    const { error } = await supabase
+      .from("class_reflections")
+      .insert({ person_id: input.personId, reflections: checked.reflections, created_by: staff.user_id });
+    if (error) {
+      if (tableNotThereYet(error)) {
+        return { ok: false, error: "Class reflections aren't switched on yet. Nothing on this screen is lost; try again in a few minutes." };
+      }
+      return {
+        ok: false,
+        error: /student_voice/.test(error.message)
+          ? "There's no student-voice consent on file for this student, so their class reflections can't be saved."
+          : error.message,
+      };
+    }
+    const { classes } = checked.reflections;
+    await logAccess(staff, "class_reflections", input.personId, {
+      classes: classes.length,
+      loved: classes.filter((c) => c.loved).length,
+      notes: classes.filter((c) => c.note).length,
+    });
+    revalidatePath(`/pilot/people/${input.personId}`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+const RESOURCES_NOT_YET = "Adding resources isn't switched on yet. Nothing on this screen is lost; try again in a few minutes.";
+
+/** Save a study link a student suggests for one of their own classes, as the
+ *  adult who's signed in. It starts unreviewed: nobody else sees it until a
+ *  teacher or admin approves it. The database refuses it without
+ *  student_voice consent. */
+export async function suggestClassResourceAction(input: { personId: string; suggestion: unknown }): Promise<Result> {
+  try {
+    const staff = await requireActingStaff();
+    const profile = await getPersonProfile(input.personId);
+    if (!profile) return { ok: false, error: "Student not found." };
+    const checked = validateResourceSuggestion(input.suggestion, classesForReflection(profile.courses, profile.classHistory));
+    if (!checked.ok) return { ok: false, error: checked.error };
+    const { classTitle, title, url, kind, note } = checked.suggestion;
+    const supabase = await getSorClient();
+    const { error } = await supabase
+      .from("class_resources")
+      .insert({ person_id: input.personId, class_title: classTitle, title, url, kind, note, created_by: staff.user_id });
+    if (error) {
+      if (tableNotThereYet(error)) return { ok: false, error: RESOURCES_NOT_YET };
+      return {
+        ok: false,
+        error: /student_voice/.test(error.message)
+          ? "There's no student-voice consent on file for this student, so what they suggest can't be saved."
+          : error.message,
+      };
+    }
+    await logAccess(staff, "suggest_class_resource", input.personId, { kind, host: new URL(url).hostname });
+    revalidatePath(`/pathway/${input.personId}/study`);
+    revalidatePath("/pilot/resources");
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** A teacher or admin approves or declines a suggested link. The database
+ *  records who decided (the signed-in reviewer, never a value sent here) and
+ *  refuses any change to the link, the class or the student. */
+export async function reviewClassResourceAction(id: string, decision: "approved" | "declined"): Promise<Result> {
+  try {
+    const staff = await requireRole("admin", "teacher");
+    if (decision !== "approved" && decision !== "declined") return { ok: false, error: "Choose approve or decline." };
+    const supabase = await getSorClient();
+    const { data, error } = await supabase
+      .from("class_resources")
+      .update({ status: decision })
+      .eq("id", id)
+      .select("person_id");
+    if (error) return tableNotThereYet(error) ? { ok: false, error: RESOURCES_NOT_YET } : fail(error);
+    if (!data?.length) return { ok: false, error: "That suggestion isn't there any more." };
+    await logAccess(staff, "review_class_resource", data[0].person_id, { resourceId: id, decision });
+    revalidatePath("/pilot/resources");
+    revalidatePath(`/pathway/${data[0].person_id}/study`);
+    return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
 const SPARK_LINK_DAYS = 7;
 
 /** Make a one-time, write-only link a family can open at home to do Spark
@@ -987,7 +1196,7 @@ const SPARK_LINK_DAYS = 7;
  *  and can't be shown again. Needs student_voice consent (DB trigger). */
 export async function createSparkLinkAction(personId: string): Promise<Result<{ url: string; expiresAt: string }>> {
   try {
-    const staff = await requireStaff();
+    const staff = await requireActingStaff();
     const supabase = await getSorClient();
     const { data: person } = await supabase
       .from("people")

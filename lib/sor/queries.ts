@@ -14,13 +14,20 @@ import type {
   InquiryFamilyLink,
   InquiryPathway,
   InquiryShare,
+  ReferralThanks,
 } from "./types";
+import { VIEW_ONLY_MESSAGE } from "./types";
 import type { FunnelCount } from "./funnel";
 import { validateStudentSparks } from "./sparks";
 import { getStemProfile } from "./stem-queries";
+import { tableNotThereYet, validateClassReflections, type ReflectionClass } from "./class-reflections";
+import { classKey, type ClassResource } from "./class-resources";
+import { looksLikeStudentAddress } from "./student-address";
+import { masteryForPerson } from "../mastery/profile";
 
 /** The signed-in, active staff member, or a redirect to /login. Signed in
- *  and waiting for an admin → /login?error=pending; not on the staff table at
+ *  and waiting for an admin → /login?error=pending, or ?error=student for a
+ *  student address (never approved automatically); not on the staff table at
  *  all (e.g. a non-school address) → /login?error=not-staff. */
 export async function requireStaff(): Promise<StaffMember> {
   await connection(); // per-request, never prerendered, even if env is missing at build time
@@ -36,10 +43,26 @@ export async function requireStaff(): Promise<StaffMember> {
     .select("user_id, email, display_name, role, active")
     .eq("user_id", user.id)
     .maybeSingle();
+  if (!data || !data.active) {
+    // A student with a Mastery Hub sign-in belongs on their own page (RLS
+    // shows a non-staff account only its own student_accounts row).
+    const { data: student } = await supabase.from("student_accounts").select("person_id").limit(1);
+    if (student?.length) redirect("/me");
+  }
   if (!data) redirect("/login?error=not-staff");
-  if (!data.active) redirect("/login?error=pending");
+  if (!data.active) redirect(`/login?error=${looksLikeStudentAddress(data.email) ? "student" : "pending"}`);
   const { user_id, email, display_name, role } = data as StaffMember;
   return { user_id, email, display_name, role };
+}
+
+/** For anything that saves, sends, creates or calls the AI: the signed-in
+ *  staff member, unless the account is view only. Every Server Action in
+ *  lib/sor/actions.ts goes through this (tests/view-only.test.mjs), so a
+ *  viewer is stopped before any work starts, not only by the database. */
+export async function requireActingStaff(): Promise<StaffMember> {
+  const staff = await requireStaff();
+  if (staff.role === "viewer") throw new Error(VIEW_ONLY_MESSAGE);
+  return staff;
 }
 
 export async function logAccess(
@@ -71,6 +94,13 @@ export async function getPilotSettings(): Promise<PilotSettings> {
     inquiries_approved_by: null,
     inquiries_approval_reference: null,
     inquiries_approved_at: null,
+    referral_thanks_open: false,
+    referral_thanks_what: null,
+    referral_thanks_on: "applied",
+    referral_thanks_cap: 3,
+    referral_thanks_approved_by: null,
+    referral_thanks_approval_reference: null,
+    referral_thanks_approved_at: null,
   };
 }
 
@@ -127,7 +157,7 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
   const supabase = await getSorClient();
   const { data: person } = await supabase.from("people").select("*").eq("id", id).maybeSingle();
   if (!person) return null;
-  const [externalIds, consents, admissions, enrollment, courses, evidence, observations, drafts, classHistory, sparks] =
+  const [externalIds, consents, admissions, enrollment, courses, evidence, observations, drafts, classHistory, sparks, reflections] =
     await Promise.all([
       supabase.from("external_ids").select("*").eq("person_id", id),
       supabase.from("consents").select("*").eq("person_id", id).order("created_at"),
@@ -166,9 +196,21 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
         .eq("person_id", id)
         .order("created_at", { ascending: false })
         .limit(20),
+      // What they enjoy about their classes, every sitting, newest first.
+      supabase
+        .from("class_reflections")
+        .select("*")
+        .eq("person_id", id)
+        .order("created_at", { ascending: false })
+        .limit(20),
     ]);
   // A failed read must never pass for "nothing there": say so in the logs.
   if (sparks.error) console.error("student_sparks read failed:", sparks.error.message);
+  // Hidden, quietly, until the class_reflections migration is applied.
+  if (reflections.error && !tableNotThereYet(reflections.error)) {
+    console.error("class_reflections read failed:", reflections.error.message);
+  }
+  const mastery = await masteryForPerson(id);
   return {
     stem: await getStemProfile(id),
     person: person as Person,
@@ -180,6 +222,7 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
     evidence: evidence.data ?? [],
     observations: observations.data ?? [],
     drafts: drafts.data ?? [],
+    mastery,
     classHistory: classHistory.data ?? [],
     // Re-validated on read: a family link can submit straight to the database,
     // so a stored row isn't trusted to have the app's shape.
@@ -195,7 +238,46 @@ export async function getPersonProfile(id: string): Promise<PersonProfile | null
         source: row.source === "family_link" ? ("family_link" as const) : ("in_person" as const),
       }];
     }),
+    classReflectionsReady: !tableNotThereYet(reflections.error),
+    classReflections: (reflections.data ?? []).flatMap((row) => {
+      const checked = validateClassReflections(row.reflections);
+      return checked.ok ? [{ reflections: checked.reflections, created_at: row.created_at }] : [];
+    }),
   } as PersonProfile;
+}
+
+/** Suggested study links for a student's classes, as far as the signed-in
+ *  staff member may see them: approved ones for everyone, unreviewed and
+ *  declined ones for the roles that review. `ready` is false until the
+ *  class_resources migration is applied, and the feature hides itself. */
+export async function getClassResources(classes: ReflectionClass[]): Promise<{ ready: boolean; rows: ClassResource[] }> {
+  const keys = [...new Set(classes.map((c) => classKey(c.title)))];
+  const supabase = await getSorClient();
+  const { data, error } = await supabase
+    .from("class_resources")
+    .select("*")
+    .in("class_key", keys.length ? keys : [""])
+    .order("created_at", { ascending: true })
+    .limit(300);
+  if (error && !tableNotThereYet(error)) console.error("class_resources read failed:", error.message);
+  return { ready: !tableNotThereYet(error), rows: (data ?? []) as ClassResource[] };
+}
+
+/** Every suggestion waiting for a teacher, oldest first, and the most recent
+ *  decisions. Admin and teacher (RLS shows other roles less). */
+export async function getResourcesForReview(): Promise<{ ready: boolean; pending: ClassResource[]; decided: ClassResource[] }> {
+  const supabase = await getSorClient();
+  const [pending, decided] = await Promise.all([
+    supabase.from("class_resources").select("*").eq("status", "pending").order("created_at", { ascending: true }).limit(200),
+    supabase.from("class_resources").select("*").neq("status", "pending").order("reviewed_at", { ascending: false }).limit(50),
+  ]);
+  const error = pending.error ?? decided.error;
+  if (error && !tableNotThereYet(error)) console.error("class_resources read failed:", error.message);
+  return {
+    ready: !tableNotThereYet(error),
+    pending: (pending.data ?? []) as ClassResource[],
+    decided: (decided.data ?? []) as ClassResource[],
+  };
 }
 
 export async function getImportRuns(): Promise<ImportRun[]> {
@@ -268,6 +350,28 @@ export async function getInquiries(): Promise<Inquiry[]> {
     .limit(1000);
   if (error) console.error("inquiries read failed:", error.message);
   return (data ?? []) as Inquiry[];
+}
+
+/** Every confirmed referral and its thank-you. RLS: admin and admissions.
+ *  Empty (not an error) until 20261012000000_referral_thanks.sql is applied. */
+export async function getReferralThanks(): Promise<ReferralThanks[]> {
+  const supabase = await getSorClient();
+  const { data, error } = await supabase.from("referral_thanks").select("*").order("confirmed_at", { ascending: false });
+  if (error) console.error("referral_thanks read failed:", error.message);
+  return (data ?? []) as ReferralThanks[];
+}
+
+/** What happened after families inquired, for the counts-only report: which
+ *  inquiries have a signed pathway, a family link, and live or past shares. */
+export async function getInquiryActivity(): Promise<{ signed: Set<string>; linked: Set<string>; shared: Set<string>; shares: number }> {
+  const supabase = await getSorClient();
+  const [{ data: signed }, { data: links }, { data: shares }] = await Promise.all([
+    supabase.from("inquiry_pathways").select("inquiry_id").eq("status", "approved"),
+    supabase.from("inquiry_family_links").select("inquiry_id"),
+    supabase.from("inquiry_shares").select("inquiry_id"),
+  ]);
+  const ids = (rows: { inquiry_id: string }[] | null) => new Set((rows ?? []).map((r) => r.inquiry_id));
+  return { signed: ids(signed), linked: ids(links), shared: ids(shares), shares: shares?.length ?? 0 };
 }
 
 /** The signed-in, active staff member, or null. Never redirects: for public

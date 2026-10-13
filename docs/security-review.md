@@ -51,7 +51,7 @@ Apply it in the Supabase SQL editor (or `supabase db push`). Then open `/pilot` 
 
 ## Needs a decision
 
-1. **What the plain `staff` role can read.** Any active staff account can read every student's observations (including the raw dictation and any discipline flag), consent records (parents' names and evidence) and enrollments. With auto-approve on, that is every holder of a school address. Suggested: observations readable by admin, admissions, teachers and their author only; consents by admin and admissions. Related: card #21.
+1. **What the plain `staff` role can read.** Any active staff account can read every student's observations (including the raw dictation and any discipline flag), consent records (parents' names and evidence) and enrollments. With auto-approve on, that is every holder of a staff-shaped school address (since `20261016000000_student_addresses_wait.sql`, an address with a number before the @, which is how student addresses look, always waits for an admin; Fizzy #35). Suggested: observations readable by admin, admissions, teachers and their author only; consents by admin and admissions. Related: card #21.
 2. **Staff who leave.** A staff member can change their sign-in email to a personal address and keep access after their school mailbox is closed, until an admin deactivates them. Turn on Supabase Auth's secure email change (or disable email changes), and make "deactivate in /pilot" part of offboarding.
 3. **Preview deployments use the production database.** Code from any unmerged branch runs against real student data, behind Vercel sign-in. Give Preview its own Supabase project with fictional data only (see `docs/hosting-move.md`).
 4. **Rate limits.** Nothing limits requests to `/login` (email codes), the family Spark link, or the share-card image. Add Vercel Firewall rate-limit rules, about 20 requests per minute per IP, and check Supabase Auth's own limits.
@@ -85,6 +85,7 @@ Apply it in the Supabase SQL editor (or `supabase db push`). Then open `/pilot` 
   - single use, with a row lock;
   - expiry and consent are checked when a link is made and when it's used;
   - a visitor learns only a first name.
+- A view-only account (`viewer`, `20261018000000_view_only_accounts.sql`) reads fictional sample students only and writes nothing but its own access-log entries. The same migration stops an account from deleting observations and at-home links it made once its access is removed or made view-only.
 - Staff self-provisioning creates pending `staff` accounts only. Nobody can activate or promote themselves, and the email domain is enforced on every staff row.
 - Every system-of-record action checks the signed-in staff member and role before touching data, with row-level security behind it.
 - Blackbaud sign-in uses PKCE plus a checked `state`. The token lives only in an httpOnly cookie, readable only by admin actions.

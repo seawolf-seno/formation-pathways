@@ -36,7 +36,7 @@ test("links and dates reject malformed values", () => {
 });
 test("STEM project evidence enters pathway drafting with known names and contacts removed", () => {
   const person = { id: "one", first_name: "Casey", last_name: "Rivera", preferred_name: null, stage: "enrolled", current_grade: 10 };
-  const profile = { person, admissions: null, enrollment: null, courses: [], classHistory: [], evidence: [], observations: [], sparks: [],
+  const profile = { person, admissions: null, enrollment: null, courses: [], classHistory: [], evidence: [], observations: [], sparks: [], classReflections: [],
     stem: { mentorNames: ["Jordan Ellis"], work: [{ kind: "project", title: "Sensor project", body: "Casey Rivera tested the sensor with Jordan Ellis. Email casey@example.test.", next_step: "", approved_by: "Taylor Smith", updated_at: "2026-10-01" }] } };
   const { input, anon } = pathwayInput(profile, [person], "Taylor Smith");
   const serialized = JSON.stringify(input);

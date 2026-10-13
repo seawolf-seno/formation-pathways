@@ -19,6 +19,8 @@ export interface FamilyPage {
   interests: string[];
   shareCode: string;
   isSample: boolean;
+  /** Thank-yous are on: shares carry the disclosure. */
+  thanks: boolean;
   expiresAt: string;
   pathways: GeneratedPathway[] | null;
 }
@@ -38,6 +40,7 @@ export async function getFamilyPage(token: string): Promise<FamilyPage | null> {
     interests: Array.isArray(d.interests) ? d.interests.filter((x): x is string => typeof x === "string") : [],
     shareCode: String(d.share_code ?? ""),
     isSample: d.is_sample === true,
+    thanks: d.thanks === true,
     expiresAt: String(d.expires_at ?? ""),
     pathways: Array.isArray(d.pathways) && d.pathways.length ? (d.pathways as GeneratedPathway[]) : null,
   };
@@ -49,6 +52,7 @@ export function pageAsShare(page: FamilyPage, index: number, style: CardStyle): 
   if (!p) return null;
   return parsePublicShare({
     first_name: page.childFirstName,
+    thanks: page.thanks,
     style,
     ref: page.shareCode,
     pathway: {

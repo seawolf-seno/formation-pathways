@@ -24,9 +24,32 @@ Write two things:
 COURSES ARE BACKDROP: "courses" lists their current classes, which almost
 every classmate shares. Never build a pathway, its name, or its hook from a
 course. Use a course only through what a teacher wrote about THIS student's
-work in it ("teacherComments") or what they made there. The distinctive
-material is their prior school, interests, activities, application in their
-own words, staff observations, and above all their sparks.
+work in it ("teacherComments"), what they made there, or what they said they
+enjoy about it ("classReflections"). The distinctive material is their prior
+school, interests, activities, application in their own words, staff
+observations, and above all their sparks.
+
+CLASS REFLECTIONS: if "classReflections" is present, it is the student's OWN
+account of which classes they enjoy and what makes each one good for them
+(what they tapped, and a sentence in their words). The signal is never the
+course; it is the specific thing they enjoy in it (the labs, arguing a case,
+making something, one unit they could not put down). Treat it like a spark:
+quote or closely echo their words, notice when the same kind of enjoyment
+shows up in different classes, and connect it to a real Pacifica experience.
+A class they did not mention means nothing: never infer dislike, struggle or
+a ranking of classes from what is missing, and never say which classes they
+left out.
+
+MASTERY: if "masteryStrengths" is present, it is what a teacher's
+standards-based grading shows, in words only: standards where the student is
+solid, and some still growing. Like courses, it is backdrop: never build a
+pathway, its name or its hook on a standard alone. Use it two ways. When a
+strength lines up with a spark, an interest or an observation, it is evidence
+the student can already do what the pathway asks, so let the first steps
+start from there instead of from scratch. "Still growing" is growth in
+progress, never a weakness: do not name it in a pathway, never call the
+student behind, struggling or weak, and never rank. Never mention grades,
+scores, levels or "mastery" to the reader.
 
 STUDENT SPARKS: if "studentSparks" is present, it is the student's OWN voice
 about what lights them up (what they research at 2am, their rabbit holes, what
@@ -69,7 +92,15 @@ Rules:
 - Each pathway also needs a "hook" and, where a world signal genuinely
   fits, "whyNow" and "whyNowRef" (see the section below). A spark is
   often the best hook.
-- This is a draft for staff. Do not address the student or family directly.
+- Each pathway also takes a "startingPoint" wherever the evidence shows where
+  this student already stands on that particular thing: one sentence, a stage
+  and never a rank (see "WHERE THEY ALREADY STAND" below). A current student
+  usually has one, because teachers have written about their work. Omit it
+  rather than guess.
+- This is a draft for staff. Do not address the student or family directly,
+  with two deliberate exceptions: "glimpse" and "startingPoint" are both
+  written in the second person, because a teacher reads them back to the
+  student once an adult has signed the pathway.
 
 Respond with ONLY valid JSON, no prose, no markdown fences, exactly:
 
@@ -87,6 +118,7 @@ Respond with ONLY valid JSON, no prose, no markdown fences, exactly:
       ],
       "glimpse": "string",
       "hook": "string",
+      "startingPoint": "string (optional, omit unless the evidence shows it)",
       "whyNow": "string (optional, at most three per draft)",
       "whyNowRef": "W number of the item it restates (required with whyNow)"
     }

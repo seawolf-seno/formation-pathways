@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { FamilyWelcome } from "@/components/discover/FamilyWelcome";
 import { getFamilyPage } from "@/lib/family-page";
 import { familyShareAction, familyStopSharingAction } from "@/lib/family-actions";
-import { welcomeMatches } from "@/lib/discover";
+import { FIRST_WEEK, welcomeMatches } from "@/lib/discover";
 import { getConsentedAlumniStories } from "@/lib/queries";
 import { syncDemoDb } from "@/lib/demo-persist";
 import { pickStories } from "@/lib/inquiry";
@@ -68,6 +68,10 @@ export default async function FamilyPage({ params }: { params: Promise<{ token: 
       share={familyShareAction.bind(null, token)}
       stopSharing={familyStopSharingAction.bind(null, token)}
       moreWithApplication
+      firstWeek={FIRST_WEEK}
+      thanks={page.thanks}
+      referralCode={page.shareCode}
+      showPlaceholders={page.isSample}
     />
   );
 }

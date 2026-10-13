@@ -2,8 +2,14 @@ import type { FormationTag, GeneratedPathway } from "@/lib/types";
 
 export type LifecycleStage = "applicant" | "admitted" | "enrolled" | "alumni" | "withdrawn";
 export type SourceSystem = "finalsite" | "blackbaud" | "canvas";
-export type StaffRole = "admin" | "admissions" | "teacher" | "staff";
-export type ConsentScope = "import_records" | "ai_drafting" | "staff_observations" | "student_voice";
+// "viewer" is view only: it opens the pages a teacher can, for fictional
+// sample students only, and can't save, send or create anything. The database
+// enforces both (20261018000000_view_only_accounts.sql).
+export type StaffRole = "admin" | "admissions" | "teacher" | "staff" | "viewer";
+
+/** What a view-only account is told when it tries to save or send something. */
+export const VIEW_ONLY_MESSAGE = "This account is view only. Nothing was saved or sent.";
+export type ConsentScope = "import_records" | "ai_drafting" | "staff_observations" | "student_voice" | "mastery_records";
 
 export const CONSENT_SCOPES: { scope: ConsentScope; label: string; detail: string }[] = [
   {
@@ -20,6 +26,11 @@ export const CONSENT_SCOPES: { scope: ConsentScope; label: string; detail: strin
     scope: "student_voice",
     label: "Student voice",
     detail: "Let the student share what lights them up (their own words and picks) in a Spark conversation with staff.",
+  },
+  {
+    scope: "mastery_records",
+    label: "Mastery Hub",
+    detail: "Keep this student's mastery levels, scores and evidence for courses run in the Mastery Hub, and let them sign in to see their own. With AI drafting consent too, their strengths in words (never scores) can inform a Pathway draft and their teacher's next steps.",
   },
   {
     scope: "ai_drafting",
@@ -58,6 +69,14 @@ export interface PilotSettings {
   inquiries_approved_by: string | null;
   inquiries_approval_reference: string | null;
   inquiries_approved_at: string | null;
+  /** Referral thank-yous for real families (needs leadership's recorded decision). */
+  referral_thanks_open: boolean;
+  referral_thanks_what: string | null;
+  referral_thanks_on: "applied" | "enrolled";
+  referral_thanks_cap: number;
+  referral_thanks_approved_by: string | null;
+  referral_thanks_approval_reference: string | null;
+  referral_thanks_approved_at: string | null;
 }
 
 export type InquiryStatus = "new" | "contacted" | "applied" | "enrolled" | "closed";
@@ -117,6 +136,24 @@ export interface InquiryFamilyLink {
   id: string;
   created_at: string;
   expires_at: string;
+}
+
+/** A confirmed referral and its thank-you (20261012000000_referral_thanks.sql). */
+export type ReferralStatus = "confirmed" | "approved" | "sent" | "declined";
+export interface ReferralThanks {
+  id: string;
+  referred_inquiry_id: string;
+  referrer_inquiry_id: string;
+  is_sample: boolean;
+  status: ReferralStatus;
+  confirmed_by: string;
+  confirmed_at: string;
+  what: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  sent_by: string | null;
+  sent_at: string | null;
+  note: string | null;
 }
 
 /** A pathway a family shared publicly at /w/[code]. */
@@ -260,9 +297,16 @@ export interface PersonProfile {
   classHistory: ClassHistoryRow[];
   /** Every Spark session, newest first ([] if none, or the role can't read them). */
   sparks: import("./sparks").SparkSession[];
+  /** Every class-reflection sitting, newest first ([] if none, or the role can't read them). */
+  classReflections: import("./class-reflections").ClassReflectionSession[];
+  /** False until the class_reflections migration is applied: hide the feature. */
+  classReflectionsReady: boolean;
   evidence: AcademicEvidence[];
   observations: SorObservation[];
   drafts: PathwayDraft[];
+  /** Mastery Hub courses in words only (strong / still growing); [] if none,
+   *  or this staff member doesn't teach them. Never scores. */
+  mastery: import("../mastery/rules").MasterySummary[];
 }
 
 export function displayName(p: Pick<Person, "first_name" | "last_name" | "preferred_name">): string {

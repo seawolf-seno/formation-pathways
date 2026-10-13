@@ -62,12 +62,14 @@ adults behind the scenes; students stay present, in person, with people.
   Cloud/OAuth 2.0 developer console needed to generate a Drive token, waiting on Pacifica
   IT. Don't push on this until he says it's unblocked. Everything else (mock Canvas/Drive,
   the whole app) works with zero live credentials in the meantime.
-- **Live deployment (2026-09-28)**: https://formation-pathways.vercel.app, Vercel project
-  `formation-pathways` on seno's personal **Hobby** team (`seno-2280s-projects`; move to a
-  school Pro/Education team before real use). The GitHub repo is connected: merges to `main`
-  auto-deploy to production, PRs get previews behind Vercel login. Env is
-  `NEXT_PUBLIC_SUPABASE_URL` + the publishable key only (Production + Preview): no Anthropic key
-  (every AI step runs its offline fallback), no service role, no Finalsite or Canvas credentials.
+- **Live deployment (2026-09-28; team moved 2026-10-11)**: https://formation-pathways.vercel.app,
+  Vercel project `formation-pathways`, now in the school's **Pacifica Christian High School**
+  team (moved from seno's personal Hobby team 2026-10-11). Preview deployments use the
+  staging Supabase project (see "Agent database access"); Production keeps the live one. The GitHub repo is connected: merges to `main`
+  auto-deploy to production, PRs get previews behind Vercel login. Preview has only the two
+  public Supabase settings (staging), so AI and integrations run their offline fallbacks there;
+  Production has the live keys and integration secrets (names in `docs/hosting-move.md`). No
+  service-role key anywhere.
   Supabase Auth Site URL and `/auth/callback` redirect are set to the production URL; code and
   link sign-in both verified in the auth logs. On Vercel the fictional demo's SQLite lives in
   per-instance `/tmp`. `lib/demo-persist.ts` (2026-10-01) snapshots it to Supabase
@@ -76,12 +78,21 @@ adults behind the scenes; students stay present, in person, with people.
   migration `20261001180000_demo_snapshots.sql` applied by seno**; until then it silently stays
   per-instance (details in `docs/oct-5-demo.md`). Server-built links use
   `requestOrigin()` (`lib/origin.ts`); never hard-code a host.
-- **Agent database access (2026-09-28)**: the account-level claude.ai Supabase connector (owner
-  access, bypasses RLS and consent triggers) was disabled. The repo's `.mcp.json` Supabase
-  server is `read_only=true` (PR #11), authenticated 2026-09-28 and verified
-  (`transaction_read_only = on`). Agents: never write to the
-  live database, never query per-student tables once real students exist, and apply new
-  migrations only via the SQL editor or `supabase db push` run by seno.
+- **Agent database access (updated 2026-10-11)**: two databases, two rules.
+  - **Production** (`cvppxixatcreyptpkymh`, real pilot students): the repo's `.mcp.json`
+    Supabase server is `read_only=true` (PR #11, verified `transaction_read_only = on`).
+    Agents never write to it, never query per-student tables, and never apply migrations
+    there; seno applies them (SQL editor or `supabase db push`). The account-level claude.ai
+    Supabase connector (owner access, bypasses RLS) stays disabled.
+  - **Staging** (`tavgqwdqlwpmcejzefso`, fictional data only): what Vercel **Preview**
+    deployments use. seno's agent has a writable `supabase-staging` MCP server (local
+    scope, not in `.mcp.json`) and may apply migrations and load sample data there. Never
+    put a real student or family in staging, and never open its real-data gate. Built
+    2026-10-11: all 14 migrations through `20261013000000` applied under their file
+    timestamps, schema fingerprint-verified identical to a PGlite run of the same files,
+    security advisors clean.
+  - Order for any new migration: staging first (check the PR preview), then production,
+    then merge.
 - **Decided, not built**: Anthropic auth on Vercel should be Workload Identity Federation
   (Vercel OIDC token → federation rule; SDK 0.125 has `oidcFederationProvider` +
   `TokenCache`), set up in the school's Anthropic org, not seno's personal one. Until then,
@@ -210,17 +221,182 @@ adults behind the scenes; students stay present, in person, with people.
   through `family_page`/`family_share`/`family_stop_sharing`/`public_share`. Cards:
   `lib/family-card.tsx`. **Needs seno to apply `20261011000000_family_share.sql`.**
   `docs/family-sharing.md`.
+- **Inquiry flow complete (2026-10-09, branch `seno/inquiry-complete`, card #29)**: instant
+  welcome right after `/discover` (no AI: their words, programs, `FIRST_WEEK` placeholder for
+  admissions to rewrite, what happens next); "Email it to …" / "Text it" from the inquiry page
+  (staff's own mail app, by name; no email service); guardian confirmation before any share
+  (`family_share(…, p_guardian)`); reward disclosure on shares and `/w` while thank-yous are on
+  (`withDisclosure`); referrals at `/pilot/inquiries/referrals` (`referral_thanks`: confirm →
+  approve → sent/declined, DB-enforced real referral, no self-referral, cap, no cash, off for
+  real families until an admin records leadership's decision); counts-only "How it's going"
+  report (`lib/inquiry-report.ts`, 1–4 hidden); phone-card inbox; DB throttle on
+  `submit_inquiry`. **Needs seno to apply `20261012000000_referral_thanks.sql`.** Phone test
+  for admissions: `docs/admissions-phone-test.md`; what's left (decisions, drafts, shot list,
+  design review, 5-family pilot, Vercel Firewall rule): `docs/inquiry-launch.md`.
+- **Class reflections (2026-10-09, branch `samuel/class-reflections`, card #32)**: first step
+  of folding Study Hub (a student's separate `study-commons` app) into Formation Pathways.
+  `/pathway/[personId]/classes`, opened by staff with the student like Spark: tap the classes
+  they enjoy from their own schedule (`classesForReflection`: latest Blackbaud year plus
+  Canvas), twice for ones they love, then what makes each good
+  (`prompts/class-reflection-likes.txt`) and one sentence. Enjoyment only: an untapped class
+  is not recorded, no ratings. `class_reflections` table (`student_voice` consent trigger,
+  same RLS as sparks); shown on the person page ("Classes they enjoy") and sent to drafting as
+  `classReflections` (`lib/sor/class-reflections.ts`, through `ai-input.ts`). **Needs seno to
+  apply `20261014000000_class_reflections.sql`**; until then the feature is hidden
+  (`classReflectionsReady`) and everything else works. Open for leadership: whether the signed `student_voice` form covers this, since its
+  wording names Spark. Not yet tried against real Claude output.
+- **Study Hub (2026-10-09, same branch, card #32)**: `/pathway/[personId]/study`, staff-opened
+  and read-only (no migration): the student's classes from the imported schedule, each with
+  free study links from `fixtures/study-library.json` (faculty-editable; subjects matched by
+  explicit title phrases, first match wins, no guessing; `https://` only;
+  `lib/sor/study-library.ts`) and what they said they enjoy. Linked from the person page and
+  from class reflections. The library started from Study Commons' curated links
+  (github.com/TheEnigmaticPhilosopher/study-commons): **confirm the author's permission and
+  the name to credit** (the page says "a Pacifica student's project"). Not carried over from
+  Study Commons: fictional grades, grade-based practice, Canvas submission, discussions.
+- **Links students add (2026-10-10, branch `samuel/class-resources`, stacked on #56, card
+  #32)**: on the Study Hub a student suggests a link for one of their classes
+  (`components/sor/SuggestResource.tsx`); it is saved unreviewed and reaches other students
+  (same class title, no names) only after a teacher or admin approves it at `/pilot/resources`.
+  `class_resources` table: `student_voice` consent trigger, https-only check, a guard that
+  fixes the link, class and student and stamps the reviewer from the signed-in account
+  (`lib/sor/class-resources.ts`). Links only, no file uploads. Hidden until the migration is
+  applied. **Needs seno to apply `20261017000000_class_resources.sql`.**
+  Still open for #32, each needing a decision first: student sign-in (none exists), file
+  uploads (storage, scanning, copyright), and open questions that build a no-numbers "where
+  you are" narrative.
+- **Always a next step (2026-10-09, branch `seno/always-next-step`, card #29)**: every family
+  page ends with `components/discover/NextSteps.tsx`: the pathway (on its way / share it / ask for
+  one), invite a family with their referral code, start the application. `NEXT_STEP_LINKS` in
+  `lib/discover.ts` are **placeholders** until admissions gives the real application link;
+  staff and samples see a "Placeholder link" tag. **Needs seno to apply
+  `20261013000000_referral_thanks_public.sql`** (until then invites always carry the disclosure).
+- **Student addresses wait (2026-10-10, branch `samuel/student-signin`, card #35)**: students
+  hold `@pacificachristian.org` addresses too (a number before the @), so with auto-approve on
+  a student's first sign-in became an active Staff account. Now the provisioning trigger never
+  auto-approves an address with a number (`private.is_student_address`; same rule in
+  `lib/sor/student-address.ts`); it waits, sees `/login?error=student`, and `/pilot` tags it
+  *Student address* and counts the ones that already have access. An admin can still approve one
+  by hand (student contributors). **Needs seno to apply `20261016000000_student_addresses_wait.sql`**,
+  then review the tagged accounts on `/pilot`: the migration changes no existing row. Not done:
+  a student sign-in with its own pages (#32), and narrowing what plain Staff can read
+  (`docs/security-review.md`, decision 1).
+- **View-only accounts (2026-10-11, branch `samuel/view-only-account`, stacked on #62, card #36)**: a
+  fifth staff role, `viewer` ("View only (sample students)" on `/pilot`), for a student
+  contributor to check that pages still work. It reads fictional sample students only
+  (`private.viewer_sees`) and can't save, send or create anything: `private.is_staff()` is now
+  false for a viewer, so existing and future policies leave it out by default, and every Server
+  Action goes through `requireActingStaff()` (`lib/sor/queries.ts`; guarded by
+  `tests/view-only.test.mjs`). It starts at `/pilot/samples` and is turned away from the
+  fictional demo in production. The migration also requires staff access to delete your own
+  observation or at-home link (before, any signed-in account could delete what it had made).
+  **Needs seno to apply `20261018000000_view_only_accounts.sql`**, then pick the role for the
+  account on `/pilot`; choosing it before the migration shows an error and changes nothing.
+  Whether a viewer should ever see real students is leadership's call; today it cannot.
+- **Always a next step + contributor workflow (2026-10-09/11, PRs #59, #60, #61)**: every
+  family page ends with `components/discover/NextSteps.tsx` (pathway / invite with referral
+  code / start the application); `NEXT_STEP_LINKS` in `lib/discover.ts` are **placeholders**
+  until admissions sends the real application link. `public.referral_thanks_open()` lets the
+  welcome page add the reward disclosure only when thank-yous are on. CI fails a reused or
+  out-of-order migration timestamp (`tests/migrations.test.mjs`, a step in `ci.yml`); PRs adding
+  a migration get the **needs migration** label; `main` requires CI + seno's code-owner review,
+  approvals dismiss on new pushes. #61 (srsuchard): addresses with a digit before the @
+  (students) always start pending, even with auto-approve on.
+- **Hosting + staging (2026-10-11, card #26)**: Vercel project moved to the school team
+  **Pacifica Christian High School** (`team_UE009PyrifdWiQ5eErR7Fyrf`); production still
+  https://formation-pathways.vercel.app. Preview env points at **staging Supabase**
+  (`tavgqwdqlwpmcejzefso`): all 16 migrations through `20261016000000`, fingerprint-verified
+  identical to a PGlite run of the repo's files, advisors clean, seno is admin, sample data
+  loaded (6 sample students + Finalsite/Blackbaud/class history/Canvas, 700 `/season` figures,
+  5 demo families). Staging sign-in is Supabase's built-in email (links only, Supabase org
+  members only); seno chose not to set up SMTP/templates for staging. A preview on current
+  code: https://formation-pathways-1aveofcp4-pacifica-christian-high-school.vercel.app (Vercel
+  login). Agent tools: the Vercel **plugin** connector sees the school team (the claude.ai Vercel
+  connector only sees seno's old personal team); `supabase-staging` MCP (local scope) is
+  writable; `.mcp.json` `supabase` is production, read-only.
+- **Team staging + Mastery Hub automation (2026-10-12, branch `seno/team-staging-auto-import`, card #37)**:
+  contributors stay Vercel **Viewers** (seno can't afford more seats): they push branches to this repo
+  (fork PRs get no CI in a private repo), test with `npm run dev:staging` (`.env.staging.example`, staging's
+  public settings), and seno builds previews of their PRs with `scripts/preview-pr.sh <n>`. Staging
+  sign-in for colleagues needs seno's one-time SMTP + code template on the staging project
+  (`docs/staging.md`); then their pending staging accounts get roles on staging `/pilot`. Mastery Hub:
+  scheduled Canvas import every 3h (`vercel.json` cron → `/api/cron/mastery`) as the least-privilege
+  **`mastery_importer`** Postgres role (`20261020000000_mastery_importer.sql`; never the service role;
+  off until seno sets its password + `MASTERY_IMPORTER_DATABASE_URL` + `CRON_SECRET`); Khan Academy
+  arrives **through Canvas** (Khan Districts/Clever LMS Connect grade sync, or Khan2Canvas after a privacy
+  review), recognized as Khan and mapped by skill name via `aliases`; class-map **source switch**;
+  multi-file AP Classroom drop-in. `docs/mastery-hub.md`, `docs/staging.md`.
+- **Mastery Hub, finishing (2026-10-12, branch `seno/mastery-finish`, card #37)**: production has
+  `20261020` (importer role, no login yet). This branch: **standards edited in the hub**
+  (`/mastery/standards`, `mastery_standard_sets` + version history; built-in files are starting
+  points), **AI next steps** drafted per student through the anonymizer (levels in words, no
+  scores, only the course's own links), labeled Draft until the teacher shares them
+  (`mastery_next_steps`), and **mastery feeds Pathway drafts** (`masteryStrengths`, words only,
+  `ai_drafting` consent). The `mastery_records` consent wording changed accordingly: re-confirm
+  families who consented under the old "never by AI" text. Migration `20261021000000` on staging.
+  Khan Academy: seno ruled out Clever; next is a Chrome extension using the teacher's own Khan
+  session (needs Claude in Chrome access to inspect Khan's teacher pages, structure only).
+- **Mastery Hub browser extension (2026-10-12, branch `seno/mastery-extension`, card #37)**: #67 merged and
+  `20261021` applied to production (verified). Chrome extension `extensions/mastery-hub` (load unpacked;
+  `docs/mastery-extension.md`): reads the teacher's own Khan **Reports → Skills** page (no Khan password, no
+  third party; seno accepted Khan's no-scraping risk) every 3h in a background tab; only **key skills**
+  (≤3 per Khan unit, mapped to a standard on the course page) at **proficient → Proficient / mastered →
+  Extending** become evidence; Khan students matched to the roster in the browser, unmatched never sent.
+  Also **tags any page** as a course resource (`mastery_course_resources`, merged into the course's standards).
+  Auth: a revocable `fpx_` token from `/mastery` (hash only, 180 days) → `app/api/mastery/extension/*` →
+  token-checked SECURITY DEFINER functions. Migration `20261022000000` on staging (verified).
+- **Mastery Hub on Canvas learning objectives (2026-10-12, branch `seno/mastery-objectives`, card #37)**:
+  #68 merged, `20261022` in production. seno found the hub too scattered: he grades a few broad
+  objectives per unit in Canvas (Outcomes), and wants everything to resolve into them. Now:
+  **Setup → Use my Canvas learning objectives** makes the course's Outcomes (by group/unit) the
+  standard set (`canvas-<id>`, codes `o<outcome id>`, unit videos carried over); Canvas work counts via
+  **rubric alignment**; Canvas's own **objective score** (rollups, `mastery_objective_grades`) shows first;
+  **all Khan levels** kept (`mastery_khan_levels`), each Khan skill sorted once into an objective
+  (★ suggestion; no 3-per-unit cap). Dashboard `/mastery/<course>` is **students first** (list + objective
+  cards with "what's behind it" dropdowns); everything else on `/mastery/<course>/setup`. Extension 0.2.0
+  sends every level. Migration `20261023000000` on staging (verified).
+- **Open PRs as of 2026-10-12**: #62 and #63 merged (their migrations are on staging; production
+  is seno's). Still open:
+  - #58 STEM Scholars (TheEnigmaticPhilosopher): migration still named `20261012000000_…`
+    (collides; asked to rename to a timestamp later than main's newest and rebase). Not on staging.
+  - #57 Spark wide evidence (CtelehowskiPCHS): no migration; Vercel check red.
+  - Mastery Hub (seno/mastery-hub, card #37): migration `20261019000000_mastery_hub.sql`, on staging.
+  For each migration PR: agent applies it to **staging** (record the file's own version in
+  `supabase_migrations.schema_migrations`), seno checks the preview, seno applies to
+  production, then merges.
+- **Mastery Hub (2026-10-12, branch `seno/mastery-hub`, card #37)**: standards-based grading
+  for any subject that wants it, AP Physics 1 first (`fixtures/mastery/ap-physics-1.json`; a new
+  subject is one more file, a new class is a new address). Each course has an **address**:
+  `/mastery/APPhysics1` (teacher: requests, class map, course settings incl. **finished through
+  Unit N**, video shelf, sources with pause switches, roster + student sign-ins; plus `/oral`,
+  `/students/[id]`, `/log`) and `/me/APPhysics1` (student). **Students sign in** (same `/login`,
+  school address registered by their teacher in `student_accounts`): levels in words, every
+  piece of evidence **with scores**, next steps (finished units first) with links and videos,
+  a **YouTube video shelf** (59 videos, oEmbed-verified, in the standards file; links out,
+  nothing embedded), oral exam requests and sent-in work. Evidence: Canvas (graded work /
+  Outcomes naming a standard code; checked on opening, at most every 6h), AP Classroom / Khan
+  **CSV export drop-in** (preview first; exact name/email matching; no scraping or stored
+  passwords, seno's choice), oral exams, accepted student work. Levels are deterministic
+  (`lib/mastery/rules.ts`), no AI. New consent scope `mastery_records`; append-only
+  `mastery_log` by triggers. Staging: `20261017`, `20261018` and this `20261019` applied in order
+  2026-10-12, whole schema fingerprint-verified, advisors clean. **Needs seno to apply
+  `20261019000000_mastery_hub.sql` to production** (after #62/#63's). Not built: a nightly
+  import with nobody signed in (needs its own DB role), AI next steps, mastery in pathway drafts,
+  view-only accounts in the hub. `docs/mastery-hub.md`.
 - **Next concrete actions**:
-  1. **Oct 5 board demo**: `docs/oct-5-demo.md` (decide live vs. sample `/season` tonight; never
-     open a real student on screen). The deck (overview → live demo → what we build next → ask)
-     is a claude.ai artifact, documented in `docs/board-deck.md`.
-  2. Admissions director's self-test (`docs/admissions-tester-guide.md`); her answers on the
-     fall-2027 counts and whether `financial_aid_waitlisting` counts as admitted.
-  3. After leadership confirms Anthropic terms: `AI_REAL_STUDENTS=on`, then Spark → Draft →
-     Edit → Sign → Open it with each pilot student; tune prompts from what they say.
-  4. Canvas for the pilot (`CANVAS_*` env + Canvas user ids); ask Finalsite to narrow the API
-     credential; move hosting to a school-owned Vercel team with a security review.
-  5. Later: alumni consent-reset design (sketched on the Systems Map).
+  1. Production migrations `20261017`, `20261018` (merged), then `20261019` (Mastery Hub, when
+     merged); #58 after its rename, via staging first.
+  2. Admissions phone test: shared doc https://claude.ai/code/artifact/e736d884-aa9c-4fef-9467-280ac6982a34
+     (seno shares it); repo copy `docs/admissions-phone-test.md`. Collect answers, the real
+     application link (`NEXT_STEP_LINKS`) and rewritten "A first week" lines (`FIRST_WEEK`).
+  3. Leadership packet `docs/inquiry-launch.md`: consent wording, thank-you decision (record on
+     `/pilot/inquiries/referrals`), FTC disclosure wording, social media policy, 5-family pilot.
+  4. New Vercel team hardening: spend limit, required 2FA, log retention, Firewall rate limits
+     on `POST /discover` and `/login`; decide Developer seats for colleagues (Viewers' PRs
+     get no previews).
+  5. After leadership confirms Anthropic terms for students: Spark → Draft → Sign with pilot
+     students. Canvas for the pilot; ask Finalsite to narrow the API credential.
+  6. Later: alumni consent-reset design (sketched on the Systems Map).
 - Tracked live at https://claude.ai/artifact/3L9fUkHmf4q6d378289uP6 (Formation Pathways
   section) and narrated architecturally at
   https://claude.ai/artifact/GWGzrdfMSr8vfWsRycGM1T — keep both current alongside this file
@@ -241,7 +417,7 @@ conflicts with this file, this file wins for what's already built.
   opportunities and a biweekly assistant. Private student links at `/scholars/[token]`;
   fictional read-only preview at `/stem-demo`. Contributions appear on person profiles
   and enter pathway drafting through the existing anonymization layer. Needs the owner
-  to apply `20261012000000_stem_scholars.sql` and approve the official rubric.
+  to apply `20261025000000_stem_scholars.sql` and approve the official rubric.
   Optional Supabase Cron prepares drafts; staff sign to release updates to student pages.
   Outbound email uses a prepared mail-app draft. Setup: `docs/stem-scholars.md`.
 - Next.js (App Router) + Tailwind, SQLite via better-sqlite3, Anthropic SDK
@@ -268,6 +444,9 @@ conflicts with this file, this file wins for what's already built.
 2. Compass, never dossier. No numeric scores on students anywhere. Counts and
    narratives only. No red/failure states on a student profile. The word
    "record" never appears in the UI — say "Pathway."
+   One deliberate exception (seno, 2026-10-12): the Mastery Hub's `mastery_evidence`
+   keeps raw scores for the teacher and that student only. They never appear on a Pathway,
+   a family page, the person page (words and counts only there) or in any AI call.
 3. Grace in the architecture. Prompts must frame struggle as
    growth-in-progress and actively surface pattern-breaking positives.
 4. Warm, not clinical. AI writes about teenagers the way a teacher who loves
@@ -300,6 +479,12 @@ Test for every screen: "would a parent trust this with their child's story?"
 - Existing pages/nav live under `app/(staff)/` with their own layout; `/apply`
   and `/applicant/[slugToken]` stay outside that group so public-facing pages
   never inherit the internal staff header/nav.
+- **Migrations: seno applies every one** (SQL editor or `supabase db push`). Contributors and
+  their agents write the migration file in their PR but never apply it, and never touch the
+  live database. Name it `YYYYMMDDHHMMSS_what_it_does.sql` with a timestamp later than the
+  newest on `main`; rebase before review. CI (`tests/migrations.test.mjs`) fails a reused
+  timestamp. Code that needs a new table must degrade gracefully until it exists (return
+  empty, hide the feature), because the deploy and the migration never land at the same moment.
 - From 2026-10-30 Supabase no longer auto-grants Data API access to new `public`
   tables (existing tables are unaffected). Every migration that creates a table must
   include its own `grant` statements in the same file, or the table is unreachable

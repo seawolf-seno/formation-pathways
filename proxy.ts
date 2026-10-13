@@ -10,7 +10,7 @@ import { createServerClient } from "@supabase/ssr";
 // signed-in @pacificachristian.org account too, and every demo page and
 // action also requires active staff (lib/demo-access.ts): its Claude calls
 // cost money, and a pending or deactivated account passes this check.
-const SOR_PREFIXES = ["/pilot", "/capture", "/season", "/pathway", "/stem"];
+const SOR_PREFIXES = ["/pilot", "/capture", "/season", "/pathway", "/mastery", "/me", "/stem"];
 
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
@@ -18,6 +18,15 @@ export async function proxy(request: NextRequest) {
   // surface. They serve only a whitelisted snapshot; see docs/pathway-sharing.md.
   // /w/[code]: an inquiring family's shared pathway and its card image
   // (docs/family-sharing.md), read-only like the demo shares.
+  // Vercel Cron: the route checks CRON_SECRET itself and touches no session.
+  // The Mastery Hub browser extension: its routes take only the extension's
+  // token, checked again by the database on every call.
+  if (path.startsWith("/api/cron/") || path.startsWith("/api/mastery/extension/")) {
+    const response = NextResponse.next();
+    response.headers.set("Cache-Control", "no-store");
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return response;
+  }
   if (path.startsWith("/share/") || path.startsWith("/from/") || path.startsWith("/w/")) {
     // A public preview must not become a bypass for POSTed staff Server Actions.
     if (request.method !== "GET" && request.method !== "HEAD") {

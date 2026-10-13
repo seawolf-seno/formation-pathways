@@ -1,0 +1,17 @@
+name: Label
+
+# Marks PRs that add a Supabase migration, so seno knows to apply it
+# (staging, then production) before merging. CONTRIBUTING.md.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@v5

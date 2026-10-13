@@ -37,6 +37,7 @@ export function tidyDraftPathway(p: GeneratedPathway): GeneratedPathway {
     stretchChallenge: tidyPhrasing(p.stretchChallenge),
     fourYearHorizon: p.fourYearHorizon.map(tidyPhrasing),
     ...(p.glimpse !== undefined ? { glimpse: t(p.glimpse) } : {}),
+    ...(p.startingPoint !== undefined ? { startingPoint: t(p.startingPoint) } : {}),
     ...(p.whyNow !== undefined ? { whyNow: t(p.whyNow) } : {}),
     ...(p.milestones ? { milestones: p.milestones.map((m) => ({ ...m, detail: tidyPhrasing(m.detail) })) } : {}),
   };
