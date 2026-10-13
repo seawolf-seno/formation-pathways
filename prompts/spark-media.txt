@@ -2,23 +2,24 @@
 # "label|emoji". Faculty: these are media genres, not interests — a kid who
 # taps "Gaming" here may not want a pathway about games, and the drafting
 # prompt is told to treat them as texture rather than as a plan.
-# Keep them recognisable in a student's own words, and keep the list short
-# enough to read on a phone without scrolling twice.
-Gaming & let's plays|🎮
-Sports highlights & takes|🏀
-Music & music videos|🎧
-Comedy & sketches|😂
-Video essays & deep dives|🧠
-Science & how things work|🔬
-Building, making & repairing|🛠️
-Cars, bikes & machines|🚗
+# Keep labels to one or two words. They are tapped on a phone, and anything
+# longer than about fifteen characters takes a whole row to itself, which
+# turns this card into a scroll.
+Gaming|🎮
+Sports|🏀
+Music|🎧
+Comedy|😂
+Video essays|🧠
+How things work|🔬
+Making & fixing|🛠️
+Cars & machines|🚗
 Cooking & food|🍳
-Fashion & style|🧥
-Art, drawing & design|🎨
-Faith, sermons & teaching|🕊️
-Vlogs & someone's daily life|📹
-Business, money & side hustles|💸
-News & what's going on|📰
-Animals & the outdoors|🌿
-Film, TV & reviews|🎬
-Anime & manga|🌀
+Fashion|🧥
+Art & design|🎨
+Faith|🕊️
+Vlogs|📹
+Money & business|💸
+News|📰
+Animals & nature|🌿
+Film & TV|🎬
+Anime|🌀

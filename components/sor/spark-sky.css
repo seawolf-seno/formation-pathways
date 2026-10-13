@@ -256,8 +256,13 @@
   border: 1px solid #8fb3d955;
   background: #ffffff0d;
   color: #f7f9fb;
-  padding: 9px 14px;
-  font-size: 14px;
+  /* Tight enough that two chips fit per row on a 375px phone. One per row
+     turns eighteen genres into a scroll and pushes the creators and the button
+     off the screen entirely. */
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
   transition: background 200ms ease, box-shadow 200ms ease, color 200ms ease;
 }
