@@ -1,8 +1,8 @@
 import "server-only";
 import { timingSafeEqual } from "crypto";
 import { Client } from "pg";
-import { canvasEvidence, rollupGrades } from "./canvas-map";
-import { outcomeCodes } from "./canvas-outcomes";
+import { assignmentGrades, canvasEvidence, rollupGrades } from "./canvas-map";
+import { assignmentCodes, outcomeCodes } from "./canvas-outcomes";
 import { fetchCanvasMastery, isLiveCanvasConfigured } from "./canvas";
 import { parseMasteryConfig } from "./config";
 import { fileStandardSet } from "./standard-sets";
@@ -81,11 +81,12 @@ export async function runScheduledImport(now = new Date()): Promise<ScheduledRun
         );
         const personByCanvasId = new Map(ids.map((r) => [String(r.external_id), r.person_id]));
         const codes = outcomeCodes(config);
+        const objectiveAssignments = assignmentCodes(config);
         const { submissions, outcomeResults, rollups, outcomes } = await fetchCanvasMastery(course.canvas_course_id, [...personByCanvasId.keys()]);
-        const { evidence, unmapped } = canvasEvidence(submissions, outcomeResults, personByCanvasId, config, now.toISOString(), codes);
+        const { evidence, unmapped } = canvasEvidence(submissions, outcomeResults, personByCanvasId, config, now.toISOString(), codes, objectiveAssignments);
         // Canvas's own objective scores: update, else add (this role can't
         // read the scores it writes, so no upsert).
-        for (const g of rollupGrades(rollups, outcomes, personByCanvasId, codes)) {
+        for (const g of [...rollupGrades(rollups, outcomes, personByCanvasId, codes), ...assignmentGrades(submissions, personByCanvasId, objectiveAssignments)]) {
           const upd = await db.query(
             `update public.mastery_objective_grades set score = $4, max_score = $5, label = $6, updated_at = $7
              where course_id = $1 and person_id = $2 and standard_code = $3`,

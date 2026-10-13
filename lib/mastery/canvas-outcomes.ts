@@ -165,3 +165,125 @@ export function suggestObjective(skillTitle: string, unitNumber: number | null, 
   if (!scored.length || scored[0].n === 0 || scored[1]?.n === scored[0].n) return null;
   return scored[0].code;
 }
+
+// ---------------------------------------------------------------- objectives as assignments
+//
+// Some teachers (seno) keep each learning objective as a Canvas ASSIGNMENT,
+// graded for mastery, instead of as an Outcome. Then the teacher picks those
+// assignments once; each becomes an objective (a<assignment id>), its unit
+// read from its name or its assignment group, and the student's grade on it
+// is the objective's Canvas score.
+
+export interface CanvasAssignmentGroup {
+  id: number | string;
+  name?: string | null;
+  position?: number | null;
+  assignments?: {
+    id: number | string;
+    name?: string | null;
+    points_possible?: number | null;
+    description?: string | null;
+    position?: number | null;
+    published?: boolean | null;
+  }[];
+}
+
+export interface AssignmentChoice {
+  id: string;
+  name: string;
+  group: string;
+  points: number | null;
+  /** The unit it belongs to, from its name, else its assignment group. */
+  unitNumber: number | null;
+  /** Looks like a learning objective (its name or its group says so). */
+  suggested: boolean;
+}
+
+export const assignmentCode = (id: number | string) => `a${id}`;
+
+const OBJECTIVE_WORDS = /\b(LOs?|learning\s+(objective|target|goal)s?|objectives?|mastery|standards?|targets?)\b/i;
+
+/** "LO 2.1 …", "LO2-3", "Unit 2 …", "U2 …", "2.1 …", "2. …" → 2. */
+export function unitFromName(name: string): number | null {
+  const lo = name.match(/\bLO\s*-?\s*(\d{1,2})(?:[.\-]\d+)?\b/i);
+  if (lo) return Number(lo[1]);
+  const dotted = name.match(/^\s*(\d{1,2})\.\d+\b/);
+  if (dotted) return Number(dotted[1]);
+  return unitNumberOf(name);
+}
+
+/** Every published assignment, with its unit and whether it looks like an
+ *  objective, in Canvas's own order. */
+export function assignmentChoices(groups: CanvasAssignmentGroup[]): AssignmentChoice[] {
+  return [...groups]
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+    .flatMap((g) => {
+      const groupName = (g.name ?? "").trim();
+      return [...(g.assignments ?? [])]
+        .filter((a) => a.published !== false && a.id != null && (a.name ?? "").trim())
+        .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
+        .map((a) => {
+          const name = (a.name ?? "").trim().slice(0, 200);
+          return {
+            id: String(a.id),
+            name,
+            group: groupName,
+            points: typeof a.points_possible === "number" ? a.points_possible : null,
+            unitNumber: unitFromName(name) ?? unitNumberOf(groupName),
+            suggested: OBJECTIVE_WORDS.test(name) || OBJECTIVE_WORDS.test(groupName),
+          };
+        });
+    });
+}
+
+/**
+ * The course's standard set from the assignments the teacher picked: a unit
+ * per unit number (titled like the subject's own unit, when there is one),
+ * an objective per assignment, in Canvas order. Levels, rules, videos and
+ * links come from `base`, as for Outcomes.
+ */
+export function objectivesFromAssignments(
+  groups: CanvasAssignmentGroup[],
+  picks: { id: string; unitNumber: number | null }[],
+  opts: { key: string; slug: string; title: string; base: MasteryConfig | null; baseRaw: Record<string, unknown> | null },
+): Record<string, unknown> {
+  const all = new Map(assignmentChoices(groups).map((c) => [c.id, c]));
+  const descriptions = new Map(groups.flatMap((g) => g.assignments ?? []).map((a) => [String(a.id), a.description ? stripHtml(a.description).slice(0, 300) : ""]));
+  const units = new Map<string, { unitNumber: number | null; standards: Record<string, unknown>[] }>();
+  for (const p of picks) {
+    const a = all.get(p.id);
+    if (!a) continue;
+    const key = p.unitNumber == null ? "none" : String(p.unitNumber);
+    if (!units.has(key)) units.set(key, { unitNumber: p.unitNumber, standards: [] });
+    const description = descriptions.get(a.id);
+    units.get(key)!.standards.push({ code: assignmentCode(a.id), title: a.name, ...(description ? { description } : {}), aliases: [], resources: [], videos: [] });
+  }
+  const baseRaw = opts.baseRaw ?? {};
+  const baseGroups = (opts.base?.groups ?? []).filter((g) => g.unitNumber !== null);
+  return {
+    key: opts.key,
+    slug: opts.slug,
+    title: opts.title,
+    source: "canvas-assignments",
+    scale: baseRaw.scale,
+    rules: baseRaw.rules,
+    groups: [...units.values()]
+      .sort((a, b) => (a.unitNumber ?? 999) - (b.unitNumber ?? 999))
+      .map((u) => {
+        const match = u.unitNumber === null ? undefined : baseGroups.find((b) => b.unitNumber === u.unitNumber);
+        return {
+          code: u.unitNumber === null ? "ucourse" : `u${u.unitNumber}`,
+          title: u.unitNumber === null ? "Course objectives" : match?.title ?? `Unit ${u.unitNumber}`,
+          unitNumber: u.unitNumber,
+          resources: match ? match.resources : [],
+          videos: match ? dedupeVideos([...match.videos, ...match.standards.flatMap((s) => s.videos)]) : [],
+          standards: u.standards,
+        };
+      }),
+  };
+}
+
+/** Canvas assignment id → objective code, for a config built from assignments. */
+export function assignmentCodes(config: MasteryConfig): Map<string, string> {
+  return new Map(config.groups.flatMap((g) => g.standards).filter((s) => /^a\d+$/.test(s.code)).map((s) => [s.code.slice(1), s.code]));
+}
