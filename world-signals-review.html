@@ -68,6 +68,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:now
 .item.flag{border-color:var(--red);background:var(--red-soft)}
 .item .text{flex:1;min-width:0}
 .item .title{overflow-wrap:anywhere}
+.item .note{font-size:.9rem;color:var(--muted);margin:.35rem 0;overflow-wrap:anywhere;white-space:pre-wrap}
 .item a{color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
 .choices{display:flex;gap:.35rem;flex-shrink:0}
 .choices button{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:.3rem .65rem;font-size:.85rem}
@@ -139,15 +140,15 @@ footer{margin-top:3rem;color:var(--muted);font-size:.85rem;border-top:1px solid 
 
   <section class="shows">
     <h2>Shows</h2>
-    <p class="progress">Podcasts approved for the weekly refresh. They start pulling signals once they're added to <code>lib/world-signals.ts</code>.</p>
+    <p class="progress">Podcasts proposed for review. The configured sources are in <code>lib/world-signals.ts</code>; this page does not add or refresh feeds.</p>
     <div class="show-card">
-      <div class="show-head"><h3>TBPN</h3><span class="approved">Approved by seno</span></div>
+      <div class="show-head"><h3>TBPN</h3><span class="pending">Listed for review</span></div>
       <p class="host">John Coogan and Jordi Hays</p>
       <p>Daily live show on tech and business news. Strong fit for why-now lines. Signals should come from episode titles, since the show notes are mostly sponsor lists. Watch for Diet TBPN recaps repeating the same stories.</p>
       <a href="https://podcasts.apple.com/us/podcast/tbpn/id1772360235" target="_blank" rel="noopener">Apple Podcasts listing</a>
     </div>
     <div class="show-card">
-      <div class="show-head"><h3>Founders</h3><span class="approved">Approved by seno</span></div>
+      <div class="show-head"><h3>Founders</h3><span class="pending">Listed for review</span></div>
       <p class="host">David Senra</p>
       <p>Weekly episodes on biographies of history's great entrepreneurs. Timeless rather than timely, so expect fewer usable why-now lines. Skip the promo episodes for his newer interview show.</p>
       <a href="https://podcasts.apple.com/us/podcast/founders/id1141877104" target="_blank" rel="noopener">Apple Podcasts listing</a>
@@ -173,15 +174,30 @@ footer{margin-top:3rem;color:var(--muted);font-size:.85rem;border-top:1px solid 
   }
   const showOf = s => s.show ?? s.showName ?? s.podcast ?? s.source ?? s.feed ?? "Unknown show";
   const titleOf = s => s.title ?? s.episodeTitle ?? s.headline ?? s.text ?? JSON.stringify(s);
-  const urlOf = s => s.url ?? s.link ?? "";
-  const keyOf = s => s.url ?? s.link ?? s.guid ?? s.id ?? `${showOf(s)}|${titleOf(s)}`;
+  const noteOf = s => s.note ?? s.description ?? s.summary ?? "";
+  const urlOf = s => {
+    const raw = s.url ?? s.link ?? "";
+    if (typeof raw !== "string" || !raw) return "";
+    try {
+      const url = new URL(raw);
+      return ["https:","http:"].includes(url.protocol) && !url.username && !url.password ? url.href : "";
+    } catch { return ""; }
+  };
+  // A changed note at an existing episode URL needs a fresh review too.
+  const keyOf = s => JSON.stringify([showOf(s),titleOf(s),noteOf(s),s.date ?? "",urlOf(s)]);
   const esc = t => String(t).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
   function readFile(file, slot){
+    if (file.size > 4 * 1024 * 1024) {
+      $("err").textContent = "Use a snapshot smaller than 4 MB.";
+      $("err").hidden = false;
+      return;
+    }
     const r = new FileReader();
     r.onload = () => {
       try {
         const list = toList(JSON.parse(r.result));
+        if (list.length > 1000 || list.some(s => !s || typeof s !== "object" || Array.isArray(s))) throw new Error("Invalid signal list");
         state[slot] = list; state[slot === "cur" ? "curName" : "oldName"] = file.name;
         const box = $(slot === "cur" ? "drop-new" : "drop-old");
         box.classList.add("loaded");
@@ -260,14 +276,14 @@ footer{margin-top:3rem;color:var(--muted);font-size:.85rem;border-top:1px solid 
         ${list.map(s => {
           const k = keyOf(s), d = state.decisions[k], u = urlOf(s);
           return `<div class="item ${d === "keep" ? "ok" : d === "flag" ? "flag" : ""}" data-key="${esc(k)}">
-            <div class="text"><div class="title">${esc(titleOf(s))}</div>${u ? `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u)}</a>` : ""}</div>
+            <div class="text"><div class="title">${esc(titleOf(s))}</div>${noteOf(s) ? `<p class="note">${esc(noteOf(s))}</p>` : ""}${u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u)}</a>` : ""}</div>
             <div class="choices" role="group" aria-label="Decision">
               <button class="k" data-d="keep" aria-pressed="${d === "keep"}">Keep</button>
               <button class="f" data-d="flag" aria-pressed="${d === "flag"}">Flag</button>
             </div>
           </div>`;
         }).join("")}
-      </div>`).join("") : '<p class="empty">Nothing new this week. Only ordering or metadata changed, so the PR is safe to merge.</p>';
+      </div>`).join("") : '<p class="empty">No new or changed signal content. Check source approvals and the PR checks before merging.</p>';
 
     state.added = added; state.byShow = byShow; state.newShows = newShows; state.dropped = dropped;
     updateProgress();
