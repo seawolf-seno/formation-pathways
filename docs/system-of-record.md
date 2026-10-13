@@ -185,7 +185,7 @@ mastery pages (`/me`). Third step of folding Study Hub in (Fizzy #32).
   page (that log is for staff opening a student's record); what they save is
   its own record.
 
-Migration `20261024000000_student_study_hub.sql` (no new table or column; 34
+Migration `20261027000000_student_study_hub.sql` (no new table or column; 34
 RLS cases). Until it is applied the link is hidden and `/study` says it
 isn't switched on yet. **Open for leadership:** the `student_voice` form
 describes a conversation with staff, and here the student saves on their

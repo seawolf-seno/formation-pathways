@@ -274,7 +274,7 @@ adults behind the scenes; students stay present, in person, with people.
   written with `created_by` null = the student themselves (`lib/sor/student-actions.ts`,
   guarded by `tests/student-study.test.mjs`); `private.student_study_guard` checks the row is
   theirs, the class is on their schedule, and caps (10 links waiting, 5 reflection saves a
-  day). **Needs seno to apply `20261024000000_student_study_hub.sql`**; until then the link is
+  day). **Needs seno to apply `20261027000000_student_study_hub.sql`**; until then the link is
   hidden and `/study` says it isn't on yet. Not tried in a browser as a signed-in student
   (the migration isn't on staging). Open for leadership: `student_voice` wording (it describes
   a conversation with staff), and student sign-ins are created under `mastery_records`
@@ -426,6 +426,14 @@ them only when a task needs that level of detail. Where anything there
 conflicts with this file, this file wins for what's already built.
 
 ## Stack
+- **STEM Scholars Hub (2026-10-09, Fizzy #34)**: `/stem` adds applications,
+  projects, mentor/alumni introductions, meeting notes, reviewed requirement evidence,
+  opportunities and a biweekly assistant. Private student links at `/scholars/[token]`;
+  fictional read-only preview at `/stem-demo`. Contributions appear on person profiles
+  and enter pathway drafting through the existing anonymization layer. Needs the owner
+  to apply `20261025000000_stem_scholars.sql` and approve the official rubric.
+  Optional Supabase Cron prepares drafts; staff sign to release updates to student pages.
+  Outbound email uses a prepared mail-app draft. Setup: `docs/stem-scholars.md`.
 - Next.js (App Router) + Tailwind, SQLite via better-sqlite3, Anthropic SDK
   (model: claude-sonnet-4-6). Single repo, runs with `npm run dev`.
 - Two data stores, deliberately separate:
