@@ -1,0 +1,64 @@
+.stem-shell { max-width: 1120px; margin: auto; padding: 32px 24px 64px; }
+.stem-hero { display:flex; justify-content:space-between; align-items:center; gap:24px; padding:38px; border-radius:20px; color:white; background:var(--color-navy); position:relative; overflow:hidden; }
+.stem-hero h1 { font-family:var(--font-display),Georgia,serif; font-size:clamp(28px,4vw,42px); margin:8px 0 12px; line-height:1.15; }
+.stem-hero p { color:var(--color-pacific); max-width:620px; }
+.stem-hero .stem-eyebrow { color:var(--color-pacific); }
+.stem-hero-mark { color:var(--color-gold); font-size:90px; line-height:1; padding-right:18px; }
+.stem-eyebrow { font-size:11px; text-transform:uppercase; letter-spacing:.12em; font-weight:600; color:var(--color-ink-muted); margin-bottom:12px; }
+.stem-tabs { display:flex; gap:4px; overflow-x:auto; margin:24px 0; border-bottom:1px solid var(--color-border); }
+.stem-tabs button { white-space:nowrap; padding:14px 16px; font-size:13px; font-weight:600; color:var(--color-ink-muted); border-bottom:3px solid transparent; }
+.stem-tabs button[aria-current] { color:var(--color-navy-ink); border-color:var(--color-gold); }
+.stem-content { display:grid; gap:24px; }
+.stem-card { background:white; border:1px solid var(--color-border); border-radius:16px; padding:26px; min-width:0; }
+.stem-card h2,.stem-intro h2 { font-family:var(--font-display),Georgia,serif; font-size:25px; color:var(--color-navy-ink); margin-bottom:18px; }
+.stem-card h3 { font-family:var(--font-display),Georgia,serif; font-size:19px; color:var(--color-navy-ink); margin-bottom:10px; }
+.stem-card p { font-size:14px; line-height:1.7; margin-bottom:14px; overflow-wrap:anywhere; }
+.stem-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+.stem-stats button { background:white; border:1px solid var(--color-border); border-radius:14px; text-align:left; padding:22px; }
+.stem-stats strong { display:block; font-family:var(--font-display),Georgia,serif; font-size:34px; color:var(--color-navy-ink); }
+.stem-stats span { display:block; font-size:12px; color:var(--color-ink-muted); margin-top:8px; }
+.stem-columns { display:grid; grid-template-columns:1.2fr 1fr; gap:24px; }
+.stem-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
+.stem-process { counter-reset:steps; display:grid; gap:24px; }
+.stem-process li { counter-increment:steps; display:grid; grid-template-columns:30px 1fr; column-gap:14px; }
+.stem-process li::before { content:counter(steps); grid-row:span 2; width:28px; height:28px; display:grid; place-items:center; color:var(--color-navy-ink); background:var(--color-gold-light); border-radius:50%; font-size:12px; }
+.stem-process strong { font-size:14px; color:var(--color-navy-ink); }
+.stem-process span { font-size:13px; line-height:1.65; color:var(--color-ink-muted); margin-top:5px; }
+.stem-row { display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:12px; margin-bottom:12px; }
+.stem-pill { display:inline-block; border-radius:20px; padding:5px 10px; background:var(--color-pacific-light); color:var(--color-navy-ink); font-size:11px; white-space:nowrap; }
+.stem-stack { display:grid; gap:20px; }
+.stem-item { border:1px solid var(--color-border); border-radius:12px; padding:18px; }
+.stem-student-layout { display:grid; grid-template-columns:270px minmax(0,1fr); gap:24px; align-items:start; }
+.stem-student-link { display:block; width:100%; text-align:left; padding:14px 12px; margin:6px 0; border-radius:10px; }
+.stem-student-link:hover,.stem-student-link.selected { background:var(--color-pacific-light); }
+.stem-student-link strong { display:block; font-size:14px; color:var(--color-navy-ink); }
+.stem-student-link span { display:block; font-size:12px; color:var(--color-ink-muted); margin-top:5px; overflow-wrap:anywhere; }
+.stem-search { width:100%; border:1px solid var(--color-border); border-radius:8px; padding:10px; margin-bottom:12px; font-size:13px; }
+.stem-form { margin:16px 0; }
+.stem-form fieldset { display:grid; gap:15px; min-width:0; }
+.stem-field { display:grid; gap:7px; font-size:12px; font-weight:600; color:var(--color-navy-ink); }
+.stem-field input,.stem-field textarea,.stem-field select { width:100%; min-width:0; padding:10px 12px; border:1px solid var(--color-border); border-radius:8px; font-family:var(--font-sans),sans-serif; font-size:14px; font-weight:400; color:var(--color-ink); background:var(--color-canvas); }
+.stem-field textarea { resize:vertical; min-height:100px; }
+.stem-field small { font-weight:400; color:var(--color-ink-muted); }
+.stem-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.stem-button { display:inline-flex; justify-content:center; align-items:center; justify-self:start; padding:10px 16px; background:var(--color-navy); color:white; font-size:12px; font-weight:600; border-radius:8px; cursor:pointer; }
+.stem-button.secondary { background:var(--color-pacific-light); color:var(--color-navy-ink); }
+.stem-button:disabled,.stem-form fieldset:disabled { opacity:.65; cursor:default; }
+.stem-text-link { display:inline-block; font-size:12px; font-weight:600; color:var(--color-navy-ink); text-decoration:underline; text-underline-offset:4px; margin:8px 0; }
+.stem-muted { color:var(--color-ink-muted); font-size:12px; }
+.stem-prewrap { white-space:pre-wrap; }
+.stem-next,.stem-notice,.stem-feedback { padding:14px 16px; background:var(--color-gold-light); border-radius:10px; font-size:13px; line-height:1.6; }
+.stem-notice { margin-top:20px; }
+.stem-feedback { margin-top:12px; overflow-wrap:anywhere; }
+.stem-requirements { display:grid; gap:12px; list-style:decimal; padding-left:22px; margin:18px 0; }
+.stem-requirements li { padding:8px 0; font-size:14px; line-height:1.6; }
+.stem-requirements small { display:block; color:var(--color-ink-muted); font-size:11px; }
+.stem-divider { height:1px; background:var(--color-border); margin:22px 0; }
+.stem-card details { margin-top:18px; border-top:1px solid var(--color-border); padding-top:14px; }
+.stem-card summary { cursor:pointer; color:var(--color-navy-ink); font-size:13px; font-weight:600; }
+.stem-check { display:flex; gap:10px; align-items:center; font-size:13px; }
+.stem-link-result { overflow-wrap:anywhere; display:grid; gap:12px; font-size:12px; }
+.stem-intro p { font-size:14px; color:var(--color-ink-muted); }
+.stem-shell :is(button,a,input,textarea,select,summary):focus-visible { outline:3px solid var(--color-pacific); outline-offset:3px; }
+@media(max-width:760px) { .stem-shell { padding:20px 14px 48px; } .stem-hero { padding:28px 22px; } .stem-hero-mark { font-size:54px; padding:0; } .stem-stats { grid-template-columns:repeat(2,1fr); } .stem-columns,.stem-grid,.stem-student-layout { grid-template-columns:1fr; } .stem-card { padding:22px 18px; } .stem-tabs button { padding:12px 10px; } }
+@media(max-width:420px) { .stem-hero-mark { display:none; } .stem-form-grid { grid-template-columns:1fr; } }

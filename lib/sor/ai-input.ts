@@ -24,6 +24,8 @@ export function personPseudonymizer(profile: PersonProfile, roster: Person[], st
       profile.enrollment?.advisor_name,
       ...profile.courses.map((c) => c.teacher_name),
       ...profile.observations.map((o) => o.author_name),
+      ...(profile.stem?.mentorNames ?? []),
+      ...(profile.stem?.work.map(w => w.approved_by) ?? []),
     ],
   });
 }
@@ -55,12 +57,17 @@ function toRuakhInput(profile: PersonProfile): RuakhInput {
         assignment: e.assignment_name,
         comment: e.teacher_comment!,
       })),
-    observations: observations.map((o) => ({
+    observations: [...observations.map((o) => ({
       author: o.author_name,
       text: o.body,
       tags: o.tags,
       date: o.created_at.slice(0, 10),
-    })),
+    })), ...(profile.stem?.work ?? []).filter(w => ["project", "evidence", "meeting"].includes(w.kind)).slice(0, 20).map(w => ({
+      author: "STEM Scholars",
+      text: `${w.kind}: ${w.title}. ${w.body.slice(0, 2000)}${w.next_step ? ` Next step: ${w.next_step}` : ""}`,
+      tags: ["Intellectual Courage", "Sense of Calling"],
+      date: w.updated_at.slice(0, 10),
+    }))],
     // What lights them up, in their own words: needs student_voice consent to
     // exist at all, and reaches Claude only under the same AI rules as the rest.
     // All sessions, so at-home answers add to the in-person ones.
