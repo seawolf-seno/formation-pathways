@@ -124,9 +124,26 @@ export interface KhanSkillRow {
   skill_id: string;
   title: string;
   unit_title: string;
+  unit_number?: number | null;
   standard_code: string | null;
   chosen: boolean;
   seen_at: string;
+}
+
+export interface ObjectiveGradeRow {
+  person_id: string;
+  standard_code: string;
+  score: number;
+  max_score: number | null;
+  label: string | null;
+  updated_at: string;
+}
+
+export interface KhanLevelRow {
+  person_id: string;
+  skill_id: string;
+  level: string;
+  updated_at: string;
 }
 
 export interface CourseBundle {
@@ -138,6 +155,10 @@ export interface CourseBundle {
   /** Khan Academy skills seen by the extension, and which are key ([] for students). */
   khanSkills: KhanSkillRow[];
   khanLinked: number;
+  /** Canvas's own objective scores, per student ([] before the migration). */
+  grades: ObjectiveGradeRow[];
+  /** Every Khan level the extension has seen, per student and skill. */
+  khanLevels: KhanLevelRow[];
   roster: RosterStudent[];
   evidence: Evidence[];
   requests: MasteryRequest[];
@@ -160,7 +181,7 @@ export async function getCourseBundle(slugOrCourse: string | MasteryCourse): Pro
   const course = typeof slugOrCourse === "string" ? await findCourse(slugOrCourse) : slugOrCourse;
   if (!course) return null;
   const courseId = course.id;
-  const [roster, evidence, requests, sources, tagged, khanSkills, khanLinks] = await Promise.all([
+  const [roster, evidence, requests, sources, tagged, khanSkills, khanLinks, grades, khanLevels] = await Promise.all([
     supabase
       .from("mastery_roster")
       .select("person_id, people(id, first_name, last_name, preferred_name, is_sample, student_accounts(email, active))")
@@ -169,8 +190,10 @@ export async function getCourseBundle(slugOrCourse: string | MasteryCourse): Pro
     supabase.from("mastery_requests").select("*").eq("course_id", courseId).order("created_at", { ascending: false }).limit(500),
     supabase.from("mastery_sources").select("source, paused, last_run_at, last_summary").eq("course_id", courseId),
     supabase.from("mastery_course_resources").select("*").eq("course_id", courseId).order("created_at", { ascending: false }),
-    supabase.from("mastery_khan_skills").select("skill_id, title, unit_title, standard_code, chosen, seen_at").eq("course_id", courseId).order("unit_title").order("title"),
+    supabase.from("mastery_khan_skills").select("*").eq("course_id", courseId).order("unit_number", { nullsFirst: false }).order("title"),
     supabase.from("mastery_khan_links").select("kaid", { count: "exact", head: true }).eq("course_id", courseId),
+    supabase.from("mastery_objective_grades").select("person_id, standard_code, score, max_score, label, updated_at").eq("course_id", courseId),
+    supabase.from("mastery_khan_levels").select("person_id, skill_id, level, updated_at").eq("course_id", courseId).limit(20000),
   ]);
   type Row = { people: Pick<Person, "id" | "first_name" | "last_name" | "preferred_name" | "is_sample"> & { student_accounts: { email: string; active: boolean } | { email: string; active: boolean }[] | null } };
   const students = ((roster.data ?? []) as unknown as Row[])
@@ -194,6 +217,8 @@ export async function getCourseBundle(slugOrCourse: string | MasteryCourse): Pro
     courseResources: (tagged.data ?? []) as CourseResourceRow[],
     khanSkills: (khanSkills.data ?? []) as KhanSkillRow[],
     khanLinked: khanLinks.count ?? 0,
+    grades: ((grades.data ?? []) as ObjectiveGradeRow[]).map((g) => ({ ...g, score: Number(g.score), max_score: g.max_score === null ? null : Number(g.max_score) })),
+    khanLevels: (khanLevels.data ?? []) as KhanLevelRow[],
     roster: students,
     evidence: (evidence.data ?? []).map(toEvidence),
     requests: (requests.data ?? []) as MasteryRequest[],
@@ -283,12 +308,18 @@ export async function getStudentCourse(slug: string, personId: string) {
   const course = await findCourse(slug);
   if (!course) return null;
   const courseId = course.id;
-  const [evidence, requests, tagged] = await Promise.all([
+  const [evidence, requests, tagged, grades, khanSkills, khanLevels] = await Promise.all([
     supabase.from("mastery_evidence").select("*").eq("course_id", courseId).eq("person_id", personId).order("occurred_at", { ascending: false }),
     supabase.from("mastery_requests").select("*").eq("course_id", courseId).eq("person_id", personId).order("created_at", { ascending: false }).limit(50),
     supabase.from("mastery_course_resources").select("*").eq("course_id", courseId),
+    supabase.from("mastery_objective_grades").select("person_id, standard_code, score, max_score, label, updated_at").eq("course_id", courseId).eq("person_id", personId),
+    supabase.from("mastery_khan_skills").select("skill_id, title, unit_title, standard_code, chosen, seen_at").eq("course_id", courseId),
+    supabase.from("mastery_khan_levels").select("person_id, skill_id, level, updated_at").eq("course_id", courseId).eq("person_id", personId),
   ]);
   return {
+    grades: ((grades.data ?? []) as ObjectiveGradeRow[]).map((g) => ({ ...g, score: Number(g.score), max_score: g.max_score === null ? null : Number(g.max_score) })),
+    khanSkills: (khanSkills.data ?? []) as KhanSkillRow[],
+    khanLevels: (khanLevels.data ?? []) as KhanLevelRow[],
     course: course as MasteryCourse,
     config: withCourseResources(await getMasteryConfig((course as MasteryCourse).config_key), (tagged.data ?? []) as CourseResourceRow[]),
     evidence: (evidence.data ?? []).map(toEvidence),

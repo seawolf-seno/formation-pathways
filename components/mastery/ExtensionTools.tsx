@@ -8,6 +8,7 @@ import {
   revokeExtensionTokenAction,
   setKhanSkillAction,
   tagResourceAction,
+  pullCanvasObjectivesAction,
 } from "@/lib/mastery/actions";
 import { button, field, quiet } from "./TeacherTools";
 
@@ -20,100 +21,152 @@ export interface KhanSkillView {
   id: string;
   title: string;
   unit: string;
-  chosen: boolean;
-  standard: string | null;
+  unitNumber: number | null;
+  objective: string | null;
   suggestion: string | null;
 }
 
 /**
- * Khan Academy key skills: everything the extension has seen in the linked
- * Khan class, grouped by Khan unit. Up to three per unit count, each mapped
- * to a standard; only those, at proficient or mastered, become evidence.
+ * Sorting Khan Academy skills into the course's learning objectives: every
+ * skill the extension has seen, by Khan unit, each with a dropdown of
+ * objectives (a suggestion is marked). Once sorted, a skill's proficient or
+ * mastered counts as evidence for that objective, and every student's level
+ * on it shows in that objective's dropdown on the dashboard.
  */
-export function KhanSkillsPanel({
+export function KhanSortPanel({
   courseId,
   skills,
-  standards,
+  groups,
   linked,
 }: {
   courseId: string;
   skills: KhanSkillView[];
-  standards: { code: string; title: string }[];
+  groups: { title: string; standards: { code: string; title: string }[] }[];
   linked: number;
 }) {
-  const units = [...new Set(skills.map((s) => s.unit))];
+  const [pending, start] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
   if (!skills.length)
     return (
       <p className="text-sm text-[var(--color-ink-muted)]">
         No Khan skills yet. Put the Khan class code in Course settings, connect the browser extension (on the Mastery Hub
-        page), and press <strong>Sync Khan now</strong> in it. The skills show up here to choose from.
+        page) and press <strong>Sync Khan now</strong> in it. Every skill shows up here to sort.
       </p>
     );
+  const units = [...new Map(skills.map((s) => [`${s.unitNumber ?? ""}|${s.unit}`, s])).values()].map((s) => ({ key: `${s.unitNumber ?? ""}|${s.unit}`, title: s.unit, n: s.unitNumber }));
+  const acceptAll = (list: KhanSkillView[]) =>
+    start(async () => {
+      setError(null);
+      for (const s of list) {
+        const res = await setKhanSkillAction(courseId, s.id, true, s.suggestion!);
+        if (!res.ok) {
+          setError(res.error);
+          break;
+        }
+      }
+      router.refresh();
+    });
   return (
     <div className="space-y-3">
       <p className="text-xs text-[var(--color-ink-muted)]">
-        {linked} Khan student{linked === 1 ? "" : "s"} linked to this roster. Pick up to three key skills per unit and the standard
-        each shows. Proficient counts as Proficient, Mastered as Extending; anything below isn&apos;t counted.
+        {linked} Khan student{linked === 1 ? "" : "s"} linked to this roster · {skills.filter((s) => s.objective).length} of {skills.length} skills
+        sorted. Every level is kept; proficient and mastered count toward the objective.
       </p>
-      {units.map((unit) => {
-        const list = skills.filter((s) => s.unit === unit);
-        const chosen = list.filter((s) => s.chosen).length;
+      {units.map((u) => {
+        const list = skills.filter((s) => `${s.unitNumber ?? ""}|${s.unit}` === u.key);
+        const sorted = list.filter((s) => s.objective).length;
+        const suggestable = list.filter((s) => !s.objective && s.suggestion);
         return (
-          <details key={unit} open={chosen > 0} className="rounded-xl border border-[var(--color-border)] bg-white">
-            <summary className="cursor-pointer px-3 py-2 text-sm">
-              <span className="font-medium text-[var(--color-navy-ink)]">{unit || "Khan skills"}</span>{" "}
-              <span className="text-xs text-[var(--color-ink-muted)]">
-                · {chosen}/3 key · {list.length} skills
+          <details key={u.key} open={sorted < list.length} className="rounded-xl border border-[var(--color-border)] bg-white">
+            <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+              <span>
+                <span className="font-medium text-[var(--color-navy-ink)]">{u.n ? `Khan unit ${u.n}: ` : ""}{u.title || "Khan skills"}</span>{" "}
+                <span className="text-xs text-[var(--color-ink-muted)]">
+                  · {sorted}/{list.length} sorted
+                </span>
               </span>
+              {suggestable.length > 0 && (
+                <button type="button" disabled={pending} onClick={() => acceptAll(suggestable)} className={`${quiet} text-xs`}>
+                  {pending ? "Sorting…" : `Use the ${suggestable.length} suggestion${suggestable.length === 1 ? "" : "s"}`}
+                </button>
+              )}
             </summary>
             <ul className="divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
               {list.map((s) => (
-                <KhanSkillRow key={s.id} courseId={courseId} skill={s} standards={standards} full={chosen >= 3} />
+                <KhanSortRow key={s.id} courseId={courseId} skill={s} groups={groups} />
               ))}
             </ul>
           </details>
         );
       })}
+      {error && <p className="text-sm text-[var(--color-navy-ink)]">{error}</p>}
     </div>
   );
 }
 
-function KhanSkillRow({ courseId, skill, standards, full }: { courseId: string; skill: KhanSkillView; standards: { code: string; title: string }[]; full: boolean }) {
-  const [standard, setStandard] = useState(skill.standard ?? skill.suggestion ?? "");
+function KhanSortRow({ courseId, skill, groups }: { courseId: string; skill: KhanSkillView; groups: { title: string; standards: { code: string; title: string }[] }[] }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
   const router = useRouter();
-  const save = (chosen: boolean, code = standard) =>
-    start(async () => {
-      setError(null);
-      const res = await setKhanSkillAction(courseId, skill.id, chosen, code);
-      if (!res.ok) setError(res.error);
-      router.refresh();
-    });
   return (
     <li className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
-      <label className="flex flex-1 items-center gap-2">
-        <input type="checkbox" checked={skill.chosen} disabled={pending || (!skill.chosen && full)} onChange={(e) => save(e.target.checked)} />
-        <span className={skill.chosen ? "font-medium text-[var(--color-navy-ink)]" : "text-[var(--color-ink)]"}>{skill.title}</span>
-      </label>
+      <span className="min-w-0 flex-1">{skill.title}</span>
       <select
-        value={standard}
-        onChange={(e) => {
-          setStandard(e.target.value);
-          if (skill.chosen) save(true, e.target.value);
-        }}
-        className={`${field} w-auto max-w-xs text-xs`}
+        value={skill.objective ?? ""}
+        disabled={pending}
+        onChange={(e) =>
+          start(async () => {
+            setError(null);
+            const code = e.target.value;
+            const res = await setKhanSkillAction(courseId, skill.id, Boolean(code), code);
+            if (!res.ok) setError(res.error);
+            router.refresh();
+          })
+        }
+        className={`${field} w-auto max-w-sm text-xs ${skill.objective ? "" : "text-[var(--color-ink-muted)]"}`}
       >
-        <option value="">Standard…</option>
-        {standards.map((x) => (
-          <option key={x.code} value={x.code}>
-            {x.code} {x.title}
-            {x.code === skill.suggestion ? " (suggested)" : ""}
-          </option>
+        <option value="">{skill.suggestion ? "Not sorted (suggestion marked ★)" : "Not sorted"}</option>
+        {groups.map((g) => (
+          <optgroup key={g.title} label={g.title}>
+            {g.standards.map((x) => (
+              <option key={x.code} value={x.code}>
+                {x.code === skill.suggestion ? "★ " : ""}
+                {x.title}
+              </option>
+            ))}
+          </optgroup>
         ))}
       </select>
       {error && <span className="w-full text-xs text-[var(--color-navy-ink)]">{error}</span>}
     </li>
+  );
+}
+
+/** Make (or refresh) the course's backbone from its Canvas Outcomes. */
+export function CanvasObjectivesButton({ courseId, fromCanvas, hasCanvasId }: { courseId: string; fromCanvas: boolean; hasCanvasId: boolean }) {
+  const [message, setMessage] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+  return (
+    <div className="space-y-2">
+      <button
+        disabled={pending || !hasCanvasId}
+        className={button}
+        onClick={() =>
+          start(async () => {
+            setMessage(null);
+            const res = await pullCanvasObjectivesAction(courseId);
+            setMessage(res.ok ? `${res.objectives} objectives in ${res.units} units from Canvas. ${res.summary}` : res.error);
+            if (res.ok) router.refresh();
+          })
+        }
+      >
+        {pending ? "Reading Canvas…" : fromCanvas ? "Pull changes from Canvas" : "Use my Canvas learning objectives"}
+      </button>
+      {!hasCanvasId && <p className="text-xs text-[var(--color-ink-muted)]">Add the Canvas course id in Course settings first.</p>}
+      {message && <p className="text-sm text-[var(--color-navy-ink)]">{message}</p>}
+    </div>
   );
 }
 

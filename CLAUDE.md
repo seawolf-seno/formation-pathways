@@ -345,6 +345,16 @@ adults behind the scenes; students stay present, in person, with people.
   Also **tags any page** as a course resource (`mastery_course_resources`, merged into the course's standards).
   Auth: a revocable `fpx_` token from `/mastery` (hash only, 180 days) → `app/api/mastery/extension/*` →
   token-checked SECURITY DEFINER functions. Migration `20261022000000` on staging (verified).
+- **Mastery Hub on Canvas learning objectives (2026-10-12, branch `seno/mastery-objectives`, card #37)**:
+  #68 merged, `20261022` in production. seno found the hub too scattered: he grades a few broad
+  objectives per unit in Canvas (Outcomes), and wants everything to resolve into them. Now:
+  **Setup → Use my Canvas learning objectives** makes the course's Outcomes (by group/unit) the
+  standard set (`canvas-<id>`, codes `o<outcome id>`, unit videos carried over); Canvas work counts via
+  **rubric alignment**; Canvas's own **objective score** (rollups, `mastery_objective_grades`) shows first;
+  **all Khan levels** kept (`mastery_khan_levels`), each Khan skill sorted once into an objective
+  (★ suggestion; no 3-per-unit cap). Dashboard `/mastery/<course>` is **students first** (list + objective
+  cards with "what's behind it" dropdowns); everything else on `/mastery/<course>/setup`. Extension 0.2.0
+  sends every level. Migration `20261023000000` on staging (verified).
 - **Open PRs as of 2026-10-12**: #62 and #63 merged (their migrations are on staging; production
   is seno's). Still open:
   - #58 STEM Scholars (TheEnigmaticPhilosopher): migration still named `20261012000000_…`

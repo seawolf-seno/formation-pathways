@@ -5,10 +5,12 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getSorClient } from "@/lib/sor/supabase-server";
 import { parseCsv } from "@/lib/sor/importers/csv";
-import { COURSE_SLUG, EVIDENCE_SOURCES, LEVELS, findStandard, type EvidenceSource, type Level } from "./config";
+import { COURSE_SLUG, EVIDENCE_SOURCES, LEVELS, findStandard, parseMasteryConfig, type EvidenceSource, type Level } from "./config";
 import { exportEvidence, parseExport, type RosterPerson } from "./exports";
 import { sampleEvidence } from "./sample";
-import { getMasteryConfig } from "./standard-sets";
+import { getMasteryConfig, rawStandardSet, savedStandardSet } from "./standard-sets";
+import { objectivesFromCanvas } from "./canvas-outcomes";
+import { fetchCanvasOutcomes, isLiveCanvasConfigured } from "./canvas";
 import { fallbackDraftSteps, parseDraftSteps, readSavedSteps, type DraftStep } from "./next-steps";
 import { nextStepsPayload } from "./next-steps-server";
 import { describeLink } from "./links";
@@ -658,6 +660,59 @@ export async function revokeExtensionTokenAction(tokenHash: string): Promise<Res
     if (error) throw new Error(error.message);
     refresh();
     return { ok: true };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+// ---------------------------------------------------------------- objectives from Canvas
+
+/** Make the teacher's Canvas learning objectives (Outcomes, by unit) this
+ *  course's backbone. Saved as the course's own standard set
+ *  (canvas-<Canvas course id>), keeping each unit's videos and links from
+ *  the set it used before; pressing it again picks up changes in Canvas.
+ *  Then brings in Canvas work and objective scores. */
+export async function pullCanvasObjectivesAction(courseId: string): Promise<Result<{ objectives: number; units: number; summary: string }>> {
+  try {
+    const staff = await requireMasteryTeacher();
+    const bundle = await bundleOrThrow(courseId);
+    const { course } = bundle;
+    if (course.is_sample) return { ok: false, error: "A sample course has no Canvas course to read from." };
+    if (!course.canvas_course_id) return { ok: false, error: "Add this course's Canvas course id in Course settings first." };
+    if (!isLiveCanvasConfigured()) return { ok: false, error: "Canvas isn't connected on this server (CANVAS_BASE_URL / CANVAS_API_TOKEN)." };
+    const { courseName, links } = await fetchCanvasOutcomes(course.canvas_course_id);
+    if (!links.length) return { ok: false, error: "That Canvas course has no learning objectives (Outcomes) yet." };
+    const key = `canvas-${course.canvas_course_id}`;
+    const previous = await rawStandardSet(course.config_key);
+    const raw = objectivesFromCanvas(links, {
+      key,
+      slug: course.slug,
+      title: `${course.title} objectives`,
+      courseTitle: courseName,
+      base: bundle.config,
+      baseRaw: previous?.raw ?? null,
+    });
+    const config = parseMasteryConfig(raw);
+    const supabase = await getSorClient();
+    const existing = await savedStandardSet(key);
+    const write = existing
+      ? await supabase.from("mastery_standard_sets").update({ config: raw }).eq("key", key).select("key")
+      : await supabase.from("mastery_standard_sets").insert({ key, config: raw }).select("key");
+    if (write.error) throw new Error(write.error.message);
+    if (!write.data?.length) return { ok: false, error: "Another teacher saved these objectives first; ask them or an admin." };
+    if (course.config_key !== key) {
+      const { error } = await supabase.from("mastery_courses").update({ config_key: key }).eq("id", courseId);
+      if (error) throw new Error(error.message);
+    }
+    const fresh = await bundleOrThrow(courseId);
+    let summary = "";
+    try {
+      summary = await runCanvasSync(fresh, staff.user_id);
+    } catch (e) {
+      summary = `Objectives saved; the Canvas check said: ${e instanceof Error ? e.message : String(e)}`;
+    }
+    refresh();
+    return { ok: true, objectives: config.groups.reduce((n, g) => n + g.standards.length, 0), units: config.groups.length, summary };
   } catch (e) {
     return fail(e);
   }

@@ -1,6 +1,7 @@
 import "server-only";
 import { LiveCanvasSource } from "@/lib/integrations/canvas";
-import type { CanvasOutcomeResult, CanvasSubmission } from "./canvas-map";
+import type { CanvasOutcomeResult, CanvasRollupScore, CanvasSubmission } from "./canvas-map";
+import type { CanvasOutcomeLink } from "./canvas-outcomes";
 
 /**
  * Reads one Canvas course's graded work and Outcome results for the students
@@ -17,8 +18,13 @@ export function isLiveCanvasConfigured(): boolean {
 export async function fetchCanvasMastery(
   canvasCourseId: string,
   canvasUserIds: string[],
-): Promise<{ submissions: CanvasSubmission[]; outcomeResults: CanvasOutcomeResult[] }> {
-  if (!canvasUserIds.length) return { submissions: [], outcomeResults: [] };
+): Promise<{
+  submissions: CanvasSubmission[];
+  outcomeResults: CanvasOutcomeResult[];
+  rollups: CanvasRollupScore[];
+  outcomes: Map<string, { ratings?: { description?: string | null; points?: number | null }[] | null; points_possible?: number | null }>;
+}> {
+  if (!canvasUserIds.length) return { submissions: [], outcomeResults: [], rollups: [], outcomes: new Map() };
   const client = new LiveCanvasSource(process.env.CANVAS_BASE_URL!, process.env.CANVAS_API_TOKEN!);
   const subs = await client.getAll<{
     user_id: number;
@@ -26,10 +32,16 @@ export async function fetchCanvasMastery(
     score: number | null;
     graded_at: string | null;
     workflow_state: string;
-    assignment?: { name: string; points_possible: number | null; external_tool_tag_attributes?: { url?: string } | null };
+    rubric_assessment?: Record<string, { points?: number | null }> | null;
+    assignment?: {
+      name: string;
+      points_possible: number | null;
+      external_tool_tag_attributes?: { url?: string } | null;
+      rubric?: { id: string; points: number | null; description?: string | null; outcome_id?: number | null }[] | null;
+    };
   }>(`/courses/${canvasCourseId}/students/submissions`, {
     "student_ids[]": canvasUserIds,
-    "include[]": ["assignment"],
+    "include[]": ["assignment", "rubric_assessment"],
     workflow_state: "graded",
   });
 
@@ -61,7 +73,29 @@ export async function fetchCanvasMastery(
     // graded assignments still count.
   }
 
+  // Each student's current score on each objective: Canvas's own rollup.
+  const rollups: CanvasRollupScore[] = [];
+  const outcomes = new Map<string, { ratings?: { description?: string | null; points?: number | null }[] | null; points_possible?: number | null }>();
+  try {
+    let page = await client.request<{
+      rollups: { scores: { score: number | null; links: { outcome: string } }[]; links: { user: string } }[];
+      linked?: { outcomes?: { id: number; ratings?: { description?: string; points?: number }[]; points_possible?: number }[] };
+    }>(`/courses/${canvasCourseId}/outcome_rollups`, { "user_ids[]": canvasUserIds, "include[]": "outcomes", per_page: 100 });
+    for (let pages = 0; pages < 20; pages++) {
+      for (const o of page.data.linked?.outcomes ?? []) outcomes.set(String(o.id), { ratings: o.ratings, points_possible: o.points_possible });
+      for (const r of page.data.rollups ?? [])
+        for (const sc of r.scores ?? [])
+          if (typeof sc.score === "number") rollups.push({ user_id: String(r.links.user), outcome_id: String(sc.links.outcome), score: sc.score });
+      if (!page.next) break;
+      page = await client.request(page.next);
+    }
+  } catch {
+    // No outcomes in this course, or the token can't read rollups.
+  }
+
   return {
+    rollups,
+    outcomes,
     submissions: subs.map((s) => ({
       user_id: String(s.user_id),
       assignment_id: String(s.assignment_id),
@@ -71,7 +105,18 @@ export async function fetchCanvasMastery(
       graded_at: s.graded_at,
       workflow_state: s.workflow_state,
       tool_url: s.assignment?.external_tool_tag_attributes?.url ?? null,
+      rubric: (s.assignment?.rubric ?? []).map((c) => ({ id: String(c.id), points: c.points, description: c.description ?? null, outcome_id: c.outcome_id ?? null })),
+      rubric_assessment: s.rubric_assessment ?? null,
     })),
     outcomeResults: outcomeResults.map((r) => ({ ...r, outcome_title: titles.get(r.outcome_id) ?? "" })),
   };
+}
+
+/** A course's learning objectives as the teacher set them up in Canvas
+ *  (Outcomes, with the group each sits in), and the course's name. */
+export async function fetchCanvasOutcomes(canvasCourseId: string): Promise<{ courseName: string; links: CanvasOutcomeLink[] }> {
+  const client = new LiveCanvasSource(process.env.CANVAS_BASE_URL!, process.env.CANVAS_API_TOKEN!);
+  const { data: course } = await client.request<{ name: string }>(`/courses/${canvasCourseId}`);
+  const links = await client.getAll<CanvasOutcomeLink>(`/courses/${canvasCourseId}/outcome_group_links`, { outcome_style: "full" });
+  return { courseName: course.name, links };
 }

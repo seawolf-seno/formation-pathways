@@ -648,7 +648,7 @@ const skills = [
 ];
 await expectAnon("the first sync keeps the skill catalog, adds no evidence yet", sync({ skills, links: [{ kaid: "kaid_kid1", person: "22222222-2222-2222-2222-222222222222" }, { kaid: "kaid_other", person: "11111111-1111-1111-1111-111111111111" }], levels: [] }), true, r => r.rows[0].r.skills === 4 && r.rows[0].r.links === 1 && r.rows[0].r.added === 0);
 await expect("the teacher picks key skills and maps them", "teach", `update mastery_khan_skills set chosen = true, standard_code = case skill_id when 'x1' then '2.5' when 'x2' then '2.2' else '2.7' end where skill_id in ('x1','x2','x3') returning skill_id`, true, r => r.rows.length === 3);
-await expect("a fourth key skill in the same unit is refused", "teach", `update mastery_khan_skills set chosen = true, standard_code = '2.8' where skill_id = 'x4'`, false);
+await expect("a fourth skill in the same unit can be sorted too (objectives are the focus now)", "teach", `update mastery_khan_skills set chosen = true, standard_code = '2.8' where skill_id = 'x4' returning skill_id`, true, r => r.rows.length === 1);
 await expect("a key skill needs a standard", "teach", `update mastery_khan_skills set chosen = true, standard_code = null where skill_id = 'x1'`, false);
 const levels = [
   { person: "22222222-2222-2222-2222-222222222222", skill: "x1", level: "mastered" },
@@ -657,8 +657,9 @@ const levels = [
   { person: "22222222-2222-2222-2222-222222222222", skill: "x4", level: "mastered" },
   { person: "11111111-1111-1111-1111-111111111111", skill: "x1", level: "mastered" },
 ];
-await expectAnon("only key skills at proficient or mastered become evidence", sync({ skills: [], links: [], levels }), true, r => r.rows[0].r.added === 2);
-await expect("mastered counts as Extending, proficient as Proficient", "teach", `select standard_code, level, recorded_by from mastery_evidence where source = 'khan' and external_key like 'khan:%' order by standard_code`, true, r => r.rows.length === 2 && r.rows[0].standard_code === "2.2" && r.rows[0].level === "proficient" && r.rows[1].level === "extending" && r.rows[1].recorded_by === null);
+await expectAnon("every level is kept; sorted skills at proficient or mastered become evidence", sync({ skills: [], links: [], levels }), true, r => r.rows[0].r.added === 3 && r.rows[0].r.levels === 4);
+await expect("mastered counts as Extending, proficient as Proficient", "teach", `select standard_code, level, recorded_by from mastery_evidence where source = 'khan' and external_key like 'khan:%' order by standard_code`, true, r => r.rows.length === 3 && r.rows[0].standard_code === "2.2" && r.rows[0].level === "proficient" && r.rows[1].level === "extending" && r.rows[2].standard_code === "2.8" && r.rows[1].recorded_by === null);
+await expect("the familiar level is kept too, just not counted", "teach", `select level from mastery_khan_levels where skill_id = 'x3'`, true, r => r.rows.length === 1 && r.rows[0].level === "familiar");
 await expectAnon("the same sync again adds nothing", sync({ skills: [], links: [], levels }), true, r => r.rows[0].r.added === 0);
 await expectAnon("not another teacher's course", `select mastery_ext_khan_sync('ext-good', '${theirsId}', '{"skills":[],"links":[],"levels":[]}'::jsonb)`, false);
 await expect("the teacher pauses Khan", "teach", `insert into mastery_sources (course_id, source, paused) values (${physics}, 'khan', true) on conflict (course_id, source) do update set paused = true returning paused`, true, r => r.rows[0]?.paused === true);
@@ -671,11 +672,23 @@ await expectAnon("a YouTube video needs its id", tag({ kind: "video", url: "http
 await expectAnon("...and with it, is saved", tag({ kind: "video", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", video_id: "dQw4w9WgXcQ", channel: "Someone" }), true);
 await expectAnon("only https pages", tag({ url: "javascript:alert(1)" }), false);
 await expect("the student sees the tagged resources", "kid", `select title from mastery_course_resources`, true, r => r.rows.length === 2);
-await expect("...but never Khan links, key skills or connections", "kid", `select (select count(*) from mastery_khan_links) + (select count(*) from mastery_khan_skills) + (select count(*) from mastery_extension_tokens) as n`, true, r => Number(r.rows[0].n) === 0);
+await expect("...their own Khan levels and their course's Khan skills", "kid", `select (select count(*) from mastery_khan_levels)::int as levels, (select count(*) from mastery_khan_skills)::int as skills`, true, r => r.rows[0].levels === 4 && r.rows[0].skills === 4);
+await expect("...but never Khan links or connections", "kid", `select (select count(*) from mastery_khan_links) + (select count(*) from mastery_extension_tokens) as n`, true, r => Number(r.rows[0].n) === 0);
 await expect("the teacher revokes the connection", "teach", `update mastery_extension_tokens set revoked_at = now() where label = 'My Chrome' returning token_hash`, true, r => r.rows.length === 1);
 await expect("a revoked connection can't come back", "teach", `update mastery_extension_tokens set revoked_at = null where label = 'My Chrome'`, false);
 await expectAnon("a revoked token gets nothing", `select mastery_ext_context('ext-good') as c`, true, r => r.rows[0].c === null);
 await expectAnon("...and can't sync", sync({ skills: [], links: [], levels }), false);
+
+// Canvas objective scores (Canvas's own rollups), shown first on the dashboard.
+const grade = (who, code, score) => `insert into mastery_objective_grades (course_id, person_id, standard_code, score, max_score, label) values (${physics}, '22222222-2222-2222-2222-222222222222', '${code}', ${score}, 4, 'Meets Mastery') on conflict (course_id, person_id, standard_code) do update set score = excluded.score returning score`;
+await expect("the teacher keeps a student's Canvas objective score", "teach", grade("teach", "o101", 3), true, r => Number(r.rows[0].score) === 3);
+await expect("another teacher can't", "teach2", grade("teach2", "o101", 1), false);
+await expect("not for someone off the roster", "teach", `insert into mastery_objective_grades (course_id, person_id, standard_code, score) values (${physics}, (select id from people where is_sample limit 1), 'o101', 1)`, false);
+await expect("the student sees their own objective scores", "kid", `select score from mastery_objective_grades`, true, r => r.rows.length === 1);
+await expect("admissions doesn't", "adm", `select * from mastery_objective_grades`, true, r => r.rows.length === 0);
+await expectImporter("the importer updates a score (update, then insert if new)", `update mastery_objective_grades set score = 4, max_score = 4, label = 'Exceeds', updated_at = now() where course_id = ${physics} and person_id = '22222222-2222-2222-2222-222222222222' and standard_code = 'o101' returning standard_code`, true, r => r.rows.length === 1);
+await expectImporter("...and adds a new one", `insert into mastery_objective_grades (course_id, person_id, standard_code, score, max_score, label, updated_at) values (${physics}, '22222222-2222-2222-2222-222222222222', 'o102', 2, 4, 'Approaching', now())`, true);
+await expectImporter("...but can't read the other columns", `select score from mastery_objective_grades`, false);
 
 const exposed = await db.query("select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.prosecdef");
 const noneExposed = exposed.rows.length === 0; if (noneExposed) pass++; else fail++;

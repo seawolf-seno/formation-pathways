@@ -2,11 +2,13 @@
 
 A small Chrome extension (`extensions/mastery-hub/`) that does two things for a teacher:
 
-1. **Khan Academy key skills, no uploads.** While you're signed in to Khan Academy, it reads your
-   class's **Reports → Skills** report the way your own browser already loads it. It sends the
-   hub your key skills at **proficient** (counts as Proficient) or **mastered** (counts as
-   Extending). It does this every three hours in a background tab, whenever you open that report
-   yourself, and on **Sync Khan now**.
+1. **All your Khan Academy data, no uploads.** While you're signed in to Khan Academy, it reads
+   your class's **Reports → Skills** report the way your own browser already loads it. It sends
+   the hub every skill's level for your students. Once you sort a skill into one of your Canvas
+   learning objectives, **proficient** (counts as Proficient) and **mastered** (counts as
+   Extending) become evidence for it, and every level shows under that objective. It does this
+   every three hours in a background tab, whenever you open that report yourself, and on **Sync
+   Khan now**.
 2. **Tag any page.** On any https page (a YouTube video, a PhET sim, an article), open the
    extension, pick the class and the standard or unit, and save. Students see it with that
    standard's next steps; YouTube videos join the video shelf.
@@ -45,14 +47,15 @@ working at once. The hub keeps only a hash of the code.
 2. **First sync.** In the extension, **Sync Khan now**. It opens your skills report in a
    background tab, sends the skill list, and closes the tab (about half a minute; you need to be
    signed in to Khan in that Chrome).
-3. **Pick key skills.** On the course page, under **Khan Academy key skills**: for each unit,
-   tick up to **three** skills and the standard each one shows (a suggestion is marked when a
-   skill's name matches a standard). Only these count.
+3. **Sort skills into objectives.** On the course's **Setup** page, under Khan Academy: each Khan
+   skill has a dropdown of your learning objectives. The suggestion (★) is the objective in the
+   same unit whose words overlap most, and **Use the suggestions** sorts a whole unit at once.
+   You do this once per skill.
 4. **Students.** Khan students are matched to your roster by exact name in your browser. Anyone
    not matched shows in the extension with a **Link to…** list; pick their name once.
    Unmatched Khan students never reach the hub.
-5. Sync again (or wait for the next automatic one). Each student's key skills at proficient or
-   mastered appear as Khan Academy evidence. A student who moves from proficient to mastered gets
+5. Sync again (or wait for the next automatic one). Each student's sorted skills at proficient or
+   mastered appear as Khan Academy evidence, and every skill's level shows under its objective. A student who moves from proficient to mastered gets
    one more piece of evidence; the same level again adds nothing. Below proficient isn't counted
    (and is never held against them).
 

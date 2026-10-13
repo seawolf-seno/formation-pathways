@@ -34,7 +34,7 @@ export default async function StudentCoursePage({ params }: { params: Promise<{ 
       {shared && shared.steps.length > 0 && (
         <SharedSteps steps={shared.steps} sharedBy={shared.shared_by_name} titles={Object.fromEntries(allStandards(data.config).map((s) => [s.code, s.title]))} />
       )}
-      <MasteryView config={data.config} evidence={data.evidence} firstName={student.firstName} audience="student" finishedThrough={data.course.finished_through} />
+      <MasteryView config={data.config} evidence={data.evidence} firstName={student.firstName} audience="student" finishedThrough={data.course.finished_through} grades={data.grades} khanSkills={data.khanSkills} khanLevels={data.khanLevels} />
       <VideoShelf config={data.config} finishedThrough={data.course.finished_through} you />
       <section>
         <h2 className="mb-3 font-display text-xl text-[var(--color-navy-ink)]">Ask your teacher</h2>

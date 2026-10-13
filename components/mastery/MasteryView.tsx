@@ -1,8 +1,8 @@
-import { LEVELS, SOURCE_LABELS, levelLabel, videoUrl, type MasteryConfig } from "@/lib/mastery/config";
+import { LEVELS, levelLabel, videoUrl, type MasteryConfig } from "@/lib/mastery/config";
 import { groupLevel, levelCounts, nextSteps, studentStatuses, type StandardStatus } from "@/lib/mastery/rules";
-import type { Evidence } from "@/lib/mastery/queries";
-import { LEVEL_STYLE, shortDate } from "./levels";
-import { DeleteEvidenceButton } from "./TeacherTools";
+import type { Evidence, KhanLevelRow, KhanSkillRow, ObjectiveGradeRow } from "@/lib/mastery/queries";
+import { ObjectiveCard, objectiveLevel } from "./ObjectiveCard";
+import { LEVEL_STYLE } from "./levels";
 
 const RESOURCE_ICON: Record<string, string> = { khan: "Practice", phet: "Simulation", openstax: "Reading", ap_classroom: "AP practice", other: "Link" };
 
@@ -14,17 +14,7 @@ export function LevelChip({ config, level, size = "sm" }: { config: MasteryConfi
   );
 }
 
-function result(e: Evidence, config: MasteryConfig): string {
-  if (e.level) return levelLabel(config, e.level);
-  if (e.score !== null && e.max_score !== null) return `${Number(e.score.toFixed(2))} / ${Number(e.max_score.toFixed(2))}`;
-  return "";
-}
 
-function basisLine(s: StandardStatus, you: boolean): string {
-  if (s.basis === "none") return "No evidence yet";
-  if (s.basis === "teacher") return `${you ? "Your teacher's" : "Your"} latest judgment, ${shortDate(s.lastAt!)}`;
-  return `From ${s.count} piece${s.count === 1 ? "" : "s"} of evidence, newest ${shortDate(s.lastAt!)}`;
-}
 
 /**
  * One student's mastery in a course: where they are on each standard (in
@@ -39,6 +29,9 @@ export function MasteryView({
   audience,
   courseIdForTeacher,
   finishedThrough = null,
+  grades = [],
+  khanSkills = [],
+  khanLevels = [],
 }: {
   config: MasteryConfig;
   evidence: Evidence[];
@@ -46,12 +39,20 @@ export function MasteryView({
   audience: "student" | "teacher";
   /** The last unit the class has finished: those come first in next steps. */
   finishedThrough?: number | null;
+  /** Canvas's own objective scores for this student. */
+  grades?: ObjectiveGradeRow[];
+  /** Khan skills sorted into objectives, and this student's Khan levels. */
+  khanSkills?: KhanSkillRow[];
+  khanLevels?: KhanLevelRow[];
   /** Set on the teacher's copy: shows a remove button on each piece. */
   courseIdForTeacher?: string;
 }) {
   const you = audience === "student";
   const statuses = studentStatuses(config, evidence);
-  const counts = levelCounts(statuses.values());
+  const gradeOf = (code: string) => grades.find((g) => g.standard_code === code) ?? null;
+  const counts = levelCounts(
+    [...statuses.values()].map((st) => ({ ...st, level: objectiveLevel(config, gradeOf(st.code), evidence.filter((e) => e.standard_code === st.code)) })),
+  );
   const steps = nextSteps(config, statuses, evidence, 3, finishedThrough);
   const total = statuses.size;
   const atOrAbove = counts.proficient + counts.extending;
@@ -136,59 +137,28 @@ export function MasteryView({
         <h2 className="font-display text-xl text-[var(--color-navy-ink)]">By unit</h2>
         <div className="mt-3 space-y-2">
           {config.groups.map((g, gi) => {
-            const levels = g.standards.map((s) => statuses.get(s.code)?.level ?? null);
+            const levels = g.standards.map((s) => objectiveLevel(config, gradeOf(s.code), byStandard.get(s.code) ?? []));
             const started = levels.some(Boolean);
             return (
-              <details key={g.code} open={started && gi < 3} className="rounded-2xl border border-[var(--color-border)] bg-white">
+              <details key={g.code} open={started && gi < 3} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-canvas)]">
                 <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3">
                   <span className="font-medium text-[var(--color-navy-ink)]">{g.title}</span>
                   <LevelChip config={config} level={groupLevel(levels)} />
                 </summary>
-                <ul className="divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
-                  {g.standards.map((s) => {
-                    const st = statuses.get(s.code)!;
-                    const pieces = byStandard.get(s.code) ?? [];
-                    return (
-                      <li key={s.code} className="px-4 py-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm text-[var(--color-ink)]">
-                              <span className="mr-2 text-xs text-[var(--color-ink-muted)]">{s.code}</span>
-                              {s.title}
-                            </p>
-                            <p className="mt-0.5 text-xs text-[var(--color-ink-muted)]">{basisLine(st, you)}</p>
-                          </div>
-                          <LevelChip config={config} level={st.level} />
-                        </div>
-                        {pieces.length > 0 && (
-                          <details className="mt-2">
-                            <summary className="cursor-pointer text-xs text-[var(--color-navy)]">Evidence ({pieces.length})</summary>
-                            <ul className="mt-2 space-y-1.5">
-                              {pieces.map((e) => (
-                                <li key={e.id} className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-lg bg-[var(--color-canvas)] px-3 py-2 text-xs">
-                                  <span className="min-w-0 flex-1">
-                                    <span className="font-medium text-[var(--color-ink)]">{SOURCE_LABELS[e.source]}</span>
-                                    <span className="text-[var(--color-ink-muted)]"> · {e.title}</span>
-                                    {e.note && <span className="mt-0.5 block text-[var(--color-ink-muted)]">“{e.note}”</span>}
-                                    {e.link && (
-                                      <a href={e.link} target="_blank" rel="noopener noreferrer" className="mt-0.5 block truncate text-[var(--color-navy)] underline">
-                                        {e.link}
-                                      </a>
-                                    )}
-                                  </span>
-                                  <span className="whitespace-nowrap text-[var(--color-ink)]">
-                                    {result(e, config)} <span className="text-[var(--color-ink-muted)]">· {shortDate(e.occurred_at)}</span>
-                                  </span>
-                                  {courseIdForTeacher && <DeleteEvidenceButton courseId={courseIdForTeacher} evidenceId={e.id} />}
-                                </li>
-                              ))}
-                            </ul>
-                          </details>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
+                <div className="space-y-2 px-3 pb-3">
+                  {g.standards.map((s) => (
+                    <ObjectiveCard
+                      key={s.code}
+                      config={config}
+                      standard={s}
+                      evidence={byStandard.get(s.code) ?? []}
+                      grade={gradeOf(s.code)}
+                      khanSkills={khanSkills.filter((k) => k.standard_code === s.code)}
+                      khanLevels={khanLevels}
+                      courseIdForTeacher={courseIdForTeacher}
+                    />
+                  ))}
+                </div>
               </details>
             );
           })}

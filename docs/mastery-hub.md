@@ -11,6 +11,41 @@ It shows small, specific paths toward mastery feeding the larger Formation Pathw
 a student's pilot page shows their mastery courses in words ("proficient or beyond on
 9 of 46 standards; going further on rolling, torque"). The scores stay in the hub.
 
+## The shape (2026-10-12): Canvas learning objectives are the backbone
+
+seno grades a few broad **learning objectives per unit in Canvas** (Outcomes). The hub uses those
+as its backbone, and everything else resolves into them:
+
+- **Setup → Learning objectives → Use my Canvas learning objectives.** This reads the course's
+  Canvas Outcomes (`/courses/:id/outcome_group_links`) and makes them the course's standard set:
+  each outcome group becomes a unit (its number read from the group title), and each outcome
+  becomes an objective (`o<Canvas id>`). Each unit's videos and study links carry over from the
+  set the course used before. **Pull changes from Canvas** picks up later edits; the codes are
+  Canvas ids, so every piece of evidence stays attached (`lib/mastery/canvas-outcomes.ts`).
+- **Canvas work** counts toward an objective through its **rubric alignment**: each aligned
+  rubric criterion is evidence at its own score. Work aligned but graded without the rubric
+  counts its whole score. **Canvas's own objective score** (outcome rollups) is saved per
+  student (`mastery_objective_grades`) and shown **first**, in the outcome's rating words
+  ("Meets Mastery · 3/4"). The hub's own reading of the evidence sits beside it.
+- **Khan Academy: all of it.** The extension sends every skill's level for every linked
+  student, and the hub keeps them all (`mastery_khan_levels`). On Setup, each Khan skill is
+  sorted once into an objective. Its Khan unit lines up with the same Canvas unit, and a
+  suggestion (★) is the objective whose words overlap most. Every sorted skill at proficient or
+  mastered counts as evidence; the others still show, with their level. The old three-per-unit
+  cap is gone.
+- **AP Classroom** progress checks ("Unit 2 Progress Check") count toward that unit's
+  objectives.
+
+**The dashboard** (`/mastery/<course>`) is students first:
+- the class down the left, with a dot per objective in the unit;
+- the chosen student's objectives filling the page, each showing the Canvas score;
+- each objective opens into what's behind it: every Khan skill sorted into it (with the
+  student's level), AP Classroom, Canvas work, oral exams and work sent in.
+
+Everything else (objectives, settings, requests, Khan sorting, sources, tagged resources, the
+whole-class map, roster) is on **Setup** (`/mastery/<course>/setup`). Students see the same
+objective cards on `/me/<course>`.
+
 ## Who sees what
 
 Every course has an **address**: `/mastery/APPhysics1` for the teacher and `/me/APPhysics1` for

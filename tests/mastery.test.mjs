@@ -11,6 +11,7 @@ import { parseCsv } from "../lib/sor/importers/csv.ts";
 
 const raw = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, "../fixtures/mastery/ap-physics-1.json"), "utf8"));
 const config = parseMasteryConfig(raw);
+const raw0 = () => structuredClone(raw);
 const rules = config.rules;
 const ev = (code, source, at, extra) => ({ standard_code: code, source, score: null, max_score: null, level: null, occurred_at: at, ...extra });
 
@@ -360,4 +361,58 @@ test("the extension matches Khan students exactly and keeps only proficient / ma
   assert.equal(countedLevel("MASTERED"), "mastered");
   assert.equal(countedLevel("proficient"), "proficient");
   for (const w of ["familiar", "attempted", "unstarted", "", null]) assert.equal(countedLevel(w), null, String(w));
+});
+
+test("Canvas objectives become the backbone, unit by unit, keeping each unit's videos", async () => {
+  const { objectivesFromCanvas, outcomeCodes, unitNumberOf, ratingLabel, suggestObjective } = await import("../lib/mastery/canvas-outcomes.ts");
+  const links = [
+    { outcome_group: { id: 20, title: "Unit 2: Forces" }, outcome: { id: 201, title: "LO 2.1", display_name: "Apply Newton's laws to a single object", description: "<p>Uses Newton&#39;s second law and free body diagrams</p>", ratings: [{ description: "Exceeds", points: 4 }, { description: "Meets Mastery", points: 3 }, { description: "Approaching", points: 2 }] } },
+    { outcome_group: { id: 20, title: "Unit 2: Forces" }, outcome: { id: 202, title: "Analyze systems and Newton's third law pairs" } },
+    { outcome_group: { id: 20, title: "Unit 2: Forces" }, outcome: { id: 203, title: "Circular motion and gravitation" } },
+    { outcome_group: { id: 10, title: "Unit 1 Kinematics" }, outcome: { id: 101, title: "Describe motion with graphs and equations" } },
+    { outcome_group: { id: 1, title: "AP Physics 1 P5" }, outcome: { id: 900, title: "Science practices" } },
+    { outcome_group: { id: 10, title: "Unit 1 Kinematics" }, outcome: { id: 101, title: "duplicate link" } },
+  ];
+  const raw = objectivesFromCanvas(links, { key: "canvas-123", slug: "APPhysics1", title: "AP Physics 1 objectives", courseTitle: "AP Physics 1 P5", base: config, baseRaw: raw0() });
+  const cfg = parseMasteryConfig(raw);
+  assert.deepEqual(cfg.groups.map((g) => [g.title, g.unitNumber, g.standards.length]), [["Unit 1 Kinematics", 1, 1], ["Unit 2: Forces", 2, 3], ["Course objectives", null, 1]]);
+  const lo21 = cfg.groups[1].standards[0];
+  assert.equal(lo21.code, "o201");
+  assert.equal(lo21.title, "Apply Newton's laws to a single object");
+  assert.equal(lo21.description, "Uses Newton's second law and free body diagrams");
+  assert.ok(cfg.groups[1].videos.length >= 5, "Unit 2's videos come along");
+  assert.equal(cfg.groups[2].videos.length, 0);
+  assert.equal(outcomeCodes(cfg).get("201"), "o201");
+  assert.equal(unitNumberOf("Unit 7 - Oscillations"), 7);
+  assert.equal(unitNumberOf("Kinematics"), null);
+  assert.equal(ratingLabel(3.4, links[0].outcome.ratings), "Meets Mastery");
+  assert.equal(ratingLabel(1, links[0].outcome.ratings), null);
+  assert.equal(suggestObjective("Newton's second law", 2, cfg), "o201");
+  assert.equal(suggestObjective("Newton's third law", 2, cfg), "o202");
+  assert.equal(suggestObjective("Centripetal acceleration and circular motion", 2, cfg), "o203");
+  assert.equal(suggestObjective("Something unrelated entirely", 2, cfg), null);
+});
+
+test("Canvas work lands on objectives through its rubric; rollups become objective scores", async () => {
+  const { canvasEvidence, rollupGrades } = await import("../lib/mastery/canvas-map.ts");
+  const codes = new Map([["201", "o201"], ["202", "o202"]]);
+  const people = new Map([["7", "p1"]]);
+  const { evidence } = canvasEvidence(
+    [
+      { user_id: "7", assignment_id: "50", assignment_name: "Unit 2 lab", points_possible: 8, score: 7, graded_at: "2026-10-10T00:00:00Z", workflow_state: "graded",
+        rubric: [{ id: "c1", points: 4, description: "Newton's laws", outcome_id: 201 }, { id: "c2", points: 4, description: "Systems", outcome_id: 202 }, { id: "c3", points: 2, description: "Neatness", outcome_id: null }],
+        rubric_assessment: { c1: { points: 4 }, c2: { points: 3 } } },
+      { user_id: "7", assignment_id: "51", assignment_name: "Unit 2 quiz", points_possible: 10, score: 6, graded_at: null, workflow_state: "graded",
+        rubric: [{ id: "c9", points: 4, outcome_id: 202 }], rubric_assessment: null },
+    ],
+    [{ user_id: "7", outcome_id: "201", outcome_title: "whatever", score: 3, possible: 4, submitted_or_assessed_at: "2026-10-11T00:00:00Z" }],
+    people, config, "2026-10-12T00:00:00Z", codes,
+  );
+  assert.deepEqual(evidence.map((e) => [e.standard_code, e.score, e.max_score]), [["o201", 4, 4], ["o202", 3, 4], ["o202", 6, 10], ["o201", 3, 4]]);
+  const grades = rollupGrades(
+    [{ user_id: "7", outcome_id: "201", score: 3 }, { user_id: "7", outcome_id: "999", score: 1 }, { user_id: "8", outcome_id: "201", score: 2 }],
+    new Map([["201", { ratings: [{ description: "Exceeds", points: 4 }, { description: "Meets Mastery", points: 3 }] }]]),
+    people, codes,
+  );
+  assert.deepEqual(grades, [{ person_id: "p1", standard_code: "o201", score: 3, max_score: 4, label: "Meets Mastery" }]);
 });

@@ -55,6 +55,8 @@ export interface Video {
 export interface Standard {
   code: string;
   title: string;
+  /** Longer wording (a Canvas outcome's description), if any. */
+  description?: string;
   /** Other names for it (a Khan Academy skill, a textbook heading), so an
    *  assignment titled that way counts toward this standard. */
   aliases: string[];
@@ -241,7 +243,8 @@ export function parseMasteryConfig(raw: unknown): MasteryConfig {
         seen.add(sc);
         const aliases = s.aliases === undefined ? [] : Array.isArray(s.aliases) ? s.aliases.map((a, ai) => text(a, `${sc} alias ${ai + 1}`, 120)) : null;
         if (!aliases) throw new Error(`${sc}: aliases must be a list`);
-        return { code: sc, title: text(s.title, `${sc} title`), aliases, resources: parseResources(s.resources, sc), videos: parseVideos(s.videos, sc) };
+        const description = typeof s.description === "string" && s.description.trim() ? s.description.trim().slice(0, 300) : undefined;
+        return { code: sc, title: text(s.title, `${sc} title`), ...(description ? { description } : {}), aliases, resources: parseResources(s.resources, sc), videos: parseVideos(s.videos, sc) };
       }),
     };
   });
