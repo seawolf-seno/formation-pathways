@@ -6,7 +6,7 @@ import { useDictation } from "@/components/useDictation";
 import { saveStudentSparksAction, submitFamilySparksAction } from "@/lib/sor/actions";
 import type { StudentSparks } from "@/lib/sor/sparks";
 import type { SparkChoicePair, SparkOption } from "@/lib/spark";
-import { CreatorsStep } from "./SparkCreators";
+import { CreatorsStep, type SparkMedia } from "./SparkCreators";
 import "./spark-sky.css";
 
 type Step = "intro" | "ask" | "pull" | "lean" | "channels" | "reveal";
@@ -99,6 +99,7 @@ export function SparkSky({
   questions,
   interests,
   pairs,
+  genres,
   isSample,
   onFinish,
 }: {
@@ -108,6 +109,8 @@ export function SparkSky({
   questions: string[];
   interests: SparkOption[];
   pairs: SparkChoicePair[];
+  /** Media genres for the last step: what fills their feed. */
+  genres: SparkOption[];
   isSample: boolean;
   /** Spark Lab: skip the intro, and hand the sparks back instead of saving
    *  them and showing the sky (the lab saves, and asks how it felt). */
@@ -123,7 +126,7 @@ export function SparkSky({
   const [pi, setPi] = useState(0);
   const [leanings, setLeanings] = useState<StudentSparks["leanings"]>([]);
   const [chosen, setChosen] = useState<string | null>(null);
-  const [channels, setChannels] = useState<Set<string>>(new Set());
+  const [media, setMedia] = useState<SparkMedia>({ channels: [], genres: [] });
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -138,9 +141,10 @@ export function SparkSky({
       ...[...picks.entries()].map(([label, obsessed]) => ({ id: `p:${label}`, label, bright: obsessed })),
       // A pair they would not split still earns its star — it says both are them.
       ...leanings.map((l) => ({ id: `l:${l.a}|${l.b}`, label: l.choice || `${l.a} + ${l.b}`, bright: false })),
-      ...[...channels].map((c) => ({ id: `c:${c}`, label: c, bright: false })),
+      ...media.channels.map((c) => ({ id: `c:${c}`, label: c, bright: false })),
+      ...media.genres.map((g) => ({ id: `g:${g}`, label: g, bright: false })),
     ],
-    [answers, picks, leanings, channels]
+    [answers, picks, leanings, media]
   );
 
   function keepAnswer() {
@@ -229,32 +233,33 @@ export function SparkSky({
    *  the tab after seeing it must not lose everything. The button below stays
    *  only as a retry if saving failed.
    *
-   *  Takes the creator names rather than reading `channels`, because the step
-   *  before this one sets them and finishes in the same handler — state read
-   *  here would still be the previous render's, and the last thing the student
-   *  typed would be dropped. */
-  function reveal(named: string[]) {
+   *  Takes what the media step collected rather than reading `media`, because
+   *  that step sets it and finishes in the same handler — state read here would
+   *  still be the previous render's, and the last thing the student typed or
+   *  tapped would be dropped. */
+  function reveal(said: SparkMedia) {
     if (onFinish) {
-      onFinish(collected(named));
+      onFinish(collected(said));
       return;
     }
     setStep("reveal");
-    if (!saved && !pending && (answers.length > 0 || picks.size > 0)) save(named);
+    if (!saved && !pending && (answers.length > 0 || picks.size > 0)) save(said);
   }
 
-  function collected(named: string[]): StudentSparks {
+  function collected(said: SparkMedia): StudentSparks {
     return {
       answers,
       picks: [...picks.entries()].map(([label, obsessed]) => ({ label, obsessed })),
       leanings,
-      channels: named,
+      channels: said.channels,
+      genres: said.genres,
     };
   }
 
-  function save(named: string[]) {
+  function save(said: SparkMedia) {
     setError(null);
     start(async () => {
-      const sparks = collected(named);
+      const sparks = collected(said);
       const res =
         target.kind === "staff"
           ? await saveStudentSparksAction({ personId: target.personId, sparks })
@@ -438,17 +443,18 @@ export function SparkSky({
           </div>
         )}
 
-        {/* The student names who they watch instead of handing over a history
-            file. Watch history is a picture of the recommender — what autoplayed
-            at midnight, what a friend sent — not of them, so it answered a
-            question nobody asked. The three they choose to name are the better
-            signal anyway, and choosing is the whole point: nothing about them
-            gets collected that they didn't decide to say. */}
+        {/* The student taps the genres and names the creators instead of handing
+            over a history file. Watch history is a picture of the recommender —
+            what autoplayed at midnight, what a friend sent — not of them, so it
+            answered a question nobody asked. What they pick out themselves is
+            the better signal anyway, and picking is the whole point: nothing
+            about them gets collected that they didn't decide to say. */}
         {step === "channels" && (
           <CreatorsStep
-            onDone={(named) => {
-              setChannels(new Set(named));
-              reveal(named);
+            genres={genres}
+            onDone={(said) => {
+              setMedia(said);
+              reveal(said);
             }}
             done={onFinish ? "Done with this one ✦" : "Show me my sky ✦"}
           />
@@ -481,7 +487,7 @@ export function SparkSky({
             ) : (
               <div className="spark-row">
                 <button className="spark-quiet" onClick={() => setStep("pull")}>Add more</button>
-                <button className="spark-go" onClick={() => save([...channels])} disabled={stars.length === 0}>
+                <button className="spark-go" onClick={() => save(media)} disabled={stars.length === 0}>
                   {error ? "Try saving again ✦" : "Save my sparks ✦"}
                 </button>
               </div>

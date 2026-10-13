@@ -101,8 +101,14 @@ signed-in device, a full-screen night sky that fills with stars:
 - **Interests** that float on screen: tap once if you love it, twice if
   you're obsessed (from `prompts/spark-interests.txt`, plus their own).
 - **This or that** (`prompts/spark-choices.txt`).
-- **Who they actually watch**: up to three creators, channels, podcasts or
-  artists, typed by the student. Only what they type is saved.
+- **What they actually watch**, one card with two questions: media genres they
+  tap (`prompts/spark-media.txt`) and up to three creators, channels, podcasts
+  or artists they type. Only what they tap or type is saved.
+
+  Genres are the weakest evidence in a Spark and the drafting prompt says so
+  outright: a feed is half chosen and half fed to them, so "watches gaming
+  videos" is texture and vocabulary, never the seed of a pathway. The staff view
+  deliberately shows no "→ pathway" trace under a genre, for the same reason.
 
   This replaced a Google Takeout `watch-history.json` upload, removed
   deliberately; it should not come back. Two reasons. A watch history is mostly
@@ -110,8 +116,8 @@ signed-in device, a full-screen night sky that fills with stars:
   than of the student, so a generalisation drawn from it generalises YouTube.
   And a student asked for it read it as surveillance even though the file was
   parsed in the browser and never uploaded, which defeats the purpose of the
-  whole experience: someone who feels watched hedges. The three creators they
-  choose to name are better evidence and freely given.
+  whole experience: someone who feels watched hedges. What a student picks out
+  themselves is better evidence, and freely given.
 - **The reveal:** the stars join into their constellation.
 
 There are no scores, points or badges. Saving needs the new **`student_voice`**

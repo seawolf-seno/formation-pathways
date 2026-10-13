@@ -38,9 +38,12 @@ export interface StudentSparks {
    *  forcing a side on a student who is into many things invents a preference
    *  they never stated. */
   leanings: { a: string; b: string; choice: string }[];
-  /** YouTube channels they chose to share from their own watch history (read
-   *  on their device; only these names leave it). */
+  /** Creators, channels, podcasts or artists they named themselves. Typed, so
+   *  only what they chose to say is here — there is no history import. */
   channels: string[];
+  /** Media genres they tapped: what actually fills their feed. Weaker evidence
+   *  than the rest of a Spark, and the prompt says so. */
+  genres: string[];
   /** Which Spark format produced these (absent on sessions before the lab). */
   format?: SparkFormat;
   lab?: SparkLabMeta;
@@ -71,6 +74,7 @@ export function validateStudentSparks(raw: unknown): { ok: true; sparks: Student
     .filter((l) => l.a && l.b && (l.choice === "" || l.choice === l.a || l.choice === l.b))
     .slice(0, 10);
   const channels = [...new Set((Array.isArray(r.channels) ? r.channels : []).map((c) => clip(c, 80)).filter(Boolean))].slice(0, 15);
+  const genres = [...new Set((Array.isArray(r.genres) ? r.genres : []).map((g) => clip(g, 60)).filter(Boolean))].slice(0, 20);
   if (!answers.length && !picks.length) {
     return { ok: false, error: "Light up at least one spark: answer a question or tap something you love." };
   }
@@ -78,7 +82,7 @@ export function validateStudentSparks(raw: unknown): { ok: true; sparks: Student
   const lab = format ? validateLabMeta(r.lab) : undefined;
   return {
     ok: true,
-    sparks: { answers, picks, leanings, channels, ...(format ? { format } : {}), ...(lab ? { lab } : {}) },
+    sparks: { answers, picks, leanings, channels, genres, ...(format ? { format } : {}), ...(lab ? { lab } : {}) },
   };
 }
 
@@ -129,7 +133,17 @@ export function sparksForPrompt(s: StudentSparks): string {
         .join("; ")}. They said both, so treat these as genuinely both — not as a missing answer, and not as a weak version of either side.`
     );
   }
-  if (s.channels.length) lines.push(`- YouTube channels they chose to share: ${s.channels.join(", ")}`);
+  if (s.channels.length) lines.push(`- Creators, channels and podcasts they named: ${s.channels.join(", ")}`);
+  // Genres are the weakest thing in a Spark: a feed is partly chosen and partly
+  // fed to them, so "watches gaming videos" is not evidence of wanting a life in
+  // games. Useful for language and texture; never as the seed of a pathway.
+  if ((s.genres ?? []).length) {
+    lines.push(
+      `- What fills their feed: ${s.genres.join(
+        ", "
+      )}. This is what they end up watching, not what they want — use it for texture and the words they'd recognise, and never build a pathway on a genre alone.`
+    );
+  }
   return lines.join("\n");
 }
 
@@ -149,6 +163,7 @@ export function mergeSparks(sessions: SparkSession[]): StudentSparks | null {
   const picks = new Map<string, StudentSparks["picks"][number]>();
   const leanings = new Map<string, StudentSparks["leanings"][number]>();
   const channels = new Set<string>();
+  const genres = new Set<string>();
   for (const { sparks } of sessions) {
     for (const a of sparks.answers) {
       const key = `${a.prompt}\n${a.text}`.toLowerCase();
@@ -163,12 +178,14 @@ export function mergeSparks(sessions: SparkSession[]): StudentSparks | null {
       if (!leanings.has(key)) leanings.set(key, l);
     }
     for (const c of sparks.channels) channels.add(c);
+    for (const g of sparks.genres ?? []) genres.add(g);
   }
   return {
     answers: [...answers.values()].slice(0, 16),
     picks: [...picks.values()].slice(0, 30),
     leanings: [...leanings.values()].slice(0, 15),
     channels: [...channels].slice(0, 20),
+    genres: [...genres].slice(0, 20),
   };
 }
 

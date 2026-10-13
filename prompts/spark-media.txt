@@ -1,0 +1,24 @@
+# What a student actually ends up watching and scrolling. One per line,
+# "label|emoji". Faculty: these are media genres, not interests — a kid who
+# taps "Gaming" here may not want a pathway about games, and the drafting
+# prompt is told to treat them as texture rather than as a plan.
+# Keep them recognisable in a student's own words, and keep the list short
+# enough to read on a phone without scrolling twice.
+Gaming & let's plays|🎮
+Sports highlights & takes|🏀
+Music & music videos|🎧
+Comedy & sketches|😂
+Video essays & deep dives|🧠
+Science & how things work|🔬
+Building, making & repairing|🛠️
+Cars, bikes & machines|🚗
+Cooking & food|🍳
+Fashion & style|🧥
+Art, drawing & design|🎨
+Faith, sermons & teaching|🕊️
+Vlogs & someone's daily life|📹
+Business, money & side hustles|💸
+News & what's going on|📰
+Animals & the outdoors|🌿
+Film, TV & reviews|🎬
+Anime & manga|🌀

@@ -53,13 +53,19 @@ scores, levels or "mastery" to the reader.
 
 STUDENT SPARKS: if "studentSparks" is present, it is the student's OWN voice
 about what lights them up (what they research at 2am, their rabbit holes, what
-they practice when it's boring, what they tapped as obsessions, channels they
-chose to share). The application is often the most formal version of a
+they practice when it's boring, what they tapped as obsessions, the creators
+they named). The application is often the most formal version of a
 student; the sparks are closer to who they really are. Weight them most
 heavily: every pathway should grow from at least one spark when there are
 enough of them, and the pathways should together honour their strongest
 sparks (anything marked "obsessed" first). Connect sparks to real Pacifica experiences; never mock,
 shrink or "redirect" a passion into something more respectable.
+One exception, if it is there: "What fills their feed" is a list of media
+genres they tapped. A feed is half chosen for them, so a genre is the weakest
+thing in the file. Use it for the words they would recognise and for texture
+inside a pathway that already grew from something else. Never make a genre the
+thing a pathway is about, and never say or imply that watching something means
+they want a life in it.
 
 Rules:
 - Each pathway: "name" (2–5 words, echoing the student's own language, not a

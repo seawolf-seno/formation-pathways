@@ -13,7 +13,15 @@ const MIN_BEFORE_DONE = 8;
  * lights a card, up (or "So me ✦") marks it as an obsession and asks why in a
  * few words, left passes. Drag, buttons or arrow keys all work.
  */
-export function SparkSwipe({ cards, onFinish }: { cards: SparkOption[]; onFinish: (s: StudentSparks) => void }) {
+export function SparkSwipe({
+  cards,
+  genres,
+  onFinish,
+}: {
+  cards: SparkOption[];
+  genres: SparkOption[];
+  onFinish: (s: StudentSparks) => void;
+}) {
   const [i, setI] = useState(0);
   const [picks, setPicks] = useState<StudentSparks["picks"]>([]);
   const [answers, setAnswers] = useState<StudentSparks["answers"]>([]);
@@ -60,7 +68,7 @@ export function SparkSwipe({ cards, onFinish }: { cards: SparkOption[]; onFinish
   }
 
   if (creators) {
-    return <CreatorsStep onDone={(channels) => onFinish({ answers, picks, leanings: [], channels })} />;
+    return <CreatorsStep genres={genres} onDone={(media) => onFinish({ answers, picks, leanings: [], ...media })} />;
   }
 
   if (why) {

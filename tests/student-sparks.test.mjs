@@ -9,6 +9,7 @@ test("sparks are cleaned, capped and need at least one spark", () => {
     picks: [{ label: "Building & tinkering", obsessed: true }, { label: "" }],
     leanings: [{ a: "Build it yourself", b: "Get everyone on the same page", choice: "Build it yourself" }, { a: "a", b: "b", choice: "c" }],
     channels: ["Veritasium", "Veritasium", " Mark Rober "],
+    genres: ["Science & how things work", " Science & how things work ", ""],
     extra: "ignored",
   });
   assert.equal(r.ok, true);
@@ -17,7 +18,31 @@ test("sparks are cleaned, capped and need at least one spark", () => {
     picks: [{ label: "Building & tinkering", obsessed: true }],
     leanings: [{ a: "Build it yourself", b: "Get everyone on the same page", choice: "Build it yourself" }],
     channels: ["Veritasium", "Mark Rober"],
+    genres: ["Science & how things work"],
   });
+});
+
+// Sessions saved before the media step existed have no `genres` at all, and
+// reading one must not throw on the person page or in a draft.
+test("sparks saved without genres still read and merge", () => {
+  const old = { answers: [], picks: [{ label: "Music", obsessed: false }], leanings: [], channels: [] };
+  assert.doesNotMatch(sparksForPrompt(old), /fills their feed/);
+  assert.deepEqual(mergeSparks([{ created_at: "2026-10-01T00:00:00Z", source: "in_person", sparks: old }]).genres, []);
+});
+
+// A feed is half chosen and half fed to them, so the prompt has to say what
+// genres are worth before a draft turns "watches gaming videos" into a plan.
+test("genres reach the prompt as texture, with their weakness stated", () => {
+  const text = sparksForPrompt({
+    answers: [{ prompt: "q", text: "a", via: "text" }],
+    picks: [],
+    leanings: [],
+    channels: [],
+    genres: ["Gaming & let's plays", "Video essays & deep dives"],
+  });
+  assert.match(text, /What fills their feed: Gaming & let's plays, Video essays & deep dives/);
+  assert.match(text, /not what they want/);
+  assert.match(text, /never build a pathway on a genre alone/);
 });
 
 test("sparks read as first-person evidence for the prompt", () => {

@@ -48,6 +48,7 @@ export default async function FamilySparkPage({ params }: { params: Promise<{ to
       questions={questions}
       interests={parseVocabLines(readPrompt("spark-interests.txt"))}
       pairs={parseChoiceLines(readPrompt("spark-choices.txt"))}
+      genres={parseVocabLines(readPrompt("spark-media.txt"))}
       isSample={false}
     />
   );

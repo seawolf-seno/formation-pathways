@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useDictation } from "@/components/useDictation";
 import { specificDetails } from "@/lib/sor/spark-lab";
 import type { StudentSparks } from "@/lib/sor/sparks";
+import type { SparkOption } from "@/lib/spark";
 import { CreatorsStep } from "./SparkCreators";
 
 /**
@@ -11,7 +12,15 @@ import { CreatorsStep } from "./SparkCreators";
  * question, out loud or typed. When an answer has no specifics (no names,
  * places, numbers), one gentle nudge asks for an example; it's always skippable.
  */
-export function SparkStarters({ starters, onFinish }: { starters: string[]; onFinish: (s: StudentSparks) => void }) {
+export function SparkStarters({
+  starters,
+  genres,
+  onFinish,
+}: {
+  starters: string[];
+  genres: SparkOption[];
+  onFinish: (s: StudentSparks) => void;
+}) {
   const [i, setI] = useState(0);
   const [draft, setDraft] = useState("");
   const [usedVoice, setUsedVoice] = useState(false);
@@ -46,7 +55,7 @@ export function SparkStarters({ starters, onFinish }: { starters: string[]; onFi
   }
 
   if (creators) {
-    return <CreatorsStep onDone={(channels) => onFinish({ answers, picks: [], leanings: [], channels })} />;
+    return <CreatorsStep genres={genres} onDone={(media) => onFinish({ answers, picks: [], leanings: [], ...media })} />;
   }
 
   if (pending) {

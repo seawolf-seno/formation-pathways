@@ -1082,6 +1082,7 @@ export async function saveStudentSparksAction(input: { personId: string; sparks:
       answers: checked.sparks.answers.length,
       picks: checked.sparks.picks.length,
       channels: checked.sparks.channels.length,
+      genres: checked.sparks.genres.length,
     });
     revalidatePath(`/pilot/people/${input.personId}`);
     return { ok: true };

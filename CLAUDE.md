@@ -383,6 +383,17 @@ adults behind the scenes; students stay present, in person, with people.
   `20261019000000_mastery_hub.sql` to production** (after #62/#63's). Not built: a nightly
   import with nobody signed in (needs its own DB role), AI next steps, mastery in pathway drafts,
   view-only accounts in the hub. `docs/mastery-hub.md`.
+- **Spark's media step (2026-10-13, branch `spark/no-watch-history`, card #16)**: the Google
+  Takeout `watch-history.json` upload is **gone** (`lib/youtube-takeout.ts` deleted) and must not
+  come back — a watch history pictures the recommender, not the student, and the student it was
+  built for read it as surveillance. In its place, the last card of every Spark format
+  (`components/sor/SparkCreators.tsx`) asks two things the student answers themselves: media
+  genres they tap (`prompts/spark-media.txt`, faculty-editable) and up to three creators they
+  type. New `genres` on `StudentSparks` (jsonb, **no migration**; old rows read as `[]`).
+  Genres are named in the prompt as the weakest evidence in a Spark — texture and vocabulary,
+  never the thing a pathway is about (`sparksForPrompt`, `prompts/ruakh-today.txt`) — and the
+  staff view deliberately shows no "→ pathway" trace under one. Not yet seen on a preview or
+  checked against real Claude output.
 - **Next concrete actions**:
   1. Production migrations `20261017`, `20261018` (merged), then `20261019` (Mastery Hub, when
      merged); #58 after its rename, via staging first.

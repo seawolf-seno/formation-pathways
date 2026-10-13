@@ -137,7 +137,7 @@ export function SparkResults({
             )}
             {s.sparks.channels.length > 0 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Channels they chose to share</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Who they named</p>
                 <ul className="mt-1 grid gap-1.5 sm:grid-cols-2">
                   {s.sparks.channels.map((c) => (
                     <li key={c}>
@@ -146,6 +146,24 @@ export function SparkResults({
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+            {/* No "→ pathway" line here on purpose: the drafting prompt is told
+                not to build a pathway on a genre, so tracing one would advertise
+                exactly the inference nobody should be making from it. */}
+            {(s.sparks.genres ?? []).length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">What fills their feed</p>
+                <ul className="mt-1 flex flex-wrap gap-1.5">
+                  {(s.sparks.genres ?? []).map((g) => (
+                    <li key={g} className="rounded-full border border-[var(--color-border)] bg-white px-2.5 py-1 text-xs">
+                      {g}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1.5 text-xs text-[var(--color-ink-muted)]">
+                  What they end up watching, not what they want — background for the words they&apos;d recognise.
+                </p>
               </div>
             )}
           </div>
