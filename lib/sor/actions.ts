@@ -1240,6 +1240,8 @@ export async function submitFamilySparksAction(input: { token: string; sparks: u
     if (!checked.ok) return { ok: false, error: checked.error };
     if (!/^[A-Za-z0-9_-]{20,100}$/.test(input.token)) return { ok: false, error: "This link isn't valid." };
     const supabase = await getSorClient();
+    const readiness = await supabase.rpc("spark_media_ready");
+    if (readiness.error || readiness.data !== true) return { ok: false, error: "Spark is being updated. Your link has not been used. Please try again shortly." };
     const { data, error } = await supabase.rpc("spark_link_submit", { p_token: input.token, p_sparks: checked.sparks });
     if (error) return { ok: false, error: "Something went wrong saving your sparks. Please try again." };
     if (data !== true) {

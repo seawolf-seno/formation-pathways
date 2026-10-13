@@ -1,5 +1,13 @@
 # System of record — consented pilot
 
+**PR #72 rollout:** apply `20261026000000_spark_media_payload.sql` before
+testing the new media/skills card through a family link. The existing
+anonymous-submit guard rejects these new JSON keys until updated. The new
+guard accepts bounded `genres`, `canTeach` and `growing` string lists without
+changing token expiry, single use, active sender or student-voice consent.
+The family page waits safely before the migration is present. Only seno
+applies migrations, to staging first. No agent applied this one.
+
 The new Formation Pathways database for a student's whole time with Pacifica:
 one `people` row from applicant to alumni, filled in from **Finalsite**
 (admissions), **Blackbaud** (enrollment) and **Canvas** (coursework), plus

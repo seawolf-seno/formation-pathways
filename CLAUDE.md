@@ -7,6 +7,12 @@ adults behind the scenes; students stay present, in person, with people.
 
 ## Status (update as work happens — keep current, not historical)
 
+- **Spark media payload compatibility (2026-10-13, PR #72)**: at-home Spark
+  needs `20261026000000_spark_media_payload.sql` for `genres`, `canTeach` and
+  `growing`. The guard preserves token expiry, consent, single use and caps.
+  The family page and submit action wait until the owner applies it. No agent
+  applied the migration.
+
 - **September 25 contribution (`codex/pathways-first-experience`)**: family-facing
   pathway exploration and focused sharing preview for the October 5 demonstration.
   Start locally at `/applicant/emma-r-8f3k2a`; no dashboard is part of this flow.
