@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Why-now snapshot review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F3F5F7; --surface:#FFFFFF; --ink:#1F2A44; --muted:#5B6578; --line:#D7DCE3;
+  --teal:#2F6F73; --teal-soft:#DCEBEB; --amber:#9A5B12; --amber-soft:#FBEEDC; --red:#A3352B; --red-soft:#F7E1DE;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141A26; --surface:#1C2433; --ink:#E7EBF2; --muted:#9AA4B6; --line:#2E3849;
+    --teal:#6FB7BB; --teal-soft:#1F3A3D; --amber:#E7B26A; --amber-soft:#3A2D1A; --red:#F08A7E; --red-soft:#3D2220;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141A26; --surface:#1C2433; --ink:#E7EBF2; --muted:#9AA4B6; --line:#2E3849;
+  --teal:#6FB7BB; --teal-soft:#1F3A3D; --amber:#E7B26A; --amber-soft:#3A2D1A; --red:#F08A7E; --red-soft:#3D2220;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:52rem;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+h1,h2{font-family:"Literata",Georgia,"Times New Roman",serif;font-weight:700;line-height:1.2;margin:0}
+h1{font-size:clamp(1.9rem,4.5vw,2.6rem);letter-spacing:-.01em}
+h2{font-size:1.35rem;margin:2.5rem 0 .75rem}
+p{margin:.5rem 0}
+.lede{color:var(--muted);max-width:38rem;margin-top:.75rem}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+
+.loaders{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:1rem;margin-top:2rem}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:1.1rem 1.2rem;background:var(--surface);display:flex;flex-direction:column;gap:.35rem;transition:border-color .15s}
+.drop.over{border-color:var(--teal)}
+.drop.loaded{border-style:solid;border-color:var(--teal)}
+.drop strong{font-weight:600}
+.drop small{color:var(--muted)}
+.drop label{align-self:flex-start;margin-top:.4rem;padding:.4rem .8rem;border-radius:6px;background:var(--teal-soft);color:var(--teal);font-weight:600;font-size:.9rem;cursor:pointer}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.sample{background:none;border:0;color:var(--teal);text-decoration:underline;padding:0;margin-top:.9rem}
+
+.headline{margin-top:2.5rem;font-family:"Literata",Georgia,serif;font-size:clamp(1.25rem,3vw,1.6rem);line-height:1.35}
+.headline b{color:var(--teal)}
+.warn{margin-top:1.25rem;padding:.9rem 1.1rem;border-left:4px solid var(--amber);background:var(--amber-soft);border-radius:0 8px 8px 0}
+.warn strong{color:var(--amber)}
+
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.95rem}
+th,td{text-align:left;padding:.55rem .5rem;border-bottom:1px solid var(--line);vertical-align:middle}
+th{font-weight:600;color:var(--muted);font-size:.85rem}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{height:.5rem;border-radius:4px;background:var(--line);min-width:6rem;position:relative;overflow:hidden}
+.bar span{position:absolute;inset:0 auto 0 0;background:var(--teal)}
+.bar i{position:absolute;inset:0 auto 0 0;background:var(--amber)}
+.tag-new{font-size:.75rem;font-weight:600;color:var(--amber);background:var(--amber-soft);padding:.05rem .4rem;border-radius:4px;margin-left:.4rem}
+
+.show-group{margin-top:1.5rem}
+.show-group h3{font-size:1rem;font-weight:600;margin:0 0 .5rem}
+.item{display:flex;gap:.75rem;align-items:flex-start;padding:.7rem .85rem;background:var(--surface);border:1px solid var(--line);border-radius:8px;margin-bottom:.5rem}
+.item.ok{border-color:var(--teal)}
+.item.flag{border-color:var(--red);background:var(--red-soft)}
+.item .text{flex:1;min-width:0}
+.item .title{overflow-wrap:anywhere}
+.item .note{font-size:.9rem;color:var(--muted);margin:.35rem 0;overflow-wrap:anywhere;white-space:pre-wrap}
+.item a{color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
+.choices{display:flex;gap:.35rem;flex-shrink:0}
+.choices button{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:6px;padding:.3rem .65rem;font-size:.85rem}
+.choices button[aria-pressed="true"].k{background:var(--teal);border-color:var(--teal);color:var(--surface)}
+.choices button[aria-pressed="true"].f{background:var(--red);border-color:var(--red);color:var(--surface)}
+@media (max-width:30rem){.item{flex-direction:column}}
+
+.progress{color:var(--muted);font-size:.95rem}
+.actions{display:flex;flex-wrap:wrap;gap:.75rem;align-items:center;margin-top:1.5rem}
+.primary{background:var(--ink);color:var(--bg);border:0;border-radius:8px;padding:.7rem 1.1rem;font-weight:600}
+.primary:disabled{opacity:.45;cursor:not-allowed}
+.status{color:var(--teal);font-size:.95rem}
+.err{color:var(--red);margin-top:1rem}
+.empty{color:var(--muted);font-style:italic}
+.show-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:1rem 1.2rem;margin-bottom:.75rem}
+.show-card p{max-width:40rem}
+.show-card a{color:var(--teal);font-weight:500}
+.show-head{display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:baseline;justify-content:space-between}
+.show-head h3{font-family:"Literata",Georgia,serif;font-size:1.15rem;margin:0}
+.host{color:var(--muted);margin-top:.15rem!important;font-size:.95rem}
+.approved{font-size:.8rem;font-weight:600;color:var(--teal);background:var(--teal-soft);padding:.15rem .5rem;border-radius:4px}
+.pending{font-size:.8rem;font-weight:600;color:var(--amber);background:var(--amber-soft);padding:.15rem .5rem;border-radius:4px}
+footer{margin-top:3rem;color:var(--muted);font-size:.85rem;border-top:1px solid var(--line);padding-top:1rem}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <h1>Why-now snapshot review</h1>
+  <p class="lede">Check this week's podcast signals before they reach pathway drafts. Load the new <code>world-signals.json</code> and, if you have it, last week's version to see only what changed.</p>
+
+  <div class="loaders">
+    <div class="drop" id="drop-new">
+      <strong>New snapshot</strong>
+      <small id="name-new">From the refresh PR branch</small>
+      <label>Choose file<input type="file" accept=".json,application/json" id="file-new"></label>
+    </div>
+    <div class="drop" id="drop-old">
+      <strong>Previous snapshot <span style="font-weight:400;color:var(--muted)">(optional)</span></strong>
+      <small id="name-old">From main, to find what's new</small>
+      <label>Choose file<input type="file" accept=".json,application/json" id="file-old"></label>
+    </div>
+  </div>
+  <button class="sample" id="sample">Try it with sample data</button>
+  <p class="err" id="err" hidden></p>
+
+  <section id="results" hidden>
+    <p class="headline" id="headline"></p>
+    <div class="warn" id="warn" hidden></div>
+
+    <h2>Signals per show</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Show</th><th class="num">Total</th><th class="num">New</th><th></th></tr></thead>
+        <tbody id="counts"></tbody>
+      </table>
+    </div>
+
+    <h2>Review new items</h2>
+    <p class="progress" id="progress"></p>
+    <div id="items"></div>
+
+    <div class="actions">
+      <button class="primary" id="copy" disabled>Copy review notes</button>
+      <span class="status" id="copy-status" aria-live="polite"></span>
+    </div>
+  </section>
+
+  <section class="shows">
+    <h2>Shows</h2>
+    <p class="progress">Podcasts proposed for review. The configured sources are in <code>lib/world-signals.ts</code>; this page does not add or refresh feeds.</p>
+    <div class="show-card">
+      <div class="show-head"><h3>TBPN</h3><span class="pending">Listed for review</span></div>
+      <p class="host">John Coogan and Jordi Hays</p>
+      <p>Daily live show on tech and business news. Strong fit for why-now lines. Signals should come from episode titles, since the show notes are mostly sponsor lists. Watch for Diet TBPN recaps repeating the same stories.</p>
+      <a href="https://podcasts.apple.com/us/podcast/tbpn/id1772360235" target="_blank" rel="noopener">Apple Podcasts listing</a>
+    </div>
+    <div class="show-card">
+      <div class="show-head"><h3>Founders</h3><span class="pending">Listed for review</span></div>
+      <p class="host">David Senra</p>
+      <p>Weekly episodes on biographies of history's great entrepreneurs. Timeless rather than timely, so expect fewer usable why-now lines. Skip the promo episodes for his newer interview show.</p>
+      <a href="https://podcasts.apple.com/us/podcast/founders/id1141877104" target="_blank" rel="noopener">Apple Podcasts listing</a>
+    </div>
+  </section>
+
+  <footer>Public RSS show notes only. The automatic filter is a keyword list and can miss things, so read every new item. Adding a new podcast source needs seno's OK.</footer>
+</main>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const state = { old: null, cur: null, oldName: "", curName: "", decisions: {} };
+  try { state.decisions = JSON.parse(localStorage.getItem("ws-decisions") || "{}"); } catch { state.decisions = {}; }
+  const save = () => { try { localStorage.setItem("ws-decisions", JSON.stringify(state.decisions)); } catch {} };
+
+  function toList(d){
+    if (Array.isArray(d)) return d;
+    if (d && Array.isArray(d.signals)) return d.signals;
+    if (d && Array.isArray(d.items)) return d.items;
+    if (d && typeof d === "object") return Object.entries(d).flatMap(([show,v]) => Array.isArray(v) ? v.map(x => ({show, ...x})) : []);
+    return [];
+  }
+  const showOf = s => s.show ?? s.showName ?? s.podcast ?? s.source ?? s.feed ?? "Unknown show";
+  const titleOf = s => s.title ?? s.episodeTitle ?? s.headline ?? s.text ?? JSON.stringify(s);
+  const noteOf = s => s.note ?? s.description ?? s.summary ?? "";
+  const urlOf = s => {
+    const raw = s.url ?? s.link ?? "";
+    if (typeof raw !== "string" || !raw) return "";
+    try {
+      const url = new URL(raw);
+      return ["https:","http:"].includes(url.protocol) && !url.username && !url.password ? url.href : "";
+    } catch { return ""; }
+  };
+  // A changed note at an existing episode URL needs a fresh review too.
+  const keyOf = s => JSON.stringify([showOf(s),titleOf(s),noteOf(s),s.date ?? "",urlOf(s)]);
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  function readFile(file, slot){
+    if (file.size > 4 * 1024 * 1024) {
+      $("err").textContent = "Use a snapshot smaller than 4 MB.";
+      $("err").hidden = false;
+      return;
+    }
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const list = toList(JSON.parse(r.result));
+        if (list.length > 1000 || list.some(s => !s || typeof s !== "object" || Array.isArray(s))) throw new Error("Invalid signal list");
+        state[slot] = list; state[slot === "cur" ? "curName" : "oldName"] = file.name;
+        const box = $(slot === "cur" ? "drop-new" : "drop-old");
+        box.classList.add("loaded");
+        $(slot === "cur" ? "name-new" : "name-old").textContent = `${file.name}, ${list.length} signals`;
+        $("err").hidden = true;
+        render();
+      } catch {
+        $("err").textContent = `${file.name} isn't valid JSON. Load the world-signals.json file from the repo.`;
+        $("err").hidden = false;
+      }
+    };
+    r.readAsText(file);
+  }
+
+  [["drop-new","file-new","cur"],["drop-old","file-old","old"]].forEach(([dropId,inputId,slot]) => {
+    const drop = $(dropId), input = $(inputId);
+    input.addEventListener("change", () => input.files[0] && readFile(input.files[0], slot));
+    drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+    drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+    drop.addEventListener("drop", e => { e.preventDefault(); drop.classList.remove("over"); const f = e.dataTransfer.files[0]; if (f) readFile(f, slot); });
+  });
+
+  $("sample").addEventListener("click", () => {
+    state.old = [
+      {show:"The Daily Grind", title:"How small towns are rebuilding main street", url:"https://example.com/dg/101"},
+      {show:"Engineering Futures", title:"Why bridge inspectors are in short supply", url:"https://example.com/ef/55"}
+    ];
+    state.cur = [
+      ...state.old,
+      {show:"The Daily Grind", title:"Nurses are leaving hospitals for home care", url:"https://example.com/dg/102"},
+      {show:"Engineering Futures", title:"The rise of drone surveying jobs", url:"https://example.com/ef/56"},
+      {show:"Market Minute", title:"Community banks are hiring again", url:"https://example.com/mm/9"}
+    ];
+    $("name-new").textContent = "Sample, 5 signals"; $("name-old").textContent = "Sample, 2 signals";
+    $("drop-new").classList.add("loaded"); $("drop-old").classList.add("loaded");
+    render();
+  });
+
+  function render(){
+    if (!state.cur) return;
+    const cur = state.cur, old = state.old || [];
+    const hasOld = !!state.old;
+    const oldKeys = new Set(old.map(keyOf)), curKeys = new Set(cur.map(keyOf));
+    const oldShows = new Set(old.map(showOf));
+    const added = hasOld ? cur.filter(s => !oldKeys.has(keyOf(s))) : cur;
+    const dropped = old.filter(s => !curKeys.has(keyOf(s))).length;
+
+    const byShow = new Map();
+    cur.forEach(s => { const r = byShow.get(showOf(s)) || {total:0, added:0}; r.total++; byShow.set(showOf(s), r); });
+    added.forEach(s => byShow.get(showOf(s)).added++);
+    const max = Math.max(1, ...[...byShow.values()].map(r => r.total));
+    const newShows = hasOld && old.length ? [...byShow.keys()].filter(s => !oldShows.has(s)) : [];
+
+    $("headline").innerHTML = hasOld
+      ? `<b>${added.length}</b> new signal${added.length === 1 ? "" : "s"} to review across ${byShow.size} show${byShow.size === 1 ? "" : "s"}, with ${cur.length} total and ${dropped} dropped since last week.`
+      : `<b>${cur.length}</b> signals across ${byShow.size} show${byShow.size === 1 ? "" : "s"}. Load last week's snapshot to review only what changed.`;
+
+    if (newShows.length){
+      $("warn").innerHTML = `<strong>New show${newShows.length > 1 ? "s" : ""}: ${newShows.map(esc).join(", ")}.</strong> Don't merge until seno has approved ${newShows.length > 1 ? "these sources" : "this source"}.`;
+      $("warn").hidden = false;
+    } else $("warn").hidden = true;
+
+    $("counts").innerHTML = [...byShow].sort((a,b) => b[1].total - a[1].total).map(([show,r]) => `
+      <tr>
+        <td>${esc(show)}${newShows.includes(show) ? '<span class="tag-new">New show</span>' : ""}</td>
+        <td class="num">${r.total}</td>
+        <td class="num">${r.added}</td>
+        <td><div class="bar" aria-hidden="true"><span style="width:${r.total/max*100}%"></span><i style="width:${r.added/max*100}%"></i></div></td>
+      </tr>`).join("");
+
+    const groups = new Map();
+    added.forEach(s => { const k = showOf(s); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(s); });
+    $("items").innerHTML = added.length ? [...groups].map(([show, list]) => `
+      <div class="show-group">
+        <h3>${esc(show)}</h3>
+        ${list.map(s => {
+          const k = keyOf(s), d = state.decisions[k], u = urlOf(s);
+          return `<div class="item ${d === "keep" ? "ok" : d === "flag" ? "flag" : ""}" data-key="${esc(k)}">
+            <div class="text"><div class="title">${esc(titleOf(s))}</div>${noteOf(s) ? `<p class="note">${esc(noteOf(s))}</p>` : ""}${u ? `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer">${esc(u)}</a>` : ""}</div>
+            <div class="choices" role="group" aria-label="Decision">
+              <button class="k" data-d="keep" aria-pressed="${d === "keep"}">Keep</button>
+              <button class="f" data-d="flag" aria-pressed="${d === "flag"}">Flag</button>
+            </div>
+          </div>`;
+        }).join("")}
+      </div>`).join("") : '<p class="empty">No new or changed signal content. Check source approvals and the PR checks before merging.</p>';
+
+    state.added = added; state.byShow = byShow; state.newShows = newShows; state.dropped = dropped;
+    updateProgress();
+    $("results").hidden = false;
+  }
+
+  function updateProgress(){
+    const added = state.added || [];
+    const done = added.filter(s => state.decisions[keyOf(s)]).length;
+    const flagged = added.filter(s => state.decisions[keyOf(s)] === "flag").length;
+    $("progress").textContent = added.length ? `${done} of ${added.length} reviewed${flagged ? `, ${flagged} flagged` : ""}.` : "";
+    $("copy").disabled = !state.cur;
+  }
+
+  $("items").addEventListener("click", e => {
+    const b = e.target.closest("button[data-d]"); if (!b) return;
+    const item = b.closest(".item"), k = item.dataset.key;
+    state.decisions[k] = state.decisions[k] === b.dataset.d ? undefined : b.dataset.d;
+    if (!state.decisions[k]) delete state.decisions[k];
+    save();
+    item.classList.toggle("ok", state.decisions[k] === "keep");
+    item.classList.toggle("flag", state.decisions[k] === "flag");
+    item.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(state.decisions[k] === x.dataset.d)));
+    updateProgress();
+  });
+
+  $("copy").addEventListener("click", async () => {
+    const added = state.added || [];
+    const flagged = added.filter(s => state.decisions[keyOf(s)] === "flag");
+    const pending = added.filter(s => !state.decisions[keyOf(s)]);
+    const L = ["### Snapshot review", ""];
+    L.push(`${added.length} new, ${flagged.length} flagged, ${pending.length} not yet reviewed.`, "");
+    L.push("| Show | Total | New |", "|---|---:|---:|");
+    [...state.byShow].forEach(([s,r]) => L.push(`| ${s.replace(/\|/g,"\\|")} | ${r.total} | ${r.added} |`));
+    if (state.newShows.length) L.push("", `**New show(s) need seno's OK:** ${state.newShows.join(", ")}`);
+    if (flagged.length){ L.push("", "**Flagged, remove before merging:**"); flagged.forEach(s => L.push(`- ${showOf(s)}: ${titleOf(s)}`)); }
+    if (pending.length){ L.push("", "**Still to review:**"); pending.forEach(s => L.push(`- ${showOf(s)}: ${titleOf(s)}`)); }
+    const text = L.join("\n");
+    try { await navigator.clipboard.writeText(text); $("copy-status").textContent = "Copied. Paste it as a comment on the PR."; }
+    catch { $("copy-status").textContent = "Copy was blocked by the browser. Select and copy the notes from the console."; console.log(text); }
+  });
+})();
+</script>
+</body>
+</html>
