@@ -26,6 +26,8 @@ export interface CanvasSubmission {
   rubric?: { id: string; points: number | null; description?: string | null; outcome_id?: string | number | null }[] | null;
   /** This student's rubric scores, by criterion id. */
   rubric_assessment?: Record<string, { points?: number | null } | undefined> | null;
+  /** Canvas's grade as shown ("3", "Meets", "B+"). */
+  grade?: string | null;
 }
 
 /** Work that came from Khan Academy into Canvas (an official sync, or a
@@ -56,12 +58,15 @@ export function canvasEvidence(
   /** Canvas outcome id → objective code, when the course's objectives come
    *  from Canvas (canvas-outcomes.ts). */
   outcomeCodes: Map<string, string> = new Map(),
+  /** Assignments that ARE objectives (their grade is the objective's
+   *  Canvas score, saved by assignmentGrades, not counted twice here). */
+  objectiveAssignments: Map<string, string> = new Map(),
 ): { evidence: EvidenceDraft[]; unmapped: string[] } {
   const evidence: EvidenceDraft[] = [];
   const unmapped = new Set<string>();
   for (const s of submissions) {
     const person = personByCanvasId.get(s.user_id);
-    if (!person) continue;
+    if (!person || objectiveAssignments.has(s.assignment_id)) continue;
     if (s.workflow_state && s.workflow_state !== "graded") continue;
     // Work aligned to objectives through its rubric: each aligned criterion
     // is evidence for its own objective, at its own score.
@@ -176,6 +181,26 @@ export function rollupGrades(
     const o = outcomes.get(String(s.outcome_id));
     const top = Math.max(0, ...(o?.ratings ?? []).map((r) => r.points ?? 0), o?.points_possible ?? 0);
     out.push({ person_id: person, standard_code: code, score: s.score, max_score: top > 0 ? top : null, label: ratingLabel(s.score, o?.ratings) });
+  }
+  return out;
+}
+
+/** When objectives are assignments: each student's grade on an objective
+ *  assignment is that objective's Canvas score. A word grade ("Meets") is
+ *  kept as the label. */
+export function assignmentGrades(
+  submissions: CanvasSubmission[],
+  personByCanvasId: Map<string, string>,
+  objectiveAssignments: Map<string, string>,
+): ObjectiveGrade[] {
+  const out: ObjectiveGrade[] = [];
+  for (const s of submissions) {
+    const person = personByCanvasId.get(s.user_id);
+    const code = objectiveAssignments.get(s.assignment_id);
+    if (!person || !code || s.score === null || !Number.isFinite(s.score)) continue;
+    if (s.workflow_state && s.workflow_state !== "graded") continue;
+    const word = s.grade && !/^\d+(\.\d+)?%?$/.test(s.grade.trim()) ? s.grade.trim().slice(0, 100) : null;
+    out.push({ person_id: person, standard_code: code, score: s.score, max_score: s.points_possible && s.points_possible > 0 ? s.points_possible : null, label: word });
   }
   return out;
 }

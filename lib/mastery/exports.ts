@@ -110,7 +110,7 @@ export function standardsInTitle(title: string, config: MasteryConfig): string[]
   const codes = allStandards(config).map((s) => s.code);
   const named = codes.filter((c) => new RegExp(`(^|[^A-Za-z0-9.])${c.replace(/\./g, "\\.")}($|[^A-Za-z0-9]|\\.(?!\\d))`, "i").test(title));
   if (named.length) return named;
-  const unit = title.match(/\bunit\s*(\d{1,2})\b/i) ?? title.match(/\bU(\d{1,2})\b/);
+  const unit = title.match(/\bunit\s*(\d{1,2})\b/i) ?? title.match(/\bU(\d{1,2})\b/) ?? title.match(/\bLO\s*-?\s*(\d{1,2})(?:[.\-]\d+)?\b/i);
   if (unit) {
     const group = config.groups.find((g) => g.unitNumber === Number(unit[1]));
     if (group) return group.standards.map((s) => s.code);

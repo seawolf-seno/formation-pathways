@@ -22,6 +22,20 @@ as its backbone, and everything else resolves into them:
   becomes an objective (`o<Canvas id>`). Each unit's videos and study links carry over from the
   set the course used before. **Pull changes from Canvas** picks up later edits; the codes are
   Canvas ids, so every piece of evidence stays attached (`lib/mastery/canvas-outcomes.ts`).
+- **Or: objectives are Canvas assignments** (seno's setup: no Outcomes, a mastery-graded
+  assignment per learning objective). **Setup → Pick objective assignments** lists the course's
+  published assignments by assignment group:
+  - ones that look like objectives (names or groups saying "LO", "learning objective",
+    "objective", "mastery"…) are pre-ticked;
+  - each one's unit is read from its name ("LO 2.1", "Unit 2 …", "2.1 …") or its group, and can
+    be changed;
+  - **Use these as objectives** makes them the backbone (codes `a<assignment id>`, same
+    `canvas-<course id>` set).
+
+  The student's **grade on an objective assignment is its Canvas score** (a word grade like
+  "Meets" is kept as the label). That grade isn't counted again as evidence. Other assignments
+  sort in underneath by unit ("Unit 2 quiz", "LO 2 practice set") along with Khan Academy and AP
+  Classroom.
 - **Canvas work** counts toward an objective through its **rubric alignment**: each aligned
   rubric criterion is evidence at its own score. Work aligned but graded without the rubric
   counts its whole score. **Canvas's own objective score** (outcome rollups) is saved per

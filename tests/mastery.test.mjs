@@ -416,3 +416,47 @@ test("Canvas work lands on objectives through its rubric; rollups become objecti
   );
   assert.deepEqual(grades, [{ person_id: "p1", standard_code: "o201", score: 3, max_score: 4, label: "Meets Mastery" }]);
 });
+
+test("objectives as Canvas assignments: pick, unit, and the grade is the score", async () => {
+  const { assignmentChoices, objectivesFromAssignments, assignmentCodes, unitFromName } = await import("../lib/mastery/canvas-outcomes.ts");
+  const { assignmentGrades, canvasEvidence } = await import("../lib/mastery/canvas-map.ts");
+  for (const [name, n] of [["LO 2.1 Newton's laws", 2], ["LO3-2 Energy", 3], ["Unit 4 Objective: Momentum", 4], ["2.3 Systems", 2], ["Lab safety", null]]) assert.equal(unitFromName(name), n, name);
+  const groups = [
+    { id: 1, name: "Learning Objectives", position: 2, assignments: [
+      { id: 501, name: "LO 2.1 Apply Newton's laws", points_possible: 4, position: 1, description: "<p>Use F=ma</p>" },
+      { id: 502, name: "LO 2.2 Systems and third-law pairs", points_possible: 4, position: 2 },
+      { id: 503, name: "Draft (unpublished)", published: false },
+    ] },
+    { id: 2, name: "Unit 1 · Quizzes", position: 1, assignments: [
+      { id: 601, name: "Graphs quiz", points_possible: 10, position: 1 },
+      { id: 602, name: "Objective check: describing motion", points_possible: 4, position: 2 },
+    ] },
+  ];
+  const choices = assignmentChoices(groups);
+  assert.deepEqual(choices.map((c) => [c.id, c.unitNumber, c.suggested]), [["601", 1, false], ["602", 1, true], ["501", 2, true], ["502", 2, true]]);
+  const raw = objectivesFromAssignments(groups, [{ id: "602", unitNumber: 1 }, { id: "501", unitNumber: 2 }, { id: "502", unitNumber: 2 }, { id: "999", unitNumber: 3 }], {
+    key: "canvas-9", slug: "APPhysics1", title: "AP Physics 1 objectives", base: config, baseRaw: raw0(),
+  });
+  const cfg = parseMasteryConfig(raw);
+  assert.deepEqual(cfg.groups.map((g) => [g.title, g.standards.map((s) => s.code)]), [
+    ["Unit 1 · Kinematics", ["a602"]],
+    ["Unit 2 · Force and translational dynamics", ["a501", "a502"]],
+  ]);
+  assert.equal(cfg.groups[1].standards[0].description, "Use F=ma");
+  assert.ok(cfg.groups[1].videos.length > 0, "the unit's videos come along");
+  const codes = assignmentCodes(cfg);
+  const people = new Map([["7", "p1"]]);
+  const subs = [
+    { user_id: "7", assignment_id: "501", assignment_name: "LO 2.1 Apply Newton's laws", points_possible: 4, score: 3, grade: "Meets", graded_at: null, workflow_state: "graded" },
+    { user_id: "7", assignment_id: "502", assignment_name: "LO 2.2", points_possible: 4, score: 2, grade: "2", graded_at: null, workflow_state: "graded" },
+    { user_id: "7", assignment_id: "700", assignment_name: "Unit 2 quiz", points_possible: 10, score: 8, graded_at: null, workflow_state: "graded" },
+    { user_id: "7", assignment_id: "701", assignment_name: "LO 2 practice set", points_possible: 5, score: 5, graded_at: null, workflow_state: "graded" },
+  ];
+  assert.deepEqual(assignmentGrades(subs, people, codes), [
+    { person_id: "p1", standard_code: "a501", score: 3, max_score: 4, label: "Meets" },
+    { person_id: "p1", standard_code: "a502", score: 2, max_score: 4, label: null },
+  ]);
+  const { evidence } = canvasEvidence(subs, [], people, cfg, "2026-10-12T00:00:00Z", new Map(), codes);
+  assert.deepEqual([...new Set(evidence.map((e) => e.title))], ["Unit 2 quiz", "LO 2 practice set"], "objective assignments aren't counted twice; other work sorts in by unit");
+  assert.ok(evidence.every((e) => ["a501", "a502"].includes(e.standard_code)));
+});

@@ -9,8 +9,8 @@ import { COURSE_SLUG, EVIDENCE_SOURCES, LEVELS, findStandard, parseMasteryConfig
 import { exportEvidence, parseExport, type RosterPerson } from "./exports";
 import { sampleEvidence } from "./sample";
 import { getMasteryConfig, rawStandardSet, savedStandardSet } from "./standard-sets";
-import { objectivesFromCanvas } from "./canvas-outcomes";
-import { fetchCanvasOutcomes, isLiveCanvasConfigured } from "./canvas";
+import { assignmentChoices, objectivesFromAssignments, objectivesFromCanvas, type AssignmentChoice } from "./canvas-outcomes";
+import { fetchCanvasAssignmentGroups, fetchCanvasOutcomes, isLiveCanvasConfigured } from "./canvas";
 import { fallbackDraftSteps, parseDraftSteps, readSavedSteps, type DraftStep } from "./next-steps";
 import { nextStepsPayload } from "./next-steps-server";
 import { describeLink } from "./links";
@@ -681,7 +681,8 @@ export async function pullCanvasObjectivesAction(courseId: string): Promise<Resu
     if (!course.canvas_course_id) return { ok: false, error: "Add this course's Canvas course id in Course settings first." };
     if (!isLiveCanvasConfigured()) return { ok: false, error: "Canvas isn't connected on this server (CANVAS_BASE_URL / CANVAS_API_TOKEN)." };
     const { courseName, links } = await fetchCanvasOutcomes(course.canvas_course_id);
-    if (!links.length) return { ok: false, error: "That Canvas course has no learning objectives (Outcomes) yet." };
+    if (!links.length)
+      return { ok: false, error: "This Canvas course has no Outcomes. If your learning objectives are assignments, use Pick objective assignments below." };
     const key = `canvas-${course.canvas_course_id}`;
     const previous = await rawStandardSet(course.config_key);
     const raw = objectivesFromCanvas(links, {
@@ -708,6 +709,75 @@ export async function pullCanvasObjectivesAction(courseId: string): Promise<Resu
     let summary = "";
     try {
       summary = await runCanvasSync(fresh, staff.user_id);
+    } catch (e) {
+      summary = `Objectives saved; the Canvas check said: ${e instanceof Error ? e.message : String(e)}`;
+    }
+    refresh();
+    return { ok: true, objectives: config.groups.reduce((n, g) => n + g.standards.length, 0), units: config.groups.length, summary };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** The course's Canvas assignments to pick objectives from (names and
+ *  points only), and which are objectives now. */
+export async function listObjectiveAssignmentsAction(courseId: string): Promise<Result<{ choices: AssignmentChoice[]; current: { id: string; unitNumber: number | null }[] }>> {
+  try {
+    await requireMasteryTeacher();
+    const bundle = await bundleOrThrow(courseId);
+    const { course } = bundle;
+    if (course.is_sample || !course.canvas_course_id) return { ok: false, error: "Add this course's Canvas course id in Course settings first." };
+    if (!isLiveCanvasConfigured()) return { ok: false, error: "Canvas isn't connected on this server (CANVAS_BASE_URL / CANVAS_API_TOKEN)." };
+    const choices = assignmentChoices(await fetchCanvasAssignmentGroups(course.canvas_course_id));
+    if (!choices.length) return { ok: false, error: "That Canvas course has no published assignments." };
+    const current = bundle.config.groups.flatMap((g) => g.standards.filter((s) => /^a\d+$/.test(s.code)).map((s) => ({ id: s.code.slice(1), unitNumber: g.unitNumber })));
+    return { ok: true, choices, current };
+  } catch (e) {
+    return fail(e);
+  }
+}
+
+/** Make the picked assignments the course's learning objectives (each in
+ *  the unit chosen), then bring in Canvas grades and evidence. */
+export async function saveAssignmentObjectivesAction(
+  courseId: string,
+  picks: { id: string; unitNumber: number | null }[],
+): Promise<Result<{ objectives: number; units: number; summary: string }>> {
+  try {
+    const staff = await requireMasteryTeacher();
+    const bundle = await bundleOrThrow(courseId);
+    const { course } = bundle;
+    if (course.is_sample || !course.canvas_course_id) return { ok: false, error: "Add this course's Canvas course id in Course settings first." };
+    if (!isLiveCanvasConfigured()) return { ok: false, error: "Canvas isn't connected on this server (CANVAS_BASE_URL / CANVAS_API_TOKEN)." };
+    const clean = picks
+      .filter((p) => /^\d{1,20}$/.test(String(p.id)))
+      .map((p) => ({ id: String(p.id), unitNumber: Number.isInteger(p.unitNumber) && p.unitNumber! >= 1 && p.unitNumber! <= 99 ? p.unitNumber : null }))
+      .slice(0, 300);
+    if (!clean.length) return { ok: false, error: "Tick at least one assignment." };
+    const key = `canvas-${course.canvas_course_id}`;
+    const previous = await rawStandardSet(course.config_key);
+    const raw = objectivesFromAssignments(await fetchCanvasAssignmentGroups(course.canvas_course_id), clean, {
+      key,
+      slug: course.slug,
+      title: `${course.title} objectives`,
+      base: bundle.config,
+      baseRaw: previous?.raw ?? null,
+    });
+    const config = parseMasteryConfig(raw);
+    const supabase = await getSorClient();
+    const existing = await savedStandardSet(key);
+    const write = existing
+      ? await supabase.from("mastery_standard_sets").update({ config: raw }).eq("key", key).select("key")
+      : await supabase.from("mastery_standard_sets").insert({ key, config: raw }).select("key");
+    if (write.error) throw new Error(write.error.message);
+    if (!write.data?.length) return { ok: false, error: "Another teacher saved these objectives first; ask them or an admin." };
+    if (course.config_key !== key) {
+      const { error } = await supabase.from("mastery_courses").update({ config_key: key }).eq("id", courseId);
+      if (error) throw new Error(error.message);
+    }
+    let summary = "";
+    try {
+      summary = await runCanvasSync(await bundleOrThrow(courseId), staff.user_id);
     } catch (e) {
       summary = `Objectives saved; the Canvas check said: ${e instanceof Error ? e.message : String(e)}`;
     }

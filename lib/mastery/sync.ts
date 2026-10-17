@@ -1,8 +1,8 @@
 import "server-only";
 import { getSorClient } from "@/lib/sor/supabase-server";
 import type { EvidenceDraft } from "./exports";
-import { canvasEvidence, rollupGrades } from "./canvas-map";
-import { outcomeCodes } from "./canvas-outcomes";
+import { assignmentGrades, canvasEvidence, rollupGrades } from "./canvas-map";
+import { assignmentCodes, outcomeCodes } from "./canvas-outcomes";
 import { fetchCanvasMastery, isLiveCanvasConfigured } from "./canvas";
 import { sampleCanvasRun } from "./sample";
 import type { CourseBundle } from "./queries";
@@ -63,10 +63,11 @@ export async function runCanvasSync(bundle: CourseBundle, actor: string): Promis
       .in("person_id", bundle.roster.map((s) => s.id));
     const personByCanvasId = new Map((ids ?? []).map((r) => [String(r.external_id), r.person_id as string]));
     const codes = outcomeCodes(bundle.config);
+    const objectiveAssignments = assignmentCodes(bundle.config);
     const { submissions, outcomeResults, rollups, outcomes } = await fetchCanvasMastery(course.canvas_course_id, [...personByCanvasId.keys()]);
-    const { evidence, unmapped } = canvasEvidence(submissions, outcomeResults, personByCanvasId, bundle.config, new Date().toISOString(), codes);
+    const { evidence, unmapped } = canvasEvidence(submissions, outcomeResults, personByCanvasId, bundle.config, new Date().toISOString(), codes, objectiveAssignments);
     const saved = await insertEvidence(course.id, evidence);
-    const grades = rollupGrades(rollups, outcomes, personByCanvasId, codes);
+    const grades = [...rollupGrades(rollups, outcomes, personByCanvasId, codes), ...assignmentGrades(submissions, personByCanvasId, objectiveAssignments)];
     if (grades.length) {
       const { error } = await supabase
         .from("mastery_objective_grades")

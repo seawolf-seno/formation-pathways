@@ -355,6 +355,11 @@ adults behind the scenes; students stay present, in person, with people.
   (★ suggestion; no 3-per-unit cap). Dashboard `/mastery/<course>` is **students first** (list + objective
   cards with "what's behind it" dropdowns); everything else on `/mastery/<course>/setup`. Extension 0.2.0
   sends every level. Migration `20261023000000` on staging (verified).
+- **Objectives as Canvas assignments (2026-10-12, branch `seno/mastery-assignment-objectives`)**: #70 merged and
+  `20261023` applied. seno's Canvas course has no Outcomes; each learning objective is a mastery-graded
+  assignment. Setup → **Pick objective assignments** (suggestions pre-ticked, unit from "LO 2.1"/"Unit 2"/group),
+  codes `a<assignment id>`; the student's grade on it is the objective's Canvas score (`assignmentGrades`), not
+  double-counted; other work sorts in by unit. No migration.
 - **Open PRs as of 2026-10-12**: #62 and #63 merged (their migrations are on staging; production
   is seno's). Still open:
   - #58 STEM Scholars (TheEnigmaticPhilosopher): migration still named `20261012000000_…`
