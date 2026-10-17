@@ -776,3 +776,27 @@ export async function draftMasteryNextSteps(payload: string): Promise<{ parsed: 
     return { parsed: null, usedFallback: true };
   }
 }
+
+/** Open House pathways (prompts/openhouse-pathway.txt): fast, small model,
+ *  short answer. `payload` has no names ([STUDENT]); the caller checks every
+ *  id against the catalog (lib/openhouse.ts). Never throws: null on no key,
+ *  a failure or a timeout, and the caller uses its no-AI pathways. */
+export async function draftOpenHousePathways(payload: string, timeoutMs = 20000): Promise<unknown | null> {
+  const anthropic = getClient();
+  if (!anthropic) return null;
+  try {
+    const message = await anthropic.messages.create(
+      {
+        model: process.env.OPENHOUSE_MODEL || "claude-haiku-4-5-20251001",
+        max_tokens: 600,
+        system: [readPrompt("openhouse-pathway.txt"), readPrompt("placeholders.txt")].join("\n\n---\n\n"),
+        messages: [{ role: "user", content: payload }],
+      },
+      { timeout: timeoutMs, maxRetries: 0 },
+    );
+    const textBlock = message.content.find((b) => b.type === "text");
+    return textBlock && textBlock.type === "text" ? extractJson(textBlock.text) : null;
+  } catch {
+    return null;
+  }
+}

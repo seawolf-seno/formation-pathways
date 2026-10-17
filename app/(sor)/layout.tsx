@@ -34,6 +34,11 @@ export default async function SorLayout({ children }: { children: React.ReactNod
               </Link>
             )}
             {canAdmin && (
+              <Link href="/pilot/openhouse" className="font-medium text-[var(--color-pacific)] hover:text-white">
+                Open House
+              </Link>
+            )}
+            {canAdmin && (
               <Link href="/season" className="font-medium text-[var(--color-pacific)] hover:text-white">
                 Season
               </Link>

@@ -41,7 +41,7 @@ export async function proxy(request: NextRequest) {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
     return response;
   }
-  if (path.startsWith("/spark/") || path === "/discover" || path.startsWith("/discover/") || path.startsWith("/welcome/") || path.startsWith("/scholars/")) {
+  if (path.startsWith("/spark/") || path === "/discover" || path.startsWith("/discover/") || path.startsWith("/welcome/") || path.startsWith("/scholars/") || path === "/oh" || path.startsWith("/oh/")) {
     // The deliberate public WRITE surfaces, both with no school sign-in:
     // - /spark/[token]: an applicant's Spark survey (fictional demo).
     //   submitSparkResponseAction (lib/actions.ts) is scoped by spark_token to
@@ -59,6 +59,9 @@ export async function proxy(request: NextRequest) {
     //   functions family_page/family_share/family_stop_sharing, which check
     //   the token; its page registers two actions (lib/family-actions.ts).
     //   See docs/family-sharing.md.
+    // - /oh, /oh/[token]: Open House pathways (Fizzy #38). Join, see your
+    //   own card by its private link, share; all through the checked
+    //   functions openhouse_join/_page/_share/_public. See docs/open-house.md.
     // - /scholars/[token]: STEM workspace; token-scoped database functions
     //   enforce expiry, active coordinator, consent and limited student writes.
     const response = NextResponse.next();

@@ -1,0 +1,467 @@
+{
+  "$comment": "Open House catalog (Fizzy #38). The AI may ONLY pick mentors and projects from here: faculty from pacificachristian.org/about/our-staff (name + department only; never a claim about a person) and real programs from prompts/pacifica-context.txt. Edit freely; ids must stay unique.",
+  "keyText": "Formation pathways are more impactful in a community. Bring your friends along for the journey.",
+  "connect": "Find your mentors tonight, or email admissions@pacificachristian.org to meet them.",
+  "interests": [
+    {
+      "id": "science",
+      "label": "Science & building",
+      "departments": [
+        "Biology",
+        "Chemistry",
+        "Engineering",
+        "Biology & Chemistry"
+      ],
+      "projects": [
+        "drone-club",
+        "makers-space",
+        "chem-club",
+        "women-in-stem",
+        "stem-distinction"
+      ],
+      "pathTitle": "The Builder's Path",
+      "because": "builds and experiments"
+    },
+    {
+      "id": "tech",
+      "label": "Tech & coding",
+      "departments": [
+        "Mathematics",
+        "Engineering"
+      ],
+      "projects": [
+        "makers-space",
+        "drone-club",
+        "stem-distinction"
+      ],
+      "pathTitle": "Creator in Code",
+      "because": "likes making things with tech"
+    },
+    {
+      "id": "math",
+      "label": "Math & puzzles",
+      "departments": [
+        "Mathematics"
+      ],
+      "projects": [
+        "stem-distinction",
+        "shark-tank",
+        "makers-space"
+      ],
+      "pathTitle": "The Problem Solver",
+      "because": "loves a good puzzle"
+    },
+    {
+      "id": "business",
+      "label": "Starting things",
+      "departments": [
+        "Mathematics"
+      ],
+      "projects": [
+        "wolf-shack",
+        "shark-tank",
+        "deca",
+        "little-light"
+      ],
+      "pathTitle": "The Founder's Path",
+      "because": "likes starting things"
+    },
+    {
+      "id": "helping",
+      "label": "Helping people",
+      "departments": [
+        "Chapel & Spiritual Life",
+        "Spanish"
+      ],
+      "projects": [
+        "little-light",
+        "women-in-stem",
+        "chapel",
+        "retreat"
+      ],
+      "pathTitle": "Servant Leader",
+      "because": "cares about helping people"
+    },
+    {
+      "id": "faith",
+      "label": "Faith & big questions",
+      "departments": [
+        "Center for Philosophy & Theology",
+        "History & Theology",
+        "Philosophy, Theology & Psychology",
+        "Chapel & Spiritual Life"
+      ],
+      "projects": [
+        "seminar",
+        "chapel",
+        "retreat"
+      ],
+      "pathTitle": "Seeker of Big Questions",
+      "because": "asks the big questions"
+    },
+    {
+      "id": "writing",
+      "label": "Reading & writing",
+      "departments": [
+        "English"
+      ],
+      "projects": [
+        "seminar",
+        "film-festival"
+      ],
+      "pathTitle": "The Storyteller",
+      "because": "loves reading and writing"
+    },
+    {
+      "id": "history",
+      "label": "History & debate",
+      "departments": [
+        "History",
+        "History & Theology"
+      ],
+      "projects": [
+        "seminar",
+        "deca"
+      ],
+      "pathTitle": "Thinker & Debater",
+      "because": "loves history and a good argument"
+    },
+    {
+      "id": "languages",
+      "label": "Languages & cultures",
+      "departments": [
+        "Spanish",
+        "Latin & Theology"
+      ],
+      "projects": [
+        "little-light",
+        "seminar"
+      ],
+      "pathTitle": "Bridge Between Cultures",
+      "because": "is drawn to languages and cultures"
+    },
+    {
+      "id": "music",
+      "label": "Music",
+      "departments": [
+        "A Cappella Music"
+      ],
+      "projects": [
+        "a-cappella",
+        "isight"
+      ],
+      "pathTitle": "The Musician's Path",
+      "because": "loves music"
+    },
+    {
+      "id": "art",
+      "label": "Art & design",
+      "departments": [
+        "Visual Arts"
+      ],
+      "projects": [
+        "visual-arts",
+        "isight",
+        "makers-space"
+      ],
+      "pathTitle": "Artist & Designer",
+      "because": "loves to make art"
+    },
+    {
+      "id": "film",
+      "label": "Film & photography",
+      "departments": [
+        "Film & Photography"
+      ],
+      "projects": [
+        "film-festival",
+        "isight"
+      ],
+      "pathTitle": "The Filmmaker's Path",
+      "because": "sees the world through a lens"
+    },
+    {
+      "id": "theater",
+      "label": "Theater & dance",
+      "departments": [
+        "Dance & History"
+      ],
+      "projects": [
+        "theater",
+        "isight"
+      ],
+      "pathTitle": "The Performer's Path",
+      "because": "comes alive on stage"
+    },
+    {
+      "id": "sports",
+      "label": "Sports",
+      "departments": [
+        "Spanish & Soccer"
+      ],
+      "projects": [
+        "wolfpack",
+        "retreat"
+      ],
+      "pathTitle": "Teammate & Competitor",
+      "because": "loves to compete"
+    }
+  ],
+  "mentors": [
+    {
+      "id": "ruth-andrew",
+      "name": "Ruth Andrew",
+      "department": "English"
+    },
+    {
+      "id": "amber-debenning",
+      "name": "Amber DeBenning",
+      "department": "English"
+    },
+    {
+      "id": "katheryn-park",
+      "name": "Dr. Katheryn Park",
+      "department": "English"
+    },
+    {
+      "id": "katie-savage",
+      "name": "Katie Savage",
+      "department": "English"
+    },
+    {
+      "id": "isaias-uggetti",
+      "name": "Isaias Uggetti",
+      "department": "English"
+    },
+    {
+      "id": "matt-benedetto",
+      "name": "Matt Benedetto",
+      "department": "Mathematics"
+    },
+    {
+      "id": "steven-eno",
+      "name": "Steven Eno",
+      "department": "Mathematics"
+    },
+    {
+      "id": "darryle-mensah",
+      "name": "Darryle Mensah",
+      "department": "Mathematics"
+    },
+    {
+      "id": "jeremy-tuggy",
+      "name": "Jeremy Tuggy",
+      "department": "Mathematics"
+    },
+    {
+      "id": "josephine-wilson",
+      "name": "Josephine Wilson",
+      "department": "Mathematics"
+    },
+    {
+      "id": "scott-comer",
+      "name": "Scott Comer",
+      "department": "History & Theology"
+    },
+    {
+      "id": "violet-comer",
+      "name": "Violet Comer",
+      "department": "Dance & History"
+    },
+    {
+      "id": "chris-mcculloch",
+      "name": "Chris McCulloch",
+      "department": "History & Theology"
+    },
+    {
+      "id": "joo-bin-kim",
+      "name": "Joo Bin Kim",
+      "department": "History"
+    },
+    {
+      "id": "michael-weaver",
+      "name": "Michael Weaver",
+      "department": "History & Theology"
+    },
+    {
+      "id": "devin-ketch",
+      "name": "Devin Ketch",
+      "department": "Philosophy, Theology & Psychology"
+    },
+    {
+      "id": "linnea-scobey",
+      "name": "Linnea Scobey",
+      "department": "Latin & Theology"
+    },
+    {
+      "id": "nicole-geiger",
+      "name": "Nicole Geiger",
+      "department": "Biology"
+    },
+    {
+      "id": "clarita-joung",
+      "name": "Clarita Joung",
+      "department": "Chemistry"
+    },
+    {
+      "id": "nic-scobey",
+      "name": "Nic Scobey",
+      "department": "Biology & Chemistry"
+    },
+    {
+      "id": "david-sumida",
+      "name": "Dr. David Sumida",
+      "department": "Engineering"
+    },
+    {
+      "id": "karla-herrera",
+      "name": "Karla Herrera",
+      "department": "Spanish"
+    },
+    {
+      "id": "ryan-tahbaz",
+      "name": "Ryan Tahbaz",
+      "department": "Spanish & Soccer"
+    },
+    {
+      "id": "tehillah-alphonso",
+      "name": "Tehillah Alphonso",
+      "department": "A Cappella Music"
+    },
+    {
+      "id": "sam-anderson",
+      "name": "Sam Anderson",
+      "department": "Film & Photography"
+    },
+    {
+      "id": "carson-vandermade",
+      "name": "Carson Vandermade",
+      "department": "Visual Arts"
+    },
+    {
+      "id": "zemeira-walker",
+      "name": "Zemeira Walker",
+      "department": "Visual Arts"
+    },
+    {
+      "id": "trevor-debenning",
+      "name": "Trevor DeBenning",
+      "department": "Chapel & Spiritual Life"
+    },
+    {
+      "id": "stephen-roberson",
+      "name": "Stephen Roberson",
+      "department": "Center for Philosophy & Theology"
+    }
+  ],
+  "projects": [
+    {
+      "id": "drone-club",
+      "title": "Compete with the Drone Club",
+      "program": "STEM Scholars",
+      "blurb": "Build and fly in the Aerial Drone Competition."
+    },
+    {
+      "id": "makers-space",
+      "title": "Build something in the Makers Space",
+      "program": "STEM Scholars",
+      "blurb": "A student-led workshop for building and inventing."
+    },
+    {
+      "id": "women-in-stem",
+      "title": "Serve with Women in STEM",
+      "program": "STEM Scholars",
+      "blurb": "Use science and engineering to serve others."
+    },
+    {
+      "id": "chem-club",
+      "title": "Run experiments with Chem Club",
+      "program": "STEM Scholars",
+      "blurb": "Hands-on chemistry beyond the classroom."
+    },
+    {
+      "id": "stem-distinction",
+      "title": "Work toward STEM Scholar with Distinction",
+      "program": "STEM Scholars",
+      "blurb": "100 hours of real STEM work, shown to the community."
+    },
+    {
+      "id": "wolf-shack",
+      "title": "Help run The Wolf Shack",
+      "program": "Minchin Center for Economics & Innovation",
+      "blurb": "A real student-run campus store: inventory, pricing, sales."
+    },
+    {
+      "id": "shark-tank",
+      "title": "Pitch a business idea",
+      "program": "Minchin Center for Economics & Innovation",
+      "blurb": "Shark-Tank-style pitches in Economics & Entrepreneurship."
+    },
+    {
+      "id": "deca",
+      "title": "Compete with DECA",
+      "program": "Minchin Center for Economics & Innovation",
+      "blurb": "Business and leadership competitions."
+    },
+    {
+      "id": "little-light",
+      "title": "Join This Little Light Africa Club",
+      "program": "Minchin Center for Economics & Innovation",
+      "blurb": "Social entrepreneurship supporting farming, solar and schools in West Africa."
+    },
+    {
+      "id": "seminar",
+      "title": "Join an Oxford-style seminar",
+      "program": "Center for Philosophy & Theology",
+      "blurb": "Small-group conversations on the big questions."
+    },
+    {
+      "id": "film-festival",
+      "title": "Make a film for the Student Film Festival",
+      "program": "PACARTS",
+      "blurb": "Screened at a local theater every year."
+    },
+    {
+      "id": "isight",
+      "title": "Show your work at the i.Sight Festival",
+      "program": "PACARTS",
+      "blurb": "Three nights celebrating every art at Pacifica."
+    },
+    {
+      "id": "a-cappella",
+      "title": "Sing with A Cappella",
+      "program": "PACARTS",
+      "blurb": "Music made together."
+    },
+    {
+      "id": "theater",
+      "title": "Take the stage in theater",
+      "program": "PACARTS",
+      "blurb": "Acting, crew and design."
+    },
+    {
+      "id": "visual-arts",
+      "title": "Build a visual art portfolio",
+      "program": "PACARTS",
+      "blurb": "Drawing, painting and design with working artists."
+    },
+    {
+      "id": "wolfpack",
+      "title": "Play for the Seawolves",
+      "program": "Athletics",
+      "blurb": "Process over product: grow as a player and a person."
+    },
+    {
+      "id": "retreat",
+      "title": "Go on the All-School Retreat",
+      "program": "Spiritual Life",
+      "blurb": "The year's deepest shared experience, with Young Life."
+    },
+    {
+      "id": "chapel",
+      "title": "Help lead chapel",
+      "program": "Spiritual Life",
+      "blurb": "Prayer, music and teaching each week."
+    }
+  ]
+}
