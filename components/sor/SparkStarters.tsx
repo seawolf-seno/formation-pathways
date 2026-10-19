@@ -4,14 +4,27 @@ import { useState } from "react";
 import { useDictation } from "@/components/useDictation";
 import { specificDetails } from "@/lib/sor/spark-lab";
 import type { StudentSparks } from "@/lib/sor/sparks";
+import type { SparkOption } from "@/lib/spark";
 import { CreatorsStep } from "./SparkCreators";
+import { SparkSkills, type SparkSkills as Skills } from "./SparkSkills";
 
 /**
  * Spark Lab format "starters": finish a sentence instead of answering an open
  * question, out loud or typed. When an answer has no specifics (no names,
  * places, numbers), one gentle nudge asks for an example; it's always skippable.
  */
-export function SparkStarters({ starters, onFinish }: { starters: string[]; onFinish: (s: StudentSparks) => void }) {
+export function SparkStarters({
+  starters,
+  genres,
+  skillQuestions,
+  onFinish,
+}: {
+  starters: string[];
+  genres: SparkOption[];
+  /** The two skill questions (prompts/spark-skills.txt), in order. */
+  skillQuestions: string[];
+  onFinish: (s: StudentSparks) => void;
+}) {
   const [i, setI] = useState(0);
   const [draft, setDraft] = useState("");
   const [usedVoice, setUsedVoice] = useState(false);
@@ -19,6 +32,7 @@ export function SparkStarters({ starters, onFinish }: { starters: string[]; onFi
   const [pending, setPending] = useState<StudentSparks["answers"][number] | null>(null);
   const [example, setExample] = useState("");
   const [creators, setCreators] = useState(false);
+  const [skills, setSkills] = useState<Skills | null>(null);
   const dictation = useDictation(setDraft);
 
   function next(answer: StudentSparks["answers"][number] | null) {
@@ -46,7 +60,9 @@ export function SparkStarters({ starters, onFinish }: { starters: string[]; onFi
   }
 
   if (creators) {
-    return <CreatorsStep onDone={(channels) => onFinish({ answers, picks: [], leanings: [], channels })} />;
+    // The tail is the same two cards in every format: skills, then media.
+    if (!skills) return <SparkSkills questions={skillQuestions} onDone={setSkills} />;
+    return <CreatorsStep genres={genres} onDone={(media) => onFinish({ answers, picks: [], leanings: [], ...skills, ...media })} />;
   }
 
   if (pending) {

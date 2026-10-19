@@ -108,9 +108,9 @@ Applications show the formal version of a student. Spark finds the real one.
    by typing. Each answer becomes a star.
 3. Tap the floating interests: once if you love it, **twice if you're
    obsessed**. Then a few quick "this or that" choices.
-4. Optional: drop in a YouTube `watch-history.json` from Google Takeout. It's
-   read on your device only and never uploaded, and you pick which channels to
-   keep. Skipping is fine.
+4. Last card: tap the kinds of things you actually end up watching, and name up
+   to three creators, channels, podcasts or artists. Only what you tap or type is
+   saved, and skipping is fine.
 5. Watch the stars join into a constellation, then **Save my sparks**.
 6. Back on the student's page, **Draft again from latest data**: the new
    pathways grow from those sparks, and milestones can say "grew from your

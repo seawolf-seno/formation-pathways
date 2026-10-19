@@ -18,8 +18,8 @@ export const metadata = {
  * The Study Hub: a student's own classes, from the schedule already imported
  * (Blackbaud class history and Canvas), each with the shared study library's
  * free resources for that subject and what the student said they enjoy about
- * it. Opened on a staff member's signed-in device and explored together:
- * there is no student login yet. A student can also suggest a link that
+ * it. Opened on a staff member's signed-in device and explored together
+ * (a signed-in student has their own at /study). A student can also suggest a link that
  * helped them (shown to others only once a teacher approves it). Nothing
  * about how the student is doing in a class is shown. The library is
  * fixtures/study-library.json, which faculty can edit.

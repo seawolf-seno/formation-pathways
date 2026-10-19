@@ -9,6 +9,9 @@ test("sparks are cleaned, capped and need at least one spark", () => {
     picks: [{ label: "Building & tinkering", obsessed: true }, { label: "" }],
     leanings: [{ a: "Build it yourself", b: "Get everyone on the same page", choice: "Build it yourself" }, { a: "a", b: "b", choice: "c" }],
     channels: ["Veritasium", "Veritasium", " Mark Rober "],
+    genres: ["Science & how things work", " Science & how things work ", ""],
+    canTeach: [" replace a bike chain ", "replace a bike chain", ""],
+    growing: ["speaking in front of a class"],
     extra: "ignored",
   });
   assert.equal(r.ok, true);
@@ -17,7 +20,67 @@ test("sparks are cleaned, capped and need at least one spark", () => {
     picks: [{ label: "Building & tinkering", obsessed: true }],
     leanings: [{ a: "Build it yourself", b: "Get everyone on the same page", choice: "Build it yourself" }],
     channels: ["Veritasium", "Mark Rober"],
+    genres: ["Science & how things work"],
+    canTeach: ["replace a bike chain"],
+    growing: ["speaking in front of a class"],
   });
+});
+
+// The skills card asks two questions and neither is a level. A student only
+// volunteers the second one if the card feels safe, so the prompt has to be
+// told it's an intention before a draft reads it as a deficit to fix.
+test("skills reach the prompt as the student's own claim, never as a weakness", () => {
+  const text = sparksForPrompt({
+    answers: [],
+    picks: [],
+    leanings: [],
+    channels: [],
+    canTeach: ["replace a bike chain"],
+    growing: ["speaking in front of a class"],
+  });
+  assert.match(text, /could teach someone: replace a bike chain/);
+  assert.match(text, /solid on/);
+  assert.match(text, /Still growing on, in their words: speaking in front of a class/);
+  assert.match(text, /intention and not a deficit/);
+  assert.match(text, /Never call it a weakness/);
+  // No rung of the Mastery Hub's ladder, and nothing a student could read as a
+  // score: these two lines are words about themselves, not a placement. (The
+  // bare word "rank" does appear — in the instruction never to do it.)
+  assert.doesNotMatch(text, /\b(level|levels|beginning|developing|proficient|extending|score|ranked|ranking)\b/i);
+});
+
+test("mergeSparks: skills accumulate across sittings and default on older rows", () => {
+  const m = mergeSparks([
+    // Saved before the skills card existed: no keys at all, must not throw.
+    { created_at: "2026-10-01T15:00:00Z", source: "in_person", sparks: { answers: [], picks: [], leanings: [], channels: [] } },
+    { created_at: "2026-10-02T15:00:00Z", source: "in_person", sparks: { answers: [], picks: [], leanings: [], channels: [], canTeach: ["replace a bike chain"], growing: [] } },
+    { created_at: "2026-10-04T20:00:00Z", source: "family_link", sparks: { answers: [], picks: [], leanings: [], channels: [], canTeach: ["true a wheel"], growing: ["speaking up"] } },
+  ]);
+  assert.deepEqual(m.canTeach, ["replace a bike chain", "true a wheel"]);
+  assert.deepEqual(m.growing, ["speaking up"]);
+});
+
+// Sessions saved before the media step existed have no `genres` at all, and
+// reading one must not throw on the person page or in a draft.
+test("sparks saved without genres still read and merge", () => {
+  const old = { answers: [], picks: [{ label: "Music", obsessed: false }], leanings: [], channels: [] };
+  assert.doesNotMatch(sparksForPrompt(old), /fills their feed/);
+  assert.deepEqual(mergeSparks([{ created_at: "2026-10-01T00:00:00Z", source: "in_person", sparks: old }]).genres, []);
+});
+
+// A feed is half chosen and half fed to them, so the prompt has to say what
+// genres are worth before a draft turns "watches gaming videos" into a plan.
+test("genres reach the prompt as texture, with their weakness stated", () => {
+  const text = sparksForPrompt({
+    answers: [{ prompt: "q", text: "a", via: "text" }],
+    picks: [],
+    leanings: [],
+    channels: [],
+    genres: ["Gaming & let's plays", "Video essays & deep dives"],
+  });
+  assert.match(text, /What fills their feed: Gaming & let's plays, Video essays & deep dives/);
+  assert.match(text, /not what they want/);
+  assert.match(text, /never build a pathway on a genre alone/);
 });
 
 test("sparks read as first-person evidence for the prompt", () => {
