@@ -10,7 +10,7 @@ import { createServerClient } from "@supabase/ssr";
 // signed-in @pacificachristian.org account too, and every demo page and
 // action also requires active staff (lib/demo-access.ts): its Claude calls
 // cost money, and a pending or deactivated account passes this check.
-const SOR_PREFIXES = ["/pilot", "/capture", "/season", "/pathway", "/mastery", "/me", "/stem"];
+const SOR_PREFIXES = ["/pilot", "/capture", "/season", "/pathway", "/mastery", "/me", "/study", "/stem"];
 
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;

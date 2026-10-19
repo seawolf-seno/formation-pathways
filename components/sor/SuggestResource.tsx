@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { suggestClassResourceAction } from "@/lib/sor/actions";
+import { suggestMyClassResourceAction } from "@/lib/sor/student-actions";
 import { MAX_NOTE_LENGTH, MAX_TITLE_LENGTH, MAX_URL_LENGTH, SUGGESTION_KINDS } from "@/lib/sor/class-resources";
 import type { ResourceKind } from "@/lib/sor/study-library";
 
@@ -10,10 +11,11 @@ const label = "block text-xs font-semibold text-[var(--color-navy-ink)]";
 
 /**
  * "Add something that helped you": a student suggests a link for one of
- * their classes. It is saved unreviewed, as the signed-in adult, and shows
- * to others taking the class only after a teacher approves it.
+ * their classes. It is saved unreviewed, as the signed-in adult (or, with
+ * `self`, as the signed-in student), and shows to others taking the class
+ * only after a teacher approves it.
  */
-export function SuggestResource({ personId, classKey, classTitle }: { personId: string; classKey: string; classTitle: string }) {
+export function SuggestResource({ personId, classKey, classTitle, self }: { personId: string; classKey: string; classTitle: string; self?: boolean }) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
@@ -29,7 +31,8 @@ export function SuggestResource({ personId, classKey, classTitle }: { personId: 
     e.preventDefault();
     setError(null);
     start(async () => {
-      const res = await suggestClassResourceAction({ personId, suggestion: { classKey, title, url, kind, note } });
+      const suggestion = { classKey, title, url, kind, note };
+      const res = self ? await suggestMyClassResourceAction(suggestion) : await suggestClassResourceAction({ personId, suggestion });
       if (!res.ok) return setError(res.error);
       setSent(true);
       setOpen(false);

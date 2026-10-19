@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireStudent } from "@/lib/mastery/queries";
+import { studentStudyReady } from "@/lib/sor/student-study";
 import { signOutAction } from "@/lib/sor/actions";
 
 export const metadata = { title: "Your mastery · Pacifica Christian", robots: { index: false, follow: false } };
@@ -8,6 +9,8 @@ export const metadata = { title: "Your mastery · Pacifica Christian", robots: {
  *  with none of the staff navigation. */
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const student = await requireStudent();
+  // Hidden until its migration (20261024000000) is applied.
+  const studyHub = await studentStudyReady();
   return (
     <div className="flex min-h-full flex-col bg-[var(--color-canvas)]">
       <header className="bg-[var(--color-navy)]">
@@ -18,11 +21,18 @@ export default async function StudentLayout({ children }: { children: React.Reac
             </span>
             <span className="font-display text-lg text-white">Your mastery</span>
           </Link>
-          <form action={signOutAction}>
-            <button className="text-xs text-[var(--color-pacific)] hover:text-white" title={student.email}>
-              Sign out
-            </button>
-          </form>
+          <div className="flex items-center gap-4">
+            {studyHub && (
+              <Link href="/study" className="text-xs text-[var(--color-pacific)] hover:text-white">
+                Study Hub
+              </Link>
+            )}
+            <form action={signOutAction}>
+              <button className="text-xs text-[var(--color-pacific)] hover:text-white" title={student.email}>
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
       </header>
       <main className="flex-1">{children}</main>

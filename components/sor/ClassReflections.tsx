@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useDictation } from "@/components/useDictation";
 import { saveClassReflectionsAction } from "@/lib/sor/actions";
+import { saveMyClassReflectionsAction } from "@/lib/sor/student-actions";
 import { MAX_LIKED, MAX_NOTE_LENGTH, type ClassReflection, type ReflectionClass } from "@/lib/sor/class-reflections";
 import type { SparkOption } from "@/lib/spark";
 
@@ -17,10 +18,11 @@ const primary = "rounded-lg bg-[var(--color-navy)] px-5 py-2.5 text-sm font-medi
 const quiet = "rounded-lg px-4 py-2.5 text-sm text-[var(--color-ink-muted)] underline-offset-2 hover:underline";
 
 /**
- * Class reflections, explored in person on a staff member's device: tap the
- * classes you enjoy (again for the ones you love), then say what makes each
- * one good. Saved once, on reaching the end. No scores, and an untapped class
- * is never sent anywhere.
+ * Class reflections, explored in person on a staff member's device, or (with
+ * `self`) by the signed-in student on their own Study Hub: tap the classes
+ * you enjoy (again for the ones you love), then say what makes each one good.
+ * Saved once, on reaching the end. No scores, and an untapped class is never
+ * sent anywhere.
  */
 export function ClassReflections({
   personId,
@@ -28,12 +30,15 @@ export function ClassReflections({
   classes,
   likes,
   isSample,
+  self,
 }: {
   personId: string;
   firstName: string;
   classes: ReflectionClass[];
   likes: SparkOption[];
   isSample: boolean;
+  /** The student is signed in themselves: saved as them, and no staff links. */
+  self?: boolean;
 }) {
   const [step, setStep] = useState<Step>({ kind: "pick" });
   const [picks, setPicks] = useState<Record<string, Enjoy>>({});
@@ -73,7 +78,7 @@ export function ClassReflections({
         ...(latest[c.key] ?? EMPTY),
       })),
     };
-    const res = await saveClassReflectionsAction({ personId, reflections });
+    const res = self ? await saveMyClassReflectionsAction(reflections) : await saveClassReflectionsAction({ personId, reflections });
     setSave(res.ok ? "saved" : { error: res.error });
   }
 
@@ -85,7 +90,7 @@ export function ClassReflections({
   }
 
   return (
-    <main className="min-h-dvh bg-[var(--color-canvas)] px-4 py-8 sm:px-6 sm:py-12">
+    <main className={`${self ? "" : "min-h-dvh "}bg-[var(--color-canvas)] px-4 py-8 sm:px-6 sm:py-12`}>
       <div className="mx-auto max-w-2xl">
         <div className="mb-6 flex items-center justify-between gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--color-gold)]">Your classes</p>
@@ -177,8 +182,8 @@ export function ClassReflections({
               {save === "saved" && (
                 <p className="text-[var(--color-navy-ink)]">
                   Saved.{" "}
-                  <Link href={`/pathway/${personId}/study`} className="font-semibold underline">Back to your classes →</Link>
-                  <Link href={`/pilot/people/${personId}#classes`} className="ml-3 text-xs text-[var(--color-ink-muted)] underline">staff page</Link>
+                  <Link href={self ? "/study" : `/pathway/${personId}/study`} className="font-semibold underline">Back to your classes →</Link>
+                  {!self && <Link href={`/pilot/people/${personId}#classes`} className="ml-3 text-xs text-[var(--color-ink-muted)] underline">staff page</Link>}
                 </p>
               )}
               {typeof save === "object" && (

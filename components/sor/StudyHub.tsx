@@ -19,7 +19,8 @@ const host = (url: string) => new URL(url).hostname.replace(/^www\./, "");
  * The Study Hub screen: each of a student's classes with its shared study
  * resources, links other students found useful (teacher-approved, shown with
  * no names) and what they said they enjoy about it. No staff navigation:
- * it's opened by an adult and explored with the student.
+ * it's opened by an adult and explored with the student, or (with `self`)
+ * by the signed-in student at /study.
  */
 export function StudyHub({
   personId,
@@ -28,6 +29,7 @@ export function StudyHub({
   classes,
   canReflect,
   canSuggest,
+  self,
 }: {
   personId: string;
   firstName: string;
@@ -37,6 +39,8 @@ export function StudyHub({
   canReflect: boolean;
   /** Suggesting a link is switched on and student-voice consent is on file. */
   canSuggest: boolean;
+  /** The student is signed in themselves: saved as them, and no staff links. */
+  self?: boolean;
 }) {
   const year = classes[0]?.schoolYear ?? null;
   const reflected = classes.some((c) => c.reflection);
@@ -45,7 +49,7 @@ export function StudyHub({
   const rows = [...classes].sort((a, b) => Number(count(b) > 0) - Number(count(a) > 0));
 
   return (
-    <main className="min-h-dvh bg-[var(--color-canvas)] px-4 py-8 sm:px-6 sm:py-12">
+    <main className={`${self ? "" : "min-h-dvh "}bg-[var(--color-canvas)] px-4 py-8 sm:px-6 sm:py-12`}>
       <div className="mx-auto max-w-3xl">
         <div className="mb-6 flex items-center justify-between gap-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-[var(--color-gold)]">Study Hub</p>
@@ -55,7 +59,7 @@ export function StudyHub({
             </span>
           )}
         </div>
-        <h1 className="font-display text-3xl leading-tight text-[var(--color-navy-ink)]">{firstName}&apos;s classes</h1>
+        <h1 className="font-display text-3xl leading-tight text-[var(--color-navy-ink)]">{self ? "Your classes" : <>{firstName}&apos;s classes</>}</h1>
         <p className="mt-2 text-sm text-[var(--color-ink-muted)]">
           {year ? `${year}. ` : ""}Free study material for each class you&apos;re taking, in one place.
         </p>
@@ -65,7 +69,7 @@ export function StudyHub({
             <p className="text-sm text-[var(--color-navy-ink)]">
               {reflected ? "Has anything changed about which classes you enjoy?" : "Which of these do you actually enjoy, and why?"}
             </p>
-            <Link href={`/pathway/${personId}/classes`} className="rounded-lg bg-[var(--color-navy)] px-3 py-2 text-sm font-medium text-white">
+            <Link href={self ? "/study/classes" : `/pathway/${personId}/classes`} className="rounded-lg bg-[var(--color-navy)] px-3 py-2 text-sm font-medium text-white">
               {reflected ? "Update what you enjoy" : "Tell us what you enjoy"}
             </Link>
           </div>
@@ -160,7 +164,7 @@ export function StudyHub({
                       </ul>
                     </div>
                   )}
-                  {canSuggest && <SuggestResource personId={personId} classKey={c.key} classTitle={c.title} />}
+                  {canSuggest && <SuggestResource personId={personId} classKey={c.key} classTitle={c.title} self={self} />}
                 </div>
               </details>
             </li>
@@ -172,9 +176,11 @@ export function StudyHub({
           adds is checked by a teacher before anyone else sees it. The library started from Study Commons, a Pacifica student&apos;s
           project.
         </p>
-        <Link href={`/pilot/people/${personId}`} className="mt-3 inline-block text-xs text-[var(--color-ink-muted)] underline">
-          Back to {firstName}&apos;s staff page
-        </Link>
+        {!self && (
+          <Link href={`/pilot/people/${personId}`} className="mt-3 inline-block text-xs text-[var(--color-ink-muted)] underline">
+            Back to {firstName}&apos;s staff page
+          </Link>
+        )}
       </div>
     </main>
   );
