@@ -49,6 +49,11 @@ export function SparkResults({
     ? sessions.filter(usedBy).flatMap((s) => [
         ...s.sparks.answers.map((a) => trace(s, a.text)),
         ...s.sparks.picks.map((p) => trace(s, p.label, true)),
+        // Both halves count. Something a student says they're reaching for is
+        // as legitimate a start for a pathway as something they're proud of,
+        // and leaving `growing` out of the total would quietly say otherwise.
+        ...(s.sparks.canTeach ?? []).map((t) => trace(s, t, true)),
+        ...(s.sparks.growing ?? []).map((g) => trace(s, g, true)),
         ...s.sparks.channels.map((c) => trace(s, c, true)),
       ])
     : [];
@@ -135,9 +140,48 @@ export function SparkResults({
                 </ul>
               </div>
             )}
+            {/* Their own words about what they can do. Shown as two labelled
+                halves rather than a level, because there isn't one: see the
+                note in components/sor/SparkSkills.tsx. The "working on" half
+                is styled the same as the other, not duller or warning-
+                coloured — a student page has no failure states, and this is
+                the one place a careless style choice would invent one. */}
+            {((s.sparks.canTeach ?? []).length > 0 || (s.sparks.growing ?? []).length > 0) && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">What they can do</p>
+                {(s.sparks.canTeach ?? []).length > 0 && (
+                  <ul className="mt-1 grid gap-1.5 sm:grid-cols-2">
+                    {(s.sparks.canTeach ?? []).map((t) => (
+                      <li key={t}>
+                        <span className="rounded-full bg-[var(--color-gold-light)] px-2.5 py-1 text-xs text-[var(--color-navy-ink)]">
+                          Could teach: {t}
+                        </span>
+                        <Uses uses={trace(s, t, true)} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {(s.sparks.growing ?? []).length > 0 && (
+                  <ul className="mt-1.5 grid gap-1.5 sm:grid-cols-2">
+                    {(s.sparks.growing ?? []).map((g) => (
+                      <li key={g}>
+                        <span className="rounded-full bg-[var(--color-gold-light)] px-2.5 py-1 text-xs text-[var(--color-navy-ink)]">
+                          Working on: {g}
+                        </span>
+                        <Uses uses={trace(s, g, true)} />
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <p className="mt-1.5 text-xs text-[var(--color-ink-muted)]">
+                  {firstName}&apos;s own words, not a level or an assessment. Naming something they&apos;re working on is an
+                  intention they volunteered, so read it as the next thing they&apos;re reaching for.
+                </p>
+              </div>
+            )}
             {s.sparks.channels.length > 0 && (
               <div>
-                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Channels they chose to share</p>
+                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">Who they named</p>
                 <ul className="mt-1 grid gap-1.5 sm:grid-cols-2">
                   {s.sparks.channels.map((c) => (
                     <li key={c}>
@@ -146,6 +190,24 @@ export function SparkResults({
                     </li>
                   ))}
                 </ul>
+              </div>
+            )}
+            {/* No "→ pathway" line here on purpose: the drafting prompt is told
+                not to build a pathway on a genre, so tracing one would advertise
+                exactly the inference nobody should be making from it. */}
+            {(s.sparks.genres ?? []).length > 0 && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-[var(--color-ink-muted)]">What fills their feed</p>
+                <ul className="mt-1 flex flex-wrap gap-1.5">
+                  {(s.sparks.genres ?? []).map((g) => (
+                    <li key={g} className="rounded-full border border-[var(--color-border)] bg-white px-2.5 py-1 text-xs">
+                      {g}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1.5 text-xs text-[var(--color-ink-muted)]">
+                  What they end up watching, not what they want — background for the words they&apos;d recognise.
+                </p>
               </div>
             )}
           </div>

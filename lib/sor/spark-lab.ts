@@ -89,6 +89,28 @@ export interface FormatSummary {
   usedShare: number | null;
   /** Distinct pathways (of the draft) that grew from this session, on average. */
   pathwaysShaped: number | null;
+  /** The media step is identical in all three formats, so these two judge the
+   *  genre question itself rather than the format: genres tapped per session,
+   *  and how often one of them turns up in a later draft. Deliberately apart
+   *  from `usedShare`, which counts only answers, interests and creators — a
+   *  genre is the weakest thing in a Spark and the prompt is told never to
+   *  build a pathway on one, so folding genres into the main number would
+   *  quietly reward exactly the inference we tell the draft not to make.
+   *  Kept so that "did asking about their feed do anything?" has an answer. */
+  genres: number;
+  genresUsed: number | null;
+  genresDrafted: number;
+  /** The skills card is shared too, and kept out of `usedShare` for the same
+   *  reason: a shared card must not flatter whichever format it arrived with.
+   *  These are shares of sessions, not counts, because both questions are
+   *  skippable and the gap between the two is the number worth watching —
+   *  "could teach" is answered with pride and "working on" takes nerve, so if
+   *  the second runs far behind the first, the card doesn't feel safe enough
+   *  to be honest in and the wording needs changing, not the student. */
+  saidCanTeach: number;
+  saidGrowing: number;
+  skillsUsed: number | null;
+  skillsDrafted: number;
 }
 
 const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : 0);
@@ -131,12 +153,30 @@ export function summarizeLab(sessions: LabSession[], drafts: LabDraft[]): Format
 
     const shares: number[] = [];
     const shaped: number[] = [];
+    const genreShares: number[] = [];
+    const skillShares: number[] = [];
     for (const s of mine) {
       // The newest draft for this student made after this session.
       const draft = drafts
         .filter((d) => d.person_id === s.person_id && d.created_at > s.created_at)
         .sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
       if (!draft) continue;
+      // Genres are counted on their own, so a session of nothing but tapped
+      // genres still answers the genre question even though it has no sparks.
+      const genres = s.sparks.genres ?? [];
+      if (genres.length) {
+        genreShares.push(
+          genres.filter((g) => sparkUses(g, draft.pathways, { short: true }).length > 0).length / genres.length
+        );
+      }
+      // Counted before the guard below, like genres: a session where the only
+      // thing said was a skill still answers the skills question.
+      const skills = [...(s.sparks.canTeach ?? []), ...(s.sparks.growing ?? [])];
+      if (skills.length) {
+        skillShares.push(
+          skills.filter((k) => sparkUses(k, draft.pathways, { short: true }).length > 0).length / skills.length
+        );
+      }
       const texts = sparkTexts(s.sparks);
       if (!texts.length) continue;
       const uses = texts.map((t) => sparkUses(t.text, draft.pathways, { short: t.short }));
@@ -156,6 +196,13 @@ export function summarizeLab(sessions: LabSession[], drafts: LabDraft[]): Format
       drafted: shares.length,
       usedShare: shares.length ? mean(shares) : null,
       pathwaysShaped: shaped.length ? mean(shaped) : null,
+      genres: mean(mine.map((s) => (s.sparks.genres ?? []).length)),
+      genresDrafted: genreShares.length,
+      genresUsed: genreShares.length ? mean(genreShares) : null,
+      saidCanTeach: mean(mine.map((s) => ((s.sparks.canTeach ?? []).length ? 1 : 0))),
+      saidGrowing: mean(mine.map((s) => ((s.sparks.growing ?? []).length ? 1 : 0))),
+      skillsDrafted: skillShares.length,
+      skillsUsed: skillShares.length ? mean(skillShares) : null,
     };
   });
 }

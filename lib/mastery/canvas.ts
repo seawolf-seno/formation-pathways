@@ -1,7 +1,7 @@
 import "server-only";
 import { LiveCanvasSource } from "@/lib/integrations/canvas";
 import type { CanvasOutcomeResult, CanvasRollupScore, CanvasSubmission } from "./canvas-map";
-import type { CanvasOutcomeLink } from "./canvas-outcomes";
+import type { CanvasAssignmentGroup, CanvasOutcomeLink } from "./canvas-outcomes";
 
 /**
  * Reads one Canvas course's graded work and Outcome results for the students
@@ -32,6 +32,7 @@ export async function fetchCanvasMastery(
     score: number | null;
     graded_at: string | null;
     workflow_state: string;
+    grade?: string | null;
     rubric_assessment?: Record<string, { points?: number | null }> | null;
     assignment?: {
       name: string;
@@ -107,6 +108,7 @@ export async function fetchCanvasMastery(
       tool_url: s.assignment?.external_tool_tag_attributes?.url ?? null,
       rubric: (s.assignment?.rubric ?? []).map((c) => ({ id: String(c.id), points: c.points, description: c.description ?? null, outcome_id: c.outcome_id ?? null })),
       rubric_assessment: s.rubric_assessment ?? null,
+      grade: s.grade ?? null,
     })),
     outcomeResults: outcomeResults.map((r) => ({ ...r, outcome_title: titles.get(r.outcome_id) ?? "" })),
   };
@@ -119,4 +121,11 @@ export async function fetchCanvasOutcomes(canvasCourseId: string): Promise<{ cou
   const { data: course } = await client.request<{ name: string }>(`/courses/${canvasCourseId}`);
   const links = await client.getAll<CanvasOutcomeLink>(`/courses/${canvasCourseId}/outcome_group_links`, { outcome_style: "full" });
   return { courseName: course.name, links };
+}
+
+/** A course's assignments by assignment group, names and points only (no
+ *  student data), for picking which are learning objectives. */
+export async function fetchCanvasAssignmentGroups(canvasCourseId: string): Promise<CanvasAssignmentGroup[]> {
+  const client = new LiveCanvasSource(process.env.CANVAS_BASE_URL!, process.env.CANVAS_API_TOKEN!);
+  return client.getAll<CanvasAssignmentGroup>(`/courses/${canvasCourseId}/assignment_groups`, { "include[]": "assignments" });
 }

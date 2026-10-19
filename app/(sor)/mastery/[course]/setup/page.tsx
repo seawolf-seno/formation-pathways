@@ -7,8 +7,7 @@ import { displayName } from "@/lib/sor/types";
 import { ClassMap, SOURCE_FILTERS, type SourceFilter } from "@/components/mastery/ClassMap";
 import { ExportDrop } from "@/components/mastery/ExportDrop";
 import { CanvasControls, CourseSettings, DeleteSampleCourse, RequestInbox, RosterPanel, SourceSwitch, type SourceRow } from "@/components/mastery/TeacherTools";
-import { VideoShelf } from "@/components/mastery/VideoShelf";
-import { KhanSortPanel, TaggedResources, CanvasObjectivesButton } from "@/components/mastery/ExtensionTools";
+import { AssignmentObjectivesPicker, KhanSortPanel, TaggedResources, CanvasObjectivesButton } from "@/components/mastery/ExtensionTools";
 import { suggestObjective } from "@/lib/mastery/canvas-outcomes";
 import { allStandards } from "@/lib/mastery/config";
 import { shortDate } from "@/components/mastery/levels";
@@ -72,11 +71,25 @@ export default async function CourseSetupPage({ params, searchParams }: { params
         <h2 className="mb-1 font-display text-xl text-[var(--color-navy-ink)]">Learning objectives</h2>
         <p className="mb-3 text-sm text-[var(--color-ink-muted)]">
           {config.groups.reduce((n, g) => n + g.standards.length, 0)} objectives in {config.groups.length} units, from{" "}
-          {config.key.startsWith("canvas-") ? "your Canvas Outcomes" : `the standard set "${config.title}"`}. Khan Academy skills, AP
+          {config.groups.some((g) => g.standards.some((x) => /^a\d+$/.test(x.code)))
+            ? "your Canvas assignments"
+            : config.key.startsWith("canvas-")
+              ? "your Canvas Outcomes"
+              : `the standard set "${config.title}"`}
+          . Khan Academy skills, AP
           Classroom results and Canvas work all sort into these.
         </p>
         {!course.is_sample && (
-          <CanvasObjectivesButton courseId={course.id} fromCanvas={config.key.startsWith("canvas-")} hasCanvasId={Boolean(course.canvas_course_id)} />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)]">Objectives are Canvas assignments</p>
+              <AssignmentObjectivesPicker courseId={course.id} hasCanvasId={Boolean(course.canvas_course_id)} />
+            </div>
+            <div>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-[var(--color-ink-muted)]">Objectives are Canvas Outcomes</p>
+              <CanvasObjectivesButton courseId={course.id} fromCanvas={config.key.startsWith("canvas-")} hasCanvasId={Boolean(course.canvas_course_id)} />
+            </div>
+          </div>
         )}
       </section>
 

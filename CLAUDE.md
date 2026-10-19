@@ -7,6 +7,12 @@ adults behind the scenes; students stay present, in person, with people.
 
 ## Status (update as work happens — keep current, not historical)
 
+- **Spark media payload compatibility (2026-10-13, PR #72)**: at-home Spark
+  needs `20261026000000_spark_media_payload.sql` for `genres`, `canTeach` and
+  `growing`. The guard preserves token expiry, consent, single use and caps.
+  The family page and submit action wait until the owner applies it. No agent
+  applied the migration.
+
 - **September 25 contribution (`codex/pathways-first-experience`)**: family-facing
   pathway exploration and focused sharing preview for the October 5 demonstration.
   Start locally at `/applicant/emma-r-8f3k2a`; no dashboard is part of this flow.
@@ -369,6 +375,11 @@ adults behind the scenes; students stay present, in person, with people.
   (★ suggestion; no 3-per-unit cap). Dashboard `/mastery/<course>` is **students first** (list + objective
   cards with "what's behind it" dropdowns); everything else on `/mastery/<course>/setup`. Extension 0.2.0
   sends every level. Migration `20261023000000` on staging (verified).
+- **Objectives as Canvas assignments (2026-10-12, branch `seno/mastery-assignment-objectives`)**: #70 merged and
+  `20261023` applied. seno's Canvas course has no Outcomes; each learning objective is a mastery-graded
+  assignment. Setup → **Pick objective assignments** (suggestions pre-ticked, unit from "LO 2.1"/"Unit 2"/group),
+  codes `a<assignment id>`; the student's grade on it is the objective's Canvas score (`assignmentGrades`), not
+  double-counted; other work sorts in by unit. No migration.
 - **Open PRs as of 2026-10-12**: #62 and #63 merged (their migrations are on staging; production
   is seno's). Still open:
   - #58 STEM Scholars (TheEnigmaticPhilosopher): migration still named `20261012000000_…`
@@ -397,6 +408,39 @@ adults behind the scenes; students stay present, in person, with people.
   `20261019000000_mastery_hub.sql` to production** (after #62/#63's). Not built: a nightly
   import with nobody signed in (needs its own DB role), AI next steps, mastery in pathway drafts,
   view-only accounts in the hub. `docs/mastery-hub.md`.
+- **Spark's media step (2026-10-13, branch `spark/no-watch-history`, card #16)**: the Google
+  Takeout `watch-history.json` upload is **gone** (`lib/youtube-takeout.ts` deleted) and must not
+  come back — a watch history pictures the recommender, not the student, and the student it was
+  built for read it as surveillance. In its place, the last card of every Spark format
+  (`components/sor/SparkCreators.tsx`) asks two things the student answers themselves: media
+  genres they tap (`prompts/spark-media.txt`, faculty-editable) and up to three creators they
+  type. New `genres` on `StudentSparks` (jsonb, **no migration**; old rows read as `[]`).
+  Genres are named in the prompt as the weakest evidence in a Spark — texture and vocabulary,
+  never the thing a pathway is about (`sparksForPrompt`, `prompts/ruakh-today.txt`) — and the
+  staff view deliberately shows no "→ pathway" trace under one. Because of that the Spark Lab's
+  "Used in pathways" can't see genres at all, so `/pilot/spark-lab` counts them on two rows of
+  their own ("Genres tapped", "Genres in a pathway") that are explicitly *not* a comparison
+  between formats — the media card is identical in all three. They exist so that "did asking
+  about their feed do anything?" has an answer in a month; expect a low share, which is the
+  design working rather than failing. Not yet seen on a preview or checked against real Claude
+  output.
+- **Spark's skills card (2026-10-13, same branch, card #16's "clear skill levels")**: a new
+  second-to-last card in every format (`components/sor/SparkSkills.tsx`,
+  `prompts/spark-skills.txt` — exactly two lines, the proud question first, order is
+  load-bearing) asking what they could teach someone and what they're trying to get better at.
+  New `canTeach` / `growing` on `StudentSparks` (jsonb, **no migration**; old rows read as
+  `[]`). Deliberately **not a level**: the Mastery Hub's ladder (`lib/mastery/config.ts`) is
+  derived from teacher-marked evidence, and self-placement on it would make a Spark a
+  self-assessment score — the dossier the product refuses to be. So this reuses the Mastery
+  Hub's *projection* instead (`lib/mastery/rules.ts`'s `masterySummary`), reaching a draft as
+  the same "solid on … / still growing on …" words. One vocabulary, two sources. The prompt is
+  told a volunteered "working on" is an intention and never a deficit, gap or concern, and that
+  a "could teach" answer is usually the best source for a pathway's `startingPoint`. The staff
+  view styles both halves identically (no failure states on a student page). Shared card, so
+  like genres it stays out of the Spark Lab's "Used in pathways" and gets its own rows; the gap
+  between "Said what they could teach" and "Said what they're working on" is the thing to watch
+  — if the second lags far behind, the card isn't safe enough to be honest in and the *wording*
+  changes, not the student. Clicked through at 375×812; not checked against real Claude output.
 - **Next concrete actions**:
   1. Production migrations `20261017`, `20261018` (merged), then `20261019` (Mastery Hub, when
      merged); #58 after its rename, via staging first.

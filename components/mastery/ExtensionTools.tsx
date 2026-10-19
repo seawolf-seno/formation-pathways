@@ -9,7 +9,10 @@ import {
   setKhanSkillAction,
   tagResourceAction,
   pullCanvasObjectivesAction,
+  listObjectiveAssignmentsAction,
+  saveAssignmentObjectivesAction,
 } from "@/lib/mastery/actions";
+import type { AssignmentChoice } from "@/lib/mastery/canvas-outcomes";
 import { button, field, quiet } from "./TeacherTools";
 
 export interface WhereOption {
@@ -333,6 +336,134 @@ export function ExtensionConnections({ tokens, hubUrl }: { tokens: TokenView[]; 
           ))}
         </ul>
       )}
+    </div>
+  );
+}
+
+/**
+ * For teachers whose learning objectives are Canvas ASSIGNMENTS (graded for
+ * mastery) rather than Outcomes: tick the assignments that are objectives and
+ * the unit each belongs to. Suggestions are pre-ticked (names or assignment
+ * groups that say "LO", "learning objective", "mastery"…), and units are read
+ * from names ("LO 2.1", "Unit 2 …") or assignment groups.
+ */
+export function AssignmentObjectivesPicker({ courseId, hasCanvasId }: { courseId: string; hasCanvasId: boolean }) {
+  const [choices, setChoices] = useState<AssignmentChoice[] | null>(null);
+  const [picked, setPicked] = useState<Record<string, number | null | undefined>>({});
+  const [message, setMessage] = useState<string | null>(null);
+  const [pending, start] = useTransition();
+  const router = useRouter();
+
+  const load = () =>
+    start(async () => {
+      setMessage(null);
+      const res = await listObjectiveAssignmentsAction(courseId);
+      if (!res.ok) return setMessage(res.error);
+      setChoices(res.choices);
+      const now: Record<string, number | null> = {};
+      if (res.current.length) for (const c of res.current) now[c.id] = c.unitNumber;
+      else for (const c of res.choices) if (c.suggested) now[c.id] = c.unitNumber;
+      setPicked(now);
+    });
+
+  const save = () =>
+    start(async () => {
+      setMessage(null);
+      const picks = Object.entries(picked)
+        .filter(([, u]) => u !== undefined)
+        .map(([id, unitNumber]) => ({ id, unitNumber: unitNumber ?? null }));
+      const res = await saveAssignmentObjectivesAction(courseId, picks);
+      if (!res.ok) return setMessage(res.error);
+      setMessage(`${res.objectives} objectives in ${res.units} units. ${res.summary}`);
+      setChoices(null);
+      router.refresh();
+    });
+
+  if (!choices)
+    return (
+      <div className="space-y-2">
+        <button disabled={pending || !hasCanvasId} onClick={load} className={quiet}>
+          {pending ? "Reading Canvas…" : "Pick objective assignments"}
+        </button>
+        <p className="text-xs text-[var(--color-ink-muted)]">
+          If your learning objectives are Canvas assignments graded for mastery, pick them here. Each one&apos;s grade becomes
+          that objective&apos;s Canvas score; your other assignments, Khan Academy and AP Classroom sort in underneath.
+        </p>
+        {message && <p className="text-sm text-[var(--color-navy-ink)]">{message}</p>}
+      </div>
+    );
+
+  const groups = [...new Set(choices.map((c) => c.group))];
+  const count = Object.values(picked).filter((u) => u !== undefined).length;
+  const units = new Set(Object.values(picked).filter((u) => u !== undefined).map((u) => u ?? "none")).size;
+  return (
+    <div className="space-y-3">
+      <div className="sticky top-0 z-10 flex flex-wrap items-center gap-3 bg-white py-2">
+        <button disabled={pending || !count} onClick={save} className={button}>
+          {pending ? "Saving…" : `Use these ${count} as objectives`}
+        </button>
+        <span className="text-xs text-[var(--color-ink-muted)]">
+          {count} ticked · {units} unit{units === 1 ? "" : "s"}
+        </span>
+        <button onClick={() => setChoices(null)} className="text-xs text-[var(--color-ink-muted)] underline">
+          Cancel
+        </button>
+      </div>
+      {groups.map((g) => {
+        const list = choices.filter((c) => c.group === g);
+        const ticked = list.filter((c) => picked[c.id] !== undefined).length;
+        return (
+          <details key={g} open={ticked > 0} className="rounded-xl border border-[var(--color-border)] bg-white">
+            <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
+              <span>
+                <span className="font-medium text-[var(--color-navy-ink)]">{g || "Assignments"}</span>{" "}
+                <span className="text-xs text-[var(--color-ink-muted)]">
+                  · {ticked}/{list.length} ticked
+                </span>
+              </span>
+              <span className="flex gap-2 text-xs">
+                <button type="button" className="underline" onClick={() => setPicked((p) => ({ ...p, ...Object.fromEntries(list.map((c) => [c.id, p[c.id] !== undefined ? p[c.id] : c.unitNumber])) }))}>
+                  Tick all
+                </button>
+                <button type="button" className="underline" onClick={() => setPicked((p) => ({ ...p, ...Object.fromEntries(list.map((c) => [c.id, undefined])) }))}>
+                  None
+                </button>
+              </span>
+            </summary>
+            <ul className="divide-y divide-[var(--color-border)] border-t border-[var(--color-border)]">
+              {list.map((c) => {
+                const on = picked[c.id] !== undefined;
+                return (
+                  <li key={c.id} className="flex flex-wrap items-center gap-2 px-3 py-1.5 text-sm">
+                    <label className="flex min-w-0 flex-1 items-center gap-2">
+                      <input type="checkbox" checked={on} onChange={(e) => setPicked((p) => ({ ...p, [c.id]: e.target.checked ? c.unitNumber : undefined }))} />
+                      <span className={on ? "font-medium text-[var(--color-navy-ink)]" : "text-[var(--color-ink)]"}>{c.name}</span>
+                      {c.points !== null && <span className="text-xs text-[var(--color-ink-muted)]">· {c.points} pts</span>}
+                      {c.suggested && !on && <span className="text-xs text-[var(--color-gold)]">looks like an objective</span>}
+                    </label>
+                    {on && (
+                      <select
+                        value={picked[c.id] ?? ""}
+                        onChange={(e) => setPicked((p) => ({ ...p, [c.id]: e.target.value === "" ? null : Number(e.target.value) }))}
+                        className={`${field} w-auto text-xs`}
+                        aria-label="Unit"
+                      >
+                        <option value="">No unit</option>
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                          <option key={n} value={n}>
+                            Unit {n}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        );
+      })}
+      {message && <p className="text-sm text-[var(--color-navy-ink)]">{message}</p>}
     </div>
   );
 }

@@ -6,10 +6,11 @@ import { useDictation } from "@/components/useDictation";
 import { saveStudentSparksAction, submitFamilySparksAction } from "@/lib/sor/actions";
 import type { StudentSparks } from "@/lib/sor/sparks";
 import type { SparkChoicePair, SparkOption } from "@/lib/spark";
-import { topChannels, type ChannelCount } from "@/lib/youtube-takeout";
+import { CreatorsStep, type SparkMedia } from "./SparkCreators";
+import { SparkSkills, type SparkSkills as Skills } from "./SparkSkills";
 import "./spark-sky.css";
 
-type Step = "intro" | "ask" | "pull" | "lean" | "channels" | "reveal";
+type Step = "intro" | "ask" | "pull" | "lean" | "skills" | "channels" | "reveal";
 
 interface Star {
   id: string;
@@ -99,6 +100,8 @@ export function SparkSky({
   questions,
   interests,
   pairs,
+  genres,
+  skillQuestions,
   isSample,
   onFinish,
 }: {
@@ -108,6 +111,10 @@ export function SparkSky({
   questions: string[];
   interests: SparkOption[];
   pairs: SparkChoicePair[];
+  /** Media genres for the last step: what fills their feed. */
+  genres: SparkOption[];
+  /** The two skill questions (prompts/spark-skills.txt), in order. */
+  skillQuestions: string[];
   isSample: boolean;
   /** Spark Lab: skip the intro, and hand the sparks back instead of saving
    *  them and showing the sky (the lab saves, and asks how it felt). */
@@ -123,9 +130,8 @@ export function SparkSky({
   const [pi, setPi] = useState(0);
   const [leanings, setLeanings] = useState<StudentSparks["leanings"]>([]);
   const [chosen, setChosen] = useState<string | null>(null);
-  const [channelOptions, setChannelOptions] = useState<ChannelCount[] | null>(null);
-  const [channels, setChannels] = useState<Set<string>>(new Set());
-  const [fileError, setFileError] = useState<string | null>(null);
+  const [media, setMedia] = useState<SparkMedia>({ channels: [], genres: [] });
+  const [skills, setSkills] = useState<Skills>({ canTeach: [], growing: [] });
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -140,9 +146,16 @@ export function SparkSky({
       ...[...picks.entries()].map(([label, obsessed]) => ({ id: `p:${label}`, label, bright: obsessed })),
       // A pair they would not split still earns its star — it says both are them.
       ...leanings.map((l) => ({ id: `l:${l.a}|${l.b}`, label: l.choice || `${l.a} + ${l.b}`, bright: false })),
-      ...[...channels].map((c) => ({ id: `c:${c}`, label: c, bright: false })),
+      ...media.channels.map((c) => ({ id: `c:${c}`, label: c, bright: false })),
+      ...media.genres.map((g) => ({ id: `g:${g}`, label: g, bright: false })),
+      // Something they could teach is one of the brightest things a student
+      // says about themselves, so it reads as one. What they're reaching for
+      // earns a star too: "everything you share becomes a star" has to hold
+      // for the harder answer as well, or the card teaches them to skip it.
+      ...skills.canTeach.map((t) => ({ id: `t:${t}`, label: short(t), bright: true })),
+      ...skills.growing.map((g) => ({ id: `w:${g}`, label: short(g), bright: false })),
     ],
-    [answers, picks, leanings, channels]
+    [answers, picks, leanings, media, skills]
   );
 
   function keepAnswer() {
@@ -206,7 +219,7 @@ export function SparkSky({
     setTimeout(() => {
       setChosen(null);
       if (pi + 1 < pairs.length) setPi(pi + 1);
-      else setStep("channels");
+      else setStep("skills");
     }, 650);
   }
 
@@ -216,16 +229,6 @@ export function SparkSky({
     if (chosen || pi === 0) return;
     setLeanings((l) => l.slice(0, pi - 1));
     setPi(pi - 1);
-  }
-
-  async function readTakeout(file: File) {
-    setFileError(null);
-    try {
-      // Read here, in this browser. The file is never uploaded anywhere.
-      setChannelOptions(topChannels(JSON.parse(await file.text())));
-    } catch (e) {
-      setFileError(e instanceof Error ? e.message : "Couldn't read that file.");
-    }
   }
 
   // Leaving with unsaved sparks loses them, so say so before the tab closes.
@@ -239,29 +242,37 @@ export function SparkSky({
 
   /** The sky is the end of the conversation, so it saves on arrival: closing
    *  the tab after seeing it must not lose everything. The button below stays
-   *  only as a retry if saving failed. */
-  function reveal() {
+   *  only as a retry if saving failed.
+   *
+   *  Takes what the media step collected rather than reading `media`, because
+   *  that step sets it and finishes in the same handler — state read here would
+   *  still be the previous render's, and the last thing the student typed or
+   *  tapped would be dropped. */
+  function reveal(said: SparkMedia) {
     if (onFinish) {
-      onFinish(collected());
+      onFinish(collected(said));
       return;
     }
     setStep("reveal");
-    if (!saved && !pending && stars.length > 0) save();
+    if (!saved && !pending && (answers.length > 0 || picks.size > 0)) save(said);
   }
 
-  function collected(): StudentSparks {
+  function collected(said: SparkMedia): StudentSparks {
     return {
       answers,
       picks: [...picks.entries()].map(([label, obsessed]) => ({ label, obsessed })),
       leanings,
-      channels: [...channels],
+      channels: said.channels,
+      genres: said.genres,
+      canTeach: skills.canTeach,
+      growing: skills.growing,
     };
   }
 
-  function save() {
+  function save(said: SparkMedia) {
     setError(null);
     start(async () => {
-      const sparks = collected();
+      const sparks = collected(said);
       const res =
         target.kind === "staff"
           ? await saveStudentSparksAction({ personId: target.personId, sparks })
@@ -445,48 +456,35 @@ export function SparkSky({
           </div>
         )}
 
+        {/* Skills in words, never on a ladder: see the note in SparkSkills.tsx
+            for why a self-placed level would make this a self-assessment
+            score. Asked after the quick taps, when a student is warmed up and
+            answering in sentences again. */}
+        {step === "skills" && (
+          <SparkSkills
+            questions={skillQuestions}
+            onDone={(said) => {
+              setSkills(said);
+              setStep("channels");
+            }}
+          />
+        )}
+
+        {/* The student taps the genres and names the creators instead of handing
+            over a history file. Watch history is a picture of the recommender —
+            what autoplayed at midnight, what a friend sent — not of them, so it
+            answered a question nobody asked. What they pick out themselves is
+            the better signal anyway, and picking is the whole point: nothing
+            about them gets collected that they didn't decide to say. */}
         {step === "channels" && (
-          <div className="spark-card">
-            <p className="spark-eyebrow">Optional</p>
-            <h2>Got your YouTube history?</h2>
-            <p className="spark-sub">
-              Drop in <code>watch-history.json</code> from Google Takeout. It&apos;s read right here on this device and never
-              uploaded. You pick which channels (if any) to add as stars.
-            </p>
-            {!channelOptions ? (
-              <label className="spark-drop">
-                <input type="file" accept=".json,application/json" onChange={(e) => e.target.files?.[0] && readTakeout(e.target.files[0])} />
-                Choose the file
-              </label>
-            ) : (
-              <div className="spark-bubbles is-static">
-                {channelOptions.map((c) => (
-                  <button
-                    key={c.name}
-                    className={`spark-bubble ${channels.has(c.name) ? "is-lit" : ""}`}
-                    onClick={() =>
-                      setChannels((s) => {
-                        const next = new Set(s);
-                        if (next.has(c.name)) next.delete(c.name);
-                        else next.add(c.name);
-                        return next;
-                      })
-                    }
-                    aria-pressed={channels.has(c.name)}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-            )}
-            {fileError && <p className="spark-error">{fileError}</p>}
-            <div className="spark-row">
-              <span />
-              <button className="spark-go" onClick={reveal}>
-                {onFinish ? (channelOptions ? "Done with this one ✦" : "Skip, done with this one ✦") : channelOptions ? "Show me my sky ✦" : "Skip, show me my sky ✦"}
-              </button>
-            </div>
-          </div>
+          <CreatorsStep
+            genres={genres}
+            onDone={(said) => {
+              setMedia(said);
+              reveal(said);
+            }}
+            done={onFinish ? "Done with this one ✦" : "Show me my sky ✦"}
+          />
         )}
 
         {step === "reveal" && (
@@ -516,7 +514,7 @@ export function SparkSky({
             ) : (
               <div className="spark-row">
                 <button className="spark-quiet" onClick={() => setStep("pull")}>Add more</button>
-                <button className="spark-go" onClick={save} disabled={stars.length === 0}>
+                <button className="spark-go" onClick={() => save(media)} disabled={stars.length === 0}>
                   {error ? "Try saving again ✦" : "Save my sparks ✦"}
                 </button>
               </div>

@@ -753,6 +753,23 @@ await db.exec(`update student_accounts set active = false where person_id = '${m
 await expect("with the sign-in turned off, the student reads nothing", "kid", `select (select count(*) from course_history) + (select count(*) from class_reflections) + (select count(*) from class_resources) + (select count(*) from class_links_for_student()) as n`, true, r => Number(r.rows[0].n) === 0);
 await expect("...and saves nothing", "kid", myLink({ url: "https://example.org/after" }), false);
 await db.exec(`update student_accounts set active = true where person_id = '${me}'`);
+// Exercise the new client shape through the actual anonymous at-home RPC.
+const mediaKid = '88888888-8888-8888-8888-888888888881';
+await expect('Spark media sample participant', 'admin', `insert into people(id,first_name,last_name,stage,is_sample) values ('${mediaKid}','Sky','Sample','enrolled',true)`, true);
+await expect('Spark media one-time link', 'admin', `insert into spark_links(person_id,token_hash,first_name,created_by) values ('${mediaKid}',${hash('media-link')},'Sky','${ids.admin}')`, true);
+await expectAnon('Spark media capability exposes no student data', `select spark_media_ready() ready`, true, r => r.rows[0].ready === true);
+const mediaSubmit = payload => `select spark_link_submit('media-link','${JSON.stringify(payload).replace(/'/g,"''")}'::jsonb) ok`;
+await expectAnon('Spark media unknown keys still refused', mediaSubmit({answers:[],genres:[],rogue:1}), true, r => r.rows[0].ok === false);
+await expectAnon('Spark media scalar lists refused', mediaSubmit({answers:[],genres:'science'}), true, r => r.rows[0].ok === false);
+await expectAnon('Spark media null lists refused', mediaSubmit({answers:[],canTeach:null}), true, r => r.rows[0].ok === false);
+await expectAnon('Spark media too many genres refused', mediaSubmit({answers:[],genres:Array(21).fill('science')}), true, r => r.rows[0].ok === false);
+await expectAnon('Spark media too many skills refused', mediaSubmit({answers:[],canTeach:Array(6).fill('repair')}), true, r => r.rows[0].ok === false);
+await expectAnon('Spark media oversized skill refused', mediaSubmit({answers:[],growing:['x'.repeat(161)]}), true, r => r.rows[0].ok === false);
+await expectAnon('Spark media non-string entries refused', mediaSubmit({answers:[],genres:[{title:'science'}]}), true, r => r.rows[0].ok === false);
+const completeMedia = {answers:[{prompt:'What do you love?',text:'Building things'}],picks:[],leanings:[],channels:['Example creator'],genres:['Science'],canTeach:['Repair a bike'],growing:['Speak in public']};
+await expectAnon('Spark media current payload saves from home', mediaSubmit(completeMedia), true, r => r.rows[0].ok === true);
+await expect('Spark media and skills persist together', 'admin', `select sparks from student_sparks where person_id='${mediaKid}'`, true, r => r.rows[0].sparks.genres[0] === 'Science' && r.rows[0].sparks.canTeach[0] === 'Repair a bike' && r.rows[0].sparks.growing[0] === 'Speak in public');
+await expectAnon('Spark media link remains single use', mediaSubmit(completeMedia), true, r => r.rows[0].ok === false);
 // STEM Scholars: use fictional people only; execute the actual migration.
 const stemPerson = "44444444-4444-4444-4444-444444444441";
 const stemOther = "44444444-4444-4444-4444-444444444442";
