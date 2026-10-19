@@ -408,6 +408,16 @@ adults behind the scenes; students stay present, in person, with people.
   `20261019000000_mastery_hub.sql` to production** (after #62/#63's). Not built: a nightly
   import with nobody signed in (needs its own DB role), AI next steps, mastery in pathway drafts,
   view-only accounts in the hub. `docs/mastery-hub.md`.
+- **Open House pathways (2026-10-16, branch `seno/open-house`, card #38)**: for Open House
+  Wed 10/21. `/oh` (public, QR): first name, grade, interests → a card with two pathways,
+  real faculty mentors and real projects, one Share button (key text + invite link
+  `/oh?ref=CODE`); fee waived for the sharer when a friend from their link applies.
+  Staff live wall `/pilot/openhouse` (Looks good / Pull / Applied / Waive fee, feeder-school
+  counts ≥5 only). **Exception to principle 1, approved by seno**: cards reach the family
+  before review, AI only picks from `fixtures/openhouse.json`, labeled "Drafted with AI"
+  until signed. **Needs seno to apply `20261026000000_open_house.sql`, set `OPENHOUSE_KEY`
+  (env + hash), and leadership to open inquiries and set the waiver thank-you.**
+  `docs/open-house.md`.
 - **Spark's media step (2026-10-13, branch `spark/no-watch-history`, card #16)**: the Google
   Takeout `watch-history.json` upload is **gone** (`lib/youtube-takeout.ts` deleted) and must not
   come back — a watch history pictures the recommender, not the student, and the student it was
@@ -496,9 +506,25 @@ conflicts with this file, this file wins for what's already built.
   (`MOCK_INTEGRATIONS`); a real per-teacher Canvas token or Drive OAuth token
   switches to the live client. See "Live-data safety" below before touching either.
 
+## Simplicity first (seno, 2026-10-16) — applies to everything built from now on
+The app grew cluttered while features shipped fast. Every new or changed screen must be simple
+and easy to use, and cleanup counts as real work:
+- **One job per screen, one obvious primary button.** Secondary things go behind a single
+  "More" or onto a separate page, never stacked above the main action.
+- **Fewest taps.** Count the taps for the main task and cut them; prefill, default and remember
+  instead of asking.
+- **Less text.** A heading, at most one short sentence of help, and labels. No paragraphs of
+  explanation on screen; put details in docs.
+- **Phone first.** Test at phone width; big tap targets.
+- **Intuitive over complete.** If a feature needs instructions to use, simplify it before adding it.
+  When in doubt, leave it out.
+Review each PR against this list and say how it was met.
+
 ## Product principles — enforce in UI copy and logic, every session
 1. Humans author, AI drafts. Every AI output is labeled "Draft" until a named
    adult reviews and signs it. There is no unsupervised send.
+   One approved exception: Open House cards (`docs/open-house.md`), catalog-only
+   and labeled "Drafted with AI" until staff sign.
 2. Compass, never dossier. No numeric scores on students anywhere. Counts and
    narratives only. No red/failure states on a student profile. The word
    "record" never appears in the UI — say "Pathway."
