@@ -68,6 +68,34 @@ export default async function SparkLabPage({ searchParams }: { searchParams: Pro
       help: "Of the draft's pathways, how many grew from this session (average).",
       value: (f) => one(f.pathwaysShaped),
     },
+    // The skills and media cards are the same in all three formats, so the rows
+    // below aren't format comparisons: they're here to answer "did asking that
+    // question do anything?", which the rows above deliberately can't.
+    {
+      label: "Said what they could teach",
+      help: "The skills card is the same in every format, so this isn't a comparison between them: it's how often a student names something they could teach rather than skipping.",
+      value: (f) => pct(f.saidCanTeach),
+    },
+    {
+      label: "Said what they're working on",
+      help: "The harder of the two questions. Watch the gap with the row above: if far fewer answer this one, the card doesn't feel safe enough to be honest in and the wording needs changing.",
+      value: (f) => pct(f.saidGrowing),
+    },
+    {
+      label: "Skills in a pathway",
+      help: "Of sessions drafted afterwards: the share of what they said they could teach or were working on that a pathway grew from.",
+      value: (f) => (f.skillsDrafted ? `${pct(f.skillsUsed)} (${f.skillsDrafted})` : "no drafts yet"),
+    },
+    {
+      label: "Genres tapped",
+      help: "The last card is the same in every format, so this isn't a comparison between them: it's how many genres a student bothers to tap.",
+      value: (f) => one(f.genres),
+    },
+    {
+      label: "Genres in a pathway",
+      help: "Of sessions drafted afterwards: the share of their tapped genres a pathway echoed. Expected to be low — the prompt is told to use a genre only for texture, never as the thing a pathway is about.",
+      value: (f) => (f.genresDrafted ? `${pct(f.genresUsed)} (${f.genresDrafted})` : "no drafts yet"),
+    },
   ];
 
   return (

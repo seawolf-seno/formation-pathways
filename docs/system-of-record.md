@@ -1,5 +1,13 @@
 # System of record — consented pilot
 
+**PR #72 rollout:** apply `20261026000000_spark_media_payload.sql` before
+testing the new media/skills card through a family link. The existing
+anonymous-submit guard rejects these new JSON keys until updated. The new
+guard accepts bounded `genres`, `canTeach` and `growing` string lists without
+changing token expiry, single use, active sender or student-voice consent.
+The family page waits safely before the migration is present. Only seno
+applies migrations, to staging first. No agent applied this one.
+
 The new Formation Pathways database for a student's whole time with Pacifica:
 one `people` row from applicant to alumni, filled in from **Finalsite**
 (admissions), **Blackbaud** (enrollment) and **Canvas** (coursework), plus
@@ -101,9 +109,49 @@ signed-in device, a full-screen night sky that fills with stars:
 - **Interests** that float on screen: tap once if you love it, twice if
   you're obsessed (from `prompts/spark-interests.txt`, plus their own).
 - **This or that** (`prompts/spark-choices.txt`).
-- **Optional: their YouTube history.** The student drops in Google Takeout's
-  `watch-history.json`. It is read **in the browser only, never uploaded**;
-  they tap the channels that are really them, and only those names are saved.
+- **What they can do**, one card with two questions (`prompts/spark-skills.txt`,
+  faculty-editable, exactly two lines and the order matters): what they could
+  teach someone, then what they're trying to get better at. Both skippable,
+  together or separately; both become stars.
+
+  This is the answer to "we need clear skill levels", and it is deliberately
+  **not** a level. The Mastery Hub already has the ladder
+  (`lib/mastery/config.ts`: beginning → developing → proficient → extending),
+  and it is derived from evidence a teacher marked. Asking a 15-year-old to
+  place themselves on it would turn a Spark into a self-assessment score — a
+  dossier the student wrote about themselves, which is worse than one we wrote.
+  So Spark reuses the Mastery Hub's *projection* instead of its ladder: words
+  only, reaching a draft as the same "solid on … / still growing on …" shape
+  `masterySummary` already hands it (`lib/mastery/rules.ts`). One vocabulary,
+  two sources — marked evidence on one side, the student's own claim on the
+  other.
+
+  The second question is the fragile one. A teenager reads "what are you bad
+  at" into it unless told otherwise, so the card says plainly that it isn't
+  about weakness and the drafting prompt is told the same: a volunteered
+  intention is the opposite of a deficit, never a gap or a concern, never
+  ranked. The staff view styles both halves identically for the same reason —
+  a student page has no failure states, and that is the one place a careless
+  colour choice would invent one. A "could teach" answer is usually the best
+  source for a pathway's `startingPoint`, since someone who can teach a thing
+  has already done it.
+- **What they actually watch**, one card with two questions: media genres they
+  tap (`prompts/spark-media.txt`) and up to three creators, channels, podcasts
+  or artists they type. Only what they tap or type is saved.
+
+  Genres are the weakest evidence in a Spark and the drafting prompt says so
+  outright: a feed is half chosen and half fed to them, so "watches gaming
+  videos" is texture and vocabulary, never the seed of a pathway. The staff view
+  deliberately shows no "→ pathway" trace under a genre, for the same reason.
+
+  This replaced a Google Takeout `watch-history.json` upload, removed
+  deliberately; it should not come back. Two reasons. A watch history is mostly
+  a picture of the recommender — what autoplayed, what a friend sent — rather
+  than of the student, so a generalisation drawn from it generalises YouTube.
+  And a student asked for it read it as surveillance even though the file was
+  parsed in the browser and never uploaded, which defeats the purpose of the
+  whole experience: someone who feels watched hedges. What a student picks out
+  themselves is better evidence, and freely given.
 - **The reveal:** the stars join into their constellation.
 
 There are no scores, points or badges. Saving needs the new **`student_voice`**
