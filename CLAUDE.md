@@ -28,17 +28,18 @@ seno decides keep / merge / cut for each area before it's built.
 `20261025000000_stem_scholars.sql` (so `/stem` stays hidden there). Staging has all of them
 through `20261026000000`, fingerprint-verified.
 
-**Open House, Wed 10/21. Blocking in production as of 2026-10-20:**
-1. No `OPENHOUSE_KEY`: no hash in `private.openhouse_keys`, so families' pathways can't be
-   saved. Set it in Vercel Production and add its hash (`docs/open-house.md`).
-2. Inquiries closed, so `/oh` says "open soon". Leadership's approval goes on `/pilot/inquiries`.
-3. Fee-waiver thank-you off (optional: cards share without the waiver line).
+**Open House, Wed 10/21** (`docs/open-house.md`). As of 2026-10-20: `OPENHOUSE_KEY` set in
+Vercel Production and its hash in production's `private.openhouse_keys` (one row, verified;
+redeployed). Still blocking: **inquiries closed**, so `/oh` says "open soon" until leadership's
+approval is recorded on `/pilot/inquiries`. Fee-waiver thank-you off (optional). Once open, seno
+makes one test card on a phone with a made-up name: pathways showing proves the key matches
+the hash; then Pull it on `/pilot/openhouse`.
 
 **Waiting on others:** admissions (offered-place statuses and release dates for `/season`,
 the real application link for `NEXT_STEP_LINKS`, phone-test answers); leadership (consent
 wording, thank-you and FTC wording, Anthropic terms for students); IT (Google Drive).
 
-**Next:** Open House blockers today → #40 inventory with seno → one small PR per area →
+**Next:** open inquiries + the phone test card → #40 inventory with seno → one small PR per area →
 seno applies the STEM migration and approves its rubric → Vercel team hardening
 (spend limit, 2FA, Firewall rate limits on `POST /discover`, `/oh` and `/login`).
 
